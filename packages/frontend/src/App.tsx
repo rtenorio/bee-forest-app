@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AppShell } from './components/layout/AppShell';
 import { ApiariesPage } from './pages/Apiaries/ApiariesPage';
+import { ApiaryDetail } from './pages/Apiaries/ApiaryDetail';
 import { HivesPage } from './pages/Hives/HivesPage';
 import { HiveDetail } from './pages/Hives/HiveDetail';
 import { InspectionsPage } from './pages/Inspections/InspectionsPage';
@@ -44,7 +45,7 @@ export function App() {
         <Route element={<AppShell />}>
           <Route index element={<RoleDashboard />} />
           <Route path="apiaries" element={<ApiariesPage />} />
-          <Route path="apiaries/:id" element={<ApiariesPage />} />
+          <Route path="apiaries/:id" element={<ApiaryDetail />} />
           <Route path="hives" element={<HivesPage />} />
           <Route path="hives/:id" element={<HiveDetail />} />
           <Route path="hives/new" element={<HivesPage />} />

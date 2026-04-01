@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { useCreateHive, useUpdateHive } from '@/hooks/useHives';
 import { useApiaries } from '@/hooks/useApiaries';
 import { useSpecies } from '@/hooks/useSpecies';
+import { useAuthStore } from '@/store/authStore';
 import { HiveCreateSchema } from '@bee-forest/shared';
 import { todayISO } from '@/utils/dates';
 import type { Hive } from '@bee-forest/shared';
@@ -36,11 +37,17 @@ interface Props {
 export function HiveForm({ initial, defaultApiaryId, onSuccess, onCancel }: Props) {
   const createHive = useCreateHive();
   const updateHive = useUpdateHive();
-  const { data: apiaries = [] } = useApiaries();
+  const user = useAuthStore((s) => s.user)!;
+  const { data: allApiaries = [] } = useApiaries();
   const { data: speciesList = [] } = useSpecies();
 
+  // Responsável only sees their assigned apiaries
+  const apiaries = user.role === 'responsavel'
+    ? allApiaries.filter((a) => user.apiary_local_ids.includes(a.local_id))
+    : allApiaries;
+
   const apiaryOptions = [
-    { value: '', label: 'Selecionar apiário...' },
+    { value: '', label: 'Selecionar meliponário...' },
     ...apiaries.map((a) => ({ value: a.local_id, label: a.name })),
   ];
 
@@ -103,7 +110,7 @@ export function HiveForm({ initial, defaultApiaryId, onSuccess, onCancel }: Prop
           />
         </div>
         <Input
-          label="Código da Colmeia *"
+          label="Código da Caixa *"
           value={form.code}
           onChange={(e) => set('code', e.target.value)}
           error={errors.code}
@@ -139,7 +146,7 @@ export function HiveForm({ initial, defaultApiaryId, onSuccess, onCancel }: Prop
       <Textarea label="Observações" value={form.notes} onChange={(e) => set('notes', e.target.value)} />
       <div className="flex gap-3 pt-2">
         <Button type="submit" loading={isPending} className="flex-1">
-          {initial ? 'Salvar Alterações' : 'Criar Colmeia'}
+          {initial ? 'Salvar Alterações' : 'Criar Caixa'}
         </Button>
         <Button type="button" variant="secondary" onClick={onCancel}>Cancelar</Button>
       </div>

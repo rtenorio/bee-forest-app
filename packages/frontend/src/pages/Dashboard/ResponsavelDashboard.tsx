@@ -79,7 +79,7 @@ export function ResponsavelDashboard() {
               return (
                 <button
                   key={apiary.local_id}
-                  onClick={() => navigate(`/hives?apiary=${apiary.local_id}`)}
+                  onClick={() => navigate(`/apiaries/${apiary.local_id}`)}
                   className="w-full text-left flex items-center justify-between px-3 py-2 rounded-lg hover:bg-stone-800 transition-colors"
                 >
                   <span className="text-stone-100 text-sm">{apiary.name}</span>

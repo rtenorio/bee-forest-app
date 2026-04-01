@@ -6,6 +6,7 @@ import { useInspections, useDeleteInspection } from '@/hooks/useInspections';
 import { useProductions } from '@/hooks/useProductions';
 import { useFeedings } from '@/hooks/useFeedings';
 import { useSpecies } from '@/hooks/useSpecies';
+import { useAuthStore } from '@/store/authStore';
 import { Card, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -19,12 +20,16 @@ import { ProductionForm } from '../Productions/ProductionForm';
 import { FeedingForm } from '../Feedings/FeedingForm';
 import { formatDate, formatDateTime, daysSince } from '@/utils/dates';
 
-const TABS = ['Inspeções', 'Produção', 'Alimentação'] as const;
-type Tab = typeof TABS[number];
-
 export function HiveDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const user = useAuthStore((s) => s.user)!;
+  const canManageHive = user.role === 'socio' || user.role === 'responsavel';
+  const canSeeProduction = user.role === 'socio' || user.role === 'responsavel';
+
+  type Tab = 'Inspeções' | 'Produção' | 'Alimentação';
+  const TABS: Tab[] = canSeeProduction ? ['Inspeções', 'Produção', 'Alimentação'] : ['Inspeções'];
+
   const [tab, setTab] = useState<Tab>('Inspeções');
   const [editHive, setEditHive] = useState(false);
   const [addInspection, setAddInspection] = useState(false);
@@ -40,36 +45,46 @@ export function HiveDetail() {
   const deleteInspection = useDeleteInspection();
 
   if (isLoading) return <div className="flex justify-center py-16"><Spinner /></div>;
-  if (!hive) return <div className="text-stone-400 text-center py-16">Colmeia não encontrada</div>;
+  if (!hive) return <div className="text-stone-400 text-center py-16">Caixa não encontrada</div>;
 
   const species = speciesList.find((s) => s.local_id === hive.species_local_id);
-  const days = inspections.length > 0 ? daysSince(inspections[0]?.inspected_at) : null;
+  const sortedInspections = [...inspections].sort((a, b) => b.inspected_at.localeCompare(a.inspected_at));
+  const days = sortedInspections.length > 0 ? daysSince(sortedInspections[0].inspected_at) : null;
 
-  const strengthData = inspections.slice().reverse().map((i) => ({
+  const strengthData = [...sortedInspections].reverse().map((i) => ({
     date: formatDate(i.inspected_at),
     forca: i.checklist.population_strength,
   }));
 
-  const productionData = productions.reduce<Record<string, number>>((acc, p) => {
-    const key = p.product_type;
-    acc[key] = (acc[key] ?? 0) + p.quantity_g;
+  const productionByType = productions.reduce<Record<string, number>>((acc, p) => {
+    acc[p.product_type] = (acc[p.product_type] ?? 0) + p.quantity_g;
     return acc;
   }, {});
-  const productionChartData = Object.entries(productionData).map(([name, total]) => ({
+  const productionChartData = Object.entries(productionByType).map(([name, total]) => ({
     name: name === 'honey' ? 'Mel' : name === 'propolis' ? 'Própolis' : name === 'pollen' ? 'Pólen' : 'Cera',
     total,
   }));
+
+  const PRODUCT_LABELS: Record<string, string> = {
+    honey: '🍯 Mel', propolis: '🟫 Própolis', pollen: '🌼 Pólen', wax: '🕯️ Cera',
+  };
+  const FEED_LABELS: Record<string, string> = {
+    sugar_syrup: '🍬 Xarope de açúcar', honey: '🍯 Mel', pollen_sub: '🌺 Substituto de pólen', other: '🌿 Outro',
+  };
 
   return (
     <div className="space-y-6 max-w-4xl">
       {/* Header */}
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate(-1)} className="text-stone-400 hover:text-stone-100 transition-colors">
+          <button
+            onClick={() => navigate(-1)}
+            className="text-stone-400 hover:text-stone-100 transition-colors text-sm"
+          >
             ← Voltar
           </button>
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-2xl font-bold text-stone-100">{hive.code}</h1>
               <HiveStatusBadge status={hive.status} />
               {hive.is_dirty && <Badge variant="warning">Não sincronizado</Badge>}
@@ -77,18 +92,25 @@ export function HiveDetail() {
             {species && <p className="text-stone-500 text-sm">{species.name} • {species.scientific_name}</p>}
           </div>
         </div>
+
         <div className="flex gap-2">
-          <Button variant="secondary" size="sm" onClick={() => setAddInspection(true)}>+ Inspeção</Button>
-          <Button variant="ghost" size="sm" onClick={() => setEditHive(true)}>Editar</Button>
-          <Button variant="danger" size="sm" onClick={() => {
-            if (confirm(`Excluir colmeia "${hive.code}"?`)) {
-              deleteHive.mutate(hive.local_id, { onSuccess: () => navigate('/hives') });
-            }
-          }}>Excluir</Button>
+          <Button variant="secondary" size="sm" onClick={() => setAddInspection(true)}>
+            + Inspeção
+          </Button>
+          {canManageHive && (
+            <>
+              <Button variant="ghost" size="sm" onClick={() => setEditHive(true)}>Editar</Button>
+              <Button variant="danger" size="sm" onClick={() => {
+                if (confirm(`Excluir caixa "${hive.code}"?`)) {
+                  deleteHive.mutate(hive.local_id, { onSuccess: () => navigate(-1) });
+                }
+              }}>Excluir</Button>
+            </>
+          )}
         </div>
       </div>
 
-      {/* Info row */}
+      {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
           { label: 'Instalação', value: formatDate(hive.installation_date) },
@@ -111,7 +133,9 @@ export function HiveDetail() {
               key={t}
               onClick={() => setTab(t)}
               className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-                tab === t ? 'border-amber-500 text-amber-400' : 'border-transparent text-stone-400 hover:text-stone-200'
+                tab === t
+                  ? 'border-amber-500 text-amber-400'
+                  : 'border-transparent text-stone-400 hover:text-stone-200'
               }`}
             >
               {t}
@@ -120,11 +144,11 @@ export function HiveDetail() {
         </div>
       </div>
 
-      {/* Tab content */}
+      {/* Tab: Inspeções */}
       {tab === 'Inspeções' && (
         <div className="space-y-4">
           <div className="flex justify-between items-center">
-            <h2 className="font-semibold text-stone-200">Histórico de Inspeções ({inspections.length})</h2>
+            <h2 className="font-semibold text-stone-200">Histórico ({inspections.length})</h2>
             <Button size="sm" onClick={() => setAddInspection(true)}>+ Nova Inspeção</Button>
           </div>
 
@@ -145,34 +169,36 @@ export function HiveDetail() {
             </Card>
           )}
 
-          {inspections.length === 0 ? (
+          {sortedInspections.length === 0 ? (
             <p className="text-stone-500 text-center py-8">Nenhuma inspeção registrada</p>
           ) : (
             <div className="space-y-3">
-              {inspections.map((inspection, idx) => (
+              {sortedInspections.map((inspection, idx) => (
                 <Card key={inspection.local_id} className={idx === 0 ? 'border-amber-600/40' : ''}>
                   <CardHeader>
                     <div>
                       <p className="font-semibold text-stone-100">{formatDateTime(inspection.inspected_at)}</p>
-                      {inspection.inspector_name && <p className="text-xs text-stone-500">por {inspection.inspector_name}</p>}
+                      {inspection.inspector_name && (
+                        <p className="text-xs text-stone-500">por {inspection.inspector_name}</p>
+                      )}
                     </div>
                     <div className="flex gap-2 items-center">
-                      <span className="text-amber-400 font-bold">
+                      <span className="text-amber-400 font-bold" title={`Força: ${inspection.checklist.population_strength}`}>
                         {'🐝'.repeat(inspection.checklist.population_strength)}
                       </span>
-                      <Button variant="danger" size="sm" onClick={() => {
-                        if (confirm('Excluir esta inspeção?')) deleteInspection.mutate(inspection.local_id);
-                      }}>×</Button>
+                      {canManageHive && (
+                        <Button variant="danger" size="sm" onClick={() => {
+                          if (confirm('Excluir esta inspeção?')) deleteInspection.mutate(inspection.local_id);
+                        }}>×</Button>
+                      )}
                     </div>
                   </CardHeader>
                   {idx === 0 && (
-                    <InspectionChecklistForm
-                      value={inspection.checklist}
-                      onChange={() => {}}
-                      readOnly
-                    />
+                    <InspectionChecklistForm value={inspection.checklist} onChange={() => {}} readOnly />
                   )}
-                  {inspection.notes && <p className="text-sm text-stone-400 mt-2 italic">"{inspection.notes}"</p>}
+                  {inspection.notes && (
+                    <p className="text-sm text-stone-400 mt-2 italic">"{inspection.notes}"</p>
+                  )}
                 </Card>
               ))}
             </div>
@@ -180,7 +206,8 @@ export function HiveDetail() {
         </div>
       )}
 
-      {tab === 'Produção' && (
+      {/* Tab: Produção (sócio / responsável only) */}
+      {tab === 'Produção' && canSeeProduction && (
         <div className="space-y-4">
           <div className="flex justify-between items-center">
             <h2 className="font-semibold text-stone-200">Produções ({productions.length})</h2>
@@ -213,8 +240,7 @@ export function HiveDetail() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="font-medium text-stone-100">
-                        {p.product_type === 'honey' ? '🍯 Mel' : p.product_type === 'propolis' ? '🟫 Própolis' : p.product_type === 'pollen' ? '🌼 Pólen' : '🕯️ Cera'}
-                        {' '}{p.quantity_g}g
+                        {PRODUCT_LABELS[p.product_type] ?? p.product_type} • {p.quantity_g}g
                       </p>
                       <p className="text-xs text-stone-500">{formatDate(p.harvested_at)}</p>
                     </div>
@@ -227,7 +253,8 @@ export function HiveDetail() {
         </div>
       )}
 
-      {tab === 'Alimentação' && (
+      {/* Tab: Alimentação (sócio / responsável only) */}
+      {tab === 'Alimentação' && canSeeProduction && (
         <div className="space-y-4">
           <div className="flex justify-between items-center">
             <h2 className="font-semibold text-stone-200">Alimentações ({feedings.length})</h2>
@@ -243,12 +270,14 @@ export function HiveDetail() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="font-medium text-stone-100">
-                        {f.feed_type === 'sugar_syrup' ? '🍬 Xarope de açúcar' : f.feed_type === 'honey' ? '🍯 Mel' : f.feed_type === 'pollen_sub' ? '🌺 Substituto de pólen' : '🌿 Outro'}
-                        {f.quantity_ml && ` • ${f.quantity_ml}ml`}
+                        {FEED_LABELS[f.feed_type] ?? f.feed_type}
+                        {f.quantity_ml ? ` • ${f.quantity_ml}ml` : ''}
                       </p>
                       <p className="text-xs text-stone-500">{formatDate(f.fed_at)}</p>
                     </div>
-                    {f.notes && <p className="text-xs text-stone-500 italic ml-2 truncate max-w-xs">{f.notes}</p>}
+                    {f.notes && (
+                      <p className="text-xs text-stone-500 italic ml-2 truncate max-w-xs">{f.notes}</p>
+                    )}
                   </div>
                 </Card>
               ))}
@@ -258,7 +287,7 @@ export function HiveDetail() {
       )}
 
       {/* Modals */}
-      <Modal open={editHive} onClose={() => setEditHive(false)} title="Editar Colmeia" size="lg">
+      <Modal open={editHive} onClose={() => setEditHive(false)} title="Editar Caixa" size="lg">
         <HiveForm initial={hive} onSuccess={() => setEditHive(false)} onCancel={() => setEditHive(false)} />
       </Modal>
 
