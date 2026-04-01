@@ -15,7 +15,6 @@ import { Spinner } from '@/components/ui/Spinner';
 import { HiveStatusBadge } from '@/components/hive/HiveStatusBadge';
 import { InspectionChecklistForm } from '@/components/inspection/InspectionChecklist';
 import { HiveForm } from './HiveForm';
-import { InspectionForm } from '../Inspections/InspectionForm';
 import { ProductionForm } from '../Productions/ProductionForm';
 import { FeedingForm } from '../Feedings/FeedingForm';
 import { formatDate, formatDateTime, daysSince } from '@/utils/dates';
@@ -32,7 +31,6 @@ export function HiveDetail() {
 
   const [tab, setTab] = useState<Tab>('Inspeções');
   const [editHive, setEditHive] = useState(false);
-  const [addInspection, setAddInspection] = useState(false);
   const [addProduction, setAddProduction] = useState(false);
   const [addFeeding, setAddFeeding] = useState(false);
 
@@ -94,7 +92,7 @@ export function HiveDetail() {
         </div>
 
         <div className="flex gap-2">
-          <Button variant="secondary" size="sm" onClick={() => setAddInspection(true)}>
+          <Button variant="secondary" size="sm" onClick={() => navigate(`/inspections/new?hive=${id}`)}>
             + Inspeção
           </Button>
           {canManageHive && (
@@ -149,7 +147,7 @@ export function HiveDetail() {
         <div className="space-y-4">
           <div className="flex justify-between items-center">
             <h2 className="font-semibold text-stone-200">Histórico ({inspections.length})</h2>
-            <Button size="sm" onClick={() => setAddInspection(true)}>+ Nova Inspeção</Button>
+            <Button size="sm" onClick={() => navigate(`/inspections/new?hive=${id}`)}>+ Nova Inspeção</Button>
           </div>
 
           {strengthData.length > 1 && (
@@ -289,10 +287,6 @@ export function HiveDetail() {
       {/* Modals */}
       <Modal open={editHive} onClose={() => setEditHive(false)} title="Editar Caixa" size="lg">
         <HiveForm initial={hive} onSuccess={() => setEditHive(false)} onCancel={() => setEditHive(false)} />
-      </Modal>
-
-      <Modal open={addInspection} onClose={() => setAddInspection(false)} title="Nova Inspeção" size="lg">
-        <InspectionForm defaultHiveId={id} onSuccess={() => setAddInspection(false)} onCancel={() => setAddInspection(false)} />
       </Modal>
 
       <Modal open={addProduction} onClose={() => setAddProduction(false)} title="Registrar Produção">

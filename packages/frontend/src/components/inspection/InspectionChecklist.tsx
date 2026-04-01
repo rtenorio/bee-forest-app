@@ -163,6 +163,52 @@ export function InspectionChecklistForm({ value, onChange, readOnly = false }: P
         </div>
       </div>
 
+      {/* Pollen stores */}
+      <div>
+        <label className="block text-sm font-medium text-stone-300 mb-2">Reserva de pólen</label>
+        <div className="flex gap-2">
+          {(['low', 'adequate', 'abundant'] as const).map((v) => (
+            <button
+              key={v}
+              type="button"
+              onClick={() => update({ pollen_stores: v })}
+              disabled={readOnly}
+              className={cn(
+                'flex-1 py-2 rounded-lg text-sm border transition-colors',
+                value.pollen_stores === v
+                  ? 'bg-amber-500/20 border-amber-500/60 text-amber-300'
+                  : 'bg-stone-800 border-stone-700 text-stone-400'
+              )}
+            >
+              {v === 'low' ? 'Baixa' : v === 'adequate' ? 'Adequada' : 'Abundante'}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Box condition */}
+      <div>
+        <label className="block text-sm font-medium text-stone-300 mb-2">Estado da caixa</label>
+        <div className="flex gap-2">
+          {(['poor', 'fair', 'good'] as const).map((v) => (
+            <button
+              key={v}
+              type="button"
+              onClick={() => update({ box_condition: v })}
+              disabled={readOnly}
+              className={cn(
+                'flex-1 py-2 rounded-lg text-sm border transition-colors',
+                value.box_condition === v
+                  ? 'bg-amber-500/20 border-amber-500/60 text-amber-300'
+                  : 'bg-stone-800 border-stone-700 text-stone-400'
+              )}
+            >
+              {v === 'poor' ? '🔴 Ruim' : v === 'fair' ? '🟡 Regular' : '🟢 Bom'}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Pests */}
       <div>
         <label className="block text-sm font-medium text-stone-300 mb-2">Pragas observadas</label>
@@ -192,6 +238,20 @@ export function InspectionChecklistForm({ value, onChange, readOnly = false }: P
           ))}
         </div>
       </div>
+
+      {/* Interventions (read-only display) */}
+      {readOnly && value.interventions && value.interventions.length > 0 && (
+        <div>
+          <label className="block text-sm font-medium text-stone-300 mb-2">Intervenções realizadas</label>
+          <div className="flex flex-wrap gap-2">
+            {value.interventions.map((id) => (
+              <span key={id} className="px-3 py-1.5 rounded-full text-sm bg-emerald-900/40 border border-emerald-600/40 text-emerald-300">
+                {id.replace(/_/g, ' ')}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

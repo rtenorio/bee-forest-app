@@ -17,10 +17,13 @@ const DEFAULT_CHECKLIST: InspectionChecklist = {
   brood_present: true,
   queen_seen: null,
   honey_stores: 'adequate',
+  pollen_stores: 'adequate',
   pests_observed: [],
   diseases_observed: [],
   propolis_quality: null,
   temperament: null,
+  box_condition: null,
+  interventions: [],
   needs_feeding: false,
   needs_space_expansion: false,
 };
