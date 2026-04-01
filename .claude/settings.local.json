@@ -1,0 +1,37 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm --version)",
+      "Bash(npx --version)",
+      "Bash(npm show:*)",
+      "Bash(npm install:*)",
+      "Bash(npm run:*)",
+      "Read(//c/Users/Rodrigo.Tenorio/.claude/projects/C--Windows-System32-bee-forest-app/memory/**)",
+      "Bash(docker --version)",
+      "Bash(docker compose:*)",
+      "Bash(docker context ls:*)",
+      "Bash(docker context:*)",
+      "Bash(docker exec:*)",
+      "Bash(echo \"Backend PID: $!\")",
+      "Bash(curl -s http://localhost:3001/health)",
+      "Bash(curl -s http://localhost:3001/api/species)",
+      "Bash(node -e ':*)",
+      "Bash(npx tsc:*)",
+      "Bash(npx tsx:*)",
+      "Bash(curl -s -X POST http://localhost:3001/api/auth/login -H 'Content-Type: application/json' -d '{\"email\":\"socio@beeforest.com\",\"password\":\"BeeForest@2024\"}')",
+      "Bash(python -m json.tool)",
+      "Bash(curl -s -X POST http://localhost:3001/api/auth/login -H \"Content-Type: application/json\" -d \"{\\\\\"email\\\\\":\\\\\"socio@beeforest.com\\\\\",\\\\\"password\\\\\":\\\\\"BeeForest@2024\\\\\"}\")",
+      "Bash(curl:*)",
+      "Bash(netstat -ano)",
+      "Bash(tasklist:*)",
+      "Bash(wmic process:*)",
+      "Bash(taskkill /F /PID 1192)",
+      "Bash(cmd /c \"taskkill /F /PID 1192\")",
+      "Bash(git --version)",
+      "Bash(winget install:*)",
+      "Bash(export PATH=\"$PATH:/c/Program Files/GitHub CLI\")",
+      "Bash(gh --version)",
+      "Bash(gh auth:*)"
+    ]
+  }
+}

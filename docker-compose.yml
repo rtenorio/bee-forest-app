@@ -1,0 +1,40 @@
+version: '3.9'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: beeforest_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: beeforest
+      POSTGRES_PASSWORD: beeforest
+      POSTGRES_DB: beeforest
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U beeforest']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./packages/backend
+      dockerfile: Dockerfile
+    container_name: beeforest_api
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://beeforest:beeforest@postgres:5432/beeforest
+      PORT: 3001
+      NODE_ENV: production
+      CORS_ORIGIN: http://localhost:5173
+    ports:
+      - '3001:3001'
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
