@@ -9,6 +9,7 @@ import { InspectionWizard } from './pages/Inspections/InspectionWizard';
 import { ProductionsPage } from './pages/Productions/ProductionsPage';
 import { FeedingsPage } from './pages/Feedings/FeedingsPage';
 import { SettingsPage } from './pages/Settings/SettingsPage';
+import { ReportsPage } from './pages/Reports/ReportsPage';
 import LoginPage from './pages/Login/LoginPage';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import { SocioDashboard } from './pages/Dashboard/SocioDashboard';
@@ -40,6 +41,7 @@ export function App() {
           <Route path="hives/:id" element={<HiveDetail />} />
           <Route path="inspections" element={<InspectionsPage />} />
           <Route path="productions" element={<ProductionsPage />} />
+          <Route path="reports" element={<ReportsPage />} />
           <Route path="feedings" element={<FeedingsPage />} />
           <Route path="settings" element={<SettingsPage />} />
         </Route>
