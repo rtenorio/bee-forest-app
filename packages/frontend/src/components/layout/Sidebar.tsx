@@ -14,6 +14,7 @@ const navItems: NavItem[] = [
   { to: '/scan', label: 'Escanear QR', icon: '📷', end: false },
   { to: '/productions', label: 'Produções', icon: '🍯', end: false, roles: ['socio', 'responsavel'] },
   { to: '/feedings', label: 'Alimentações', icon: '🌺', end: false, roles: ['socio', 'responsavel'] },
+  { to: '/harvests', label: 'Colheitas', icon: '🫙', end: false, roles: ['socio', 'responsavel'] },
   { to: '/reports', label: 'Relatórios', icon: '📊', end: false, roles: ['socio', 'responsavel'] },
   { to: '/settings', label: 'Configurações', icon: '⚙️', end: false },
 ];

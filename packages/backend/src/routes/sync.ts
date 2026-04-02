@@ -13,6 +13,7 @@ const TABLE_MAP: Record<string, string> = {
   inspection: 'inspections',
   production: 'productions',
   feeding: 'feedings',
+  harvest: 'harvests',
 };
 
 // Retorna os hive_local_ids acessíveis para o usuário atual
@@ -109,8 +110,8 @@ router.post('/', validate(SyncPayloadSchema), async (req, res, next) => {
     const since = last_sync_at ?? '1970-01-01T00:00:00.000Z';
 
     for (const [entity_type, table] of Object.entries(TABLE_MAP)) {
-      // Tratador não recebe produções/alimentações
-      if (user.role === 'tratador' && ['production', 'feeding'].includes(entity_type)) continue;
+      // Tratador não recebe produções/alimentações/colheitas
+      if (user.role === 'tratador' && ['production', 'feeding', 'harvest'].includes(entity_type)) continue;
 
       let rows;
       if (accessibleHiveIds === null) {
@@ -133,6 +134,20 @@ router.post('/', validate(SyncPayloadSchema), async (req, res, next) => {
           `SELECT * FROM ${table} WHERE updated_at > $1 AND ${col} = ANY($2::varchar[]) AND deleted_at IS NULL`,
           [since, accessibleHiveIds]
         );
+      } else if (entity_type === 'harvest') {
+        if (user.role === 'responsavel') {
+          const ids = user.apiary_local_ids;
+          if (ids.length === 0) continue;
+          rows = await client.query(
+            `SELECT * FROM ${table} WHERE updated_at > $1 AND apiary_local_id = ANY($2::varchar[]) AND deleted_at IS NULL`,
+            [since, ids]
+          );
+        } else {
+          rows = await client.query(
+            `SELECT * FROM ${table} WHERE updated_at > $1 AND deleted_at IS NULL`,
+            [since]
+          );
+        }
       } else {
         rows = await client.query(
           `SELECT * FROM ${table} WHERE updated_at > $1 AND deleted_at IS NULL`,

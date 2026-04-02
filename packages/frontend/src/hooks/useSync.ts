@@ -9,6 +9,7 @@ import { speciesRepo } from '@/db/repositories/species.repository';
 import { inspectionRepo } from '@/db/repositories/inspection.repository';
 import { productionRepo } from '@/db/repositories/production.repository';
 import { feedingRepo } from '@/db/repositories/feeding.repository';
+import { harvestRepo } from '@/db/repositories/harvest.repository';
 import type { SyncResult, EntityType } from '@bee-forest/shared';
 
 const CLIENT_ID_KEY = 'bee-forest-client-id';
@@ -29,6 +30,7 @@ const repoMap = {
   inspection: inspectionRepo,
   production: productionRepo,
   feeding: feedingRepo,
+  harvest: harvestRepo,
 };
 
 export function useSync() {

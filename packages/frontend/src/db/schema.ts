@@ -1,5 +1,5 @@
 import { openDB, DBSchema, IDBPDatabase } from 'idb';
-import type { Apiary, Species, Hive, Inspection, Production, Feeding } from '@bee-forest/shared';
+import type { Apiary, Species, Hive, Inspection, Production, Feeding, Harvest } from '@bee-forest/shared';
 import type { SyncQueueItem } from '@bee-forest/shared';
 
 export interface PendingQRScan {
@@ -49,10 +49,15 @@ export interface BeeForestDB extends DBSchema {
     value: PendingQRScan;
     indexes: { 'by-hive': string; 'by-created': string };
   };
+  harvests: {
+    key: string;
+    value: Harvest;
+    indexes: { 'by-apiary': string; 'by-date': string };
+  };
 }
 
 const DB_NAME = 'bee-forest';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 let dbInstance: IDBPDatabase<BeeForestDB> | null = null;
 
@@ -98,6 +103,13 @@ export async function getDb(): Promise<IDBPDatabase<BeeForestDB>> {
         const qrStore = db.createObjectStore('qr_scans', { keyPath: 'id' });
         qrStore.createIndex('by-hive', 'hive_local_id');
         qrStore.createIndex('by-created', 'scanned_at');
+      }
+
+      // ── Version 3: Colheitas ─────────────────────────────────────────────────
+      if (oldVersion < 3) {
+        const harvestsStore = db.createObjectStore('harvests', { keyPath: 'local_id' });
+        harvestsStore.createIndex('by-apiary', 'apiary_local_id');
+        harvestsStore.createIndex('by-date', 'harvested_at');
       }
     },
   });

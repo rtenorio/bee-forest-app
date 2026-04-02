@@ -4,7 +4,8 @@ export type EntityType =
   | 'species'
   | 'inspection'
   | 'production'
-  | 'feeding';
+  | 'feeding'
+  | 'harvest';
 
 export interface SyncMeta {
   local_id: string;

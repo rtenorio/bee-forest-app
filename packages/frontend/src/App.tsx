@@ -8,6 +8,8 @@ import { InspectionsPage } from './pages/Inspections/InspectionsPage';
 import { InspectionWizard } from './pages/Inspections/InspectionWizard';
 import { ProductionsPage } from './pages/Productions/ProductionsPage';
 import { FeedingsPage } from './pages/Feedings/FeedingsPage';
+import { HarvestsPage } from './pages/Harvests/HarvestsPage';
+import { HarvestWizard } from './pages/Harvests/HarvestWizard';
 import { SettingsPage } from './pages/Settings/SettingsPage';
 import { ReportsPage } from './pages/Reports/ReportsPage';
 import LoginPage from './pages/Login/LoginPage';
@@ -33,6 +35,7 @@ export function App() {
       <Route element={<ProtectedRoute />}>
         {/* Full-screen pages (no AppShell chrome) */}
         <Route path="inspections/new" element={<InspectionWizard />} />
+        <Route path="harvests/new" element={<HarvestWizard />} />
         <Route path="scan" element={<QRScanPage />} />
 
         <Route element={<AppShell />}>
@@ -45,6 +48,7 @@ export function App() {
           <Route path="productions" element={<ProductionsPage />} />
           <Route path="reports" element={<ReportsPage />} />
           <Route path="feedings" element={<FeedingsPage />} />
+          <Route path="harvests" element={<HarvestsPage />} />
           <Route path="settings" element={<SettingsPage />} />
         </Route>
       </Route>

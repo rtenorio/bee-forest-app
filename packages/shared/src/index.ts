@@ -7,6 +7,7 @@ export * from './types/hive';
 export * from './types/inspection';
 export * from './types/production';
 export * from './types/feeding';
+export * from './types/harvest';
 
 // Schemas
 export * from './schemas/auth.schema';
@@ -17,3 +18,4 @@ export * from './schemas/inspection.schema';
 export * from './schemas/production.schema';
 export * from './schemas/feeding.schema';
 export * from './schemas/sync.schema';
+export * from './schemas/harvest.schema';
