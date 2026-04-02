@@ -8,6 +8,7 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "db:migrate": "tsx src/db/migrate.ts",
+    "db:seed-hives": "tsx src/db/seed_hives.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
