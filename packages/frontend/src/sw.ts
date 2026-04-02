@@ -5,7 +5,6 @@ import { registerRoute, NavigationRoute } from 'workbox-routing';
 import { StaleWhileRevalidate, CacheFirst, NetworkOnly } from 'workbox-strategies';
 import { ExpirationPlugin } from 'workbox-expiration';
 import { CacheableResponsePlugin } from 'workbox-cacheable-response';
-import { BackgroundSyncPlugin } from 'workbox-background-sync';
 
 declare const self: ServiceWorkerGlobalScope;
 
@@ -44,25 +43,20 @@ registerRoute(
   'GET'
 );
 
-// Background sync for failed mutations
-const bgSyncPlugin = new BackgroundSyncPlugin('bee-forest-sync-queue', {
-  maxRetentionTime: 7 * 24 * 60, // 7 days
-});
-
-// POST/PUT/PATCH/DELETE to API: NetworkOnly + BackgroundSync
+// POST/PUT/PATCH/DELETE to API: NetworkOnly (app manages its own sync queue via IDB)
 registerRoute(
   ({ url }) => url.pathname.startsWith('/api/') && self.location.origin === url.origin,
-  new NetworkOnly({ plugins: [bgSyncPlugin] }),
+  new NetworkOnly(),
   'POST'
 );
 registerRoute(
   ({ url }) => url.pathname.startsWith('/api/') && self.location.origin === url.origin,
-  new NetworkOnly({ plugins: [bgSyncPlugin] }),
+  new NetworkOnly(),
   'PUT'
 );
 registerRoute(
   ({ url }) => url.pathname.startsWith('/api/') && self.location.origin === url.origin,
-  new NetworkOnly({ plugins: [bgSyncPlugin] }),
+  new NetworkOnly(),
   'DELETE'
 );
 

@@ -103,33 +103,45 @@ router.post('/', validate(SyncPayloadSchema), async (req, res, next) => {
     }
 
     // Pull: retorna apenas dados acessíveis ao usuário
+    // Quando last_sync_at é null (primeiro acesso), faz pull total desde a época
     const server_changes: Array<{ entity_type: string; records: unknown[] }> = [];
     const accessibleHiveIds = await resolveAccessibleHiveIds(req);
+    const since = last_sync_at ?? '1970-01-01T00:00:00.000Z';
 
-    if (last_sync_at) {
-      for (const [entity_type, table] of Object.entries(TABLE_MAP)) {
-        // Tratador não recebe produções/alimentações
-        if (user.role === 'tratador' && ['production', 'feeding'].includes(entity_type)) continue;
+    for (const [entity_type, table] of Object.entries(TABLE_MAP)) {
+      // Tratador não recebe produções/alimentações
+      if (user.role === 'tratador' && ['production', 'feeding'].includes(entity_type)) continue;
 
-        let rows;
-        if (accessibleHiveIds === null) {
-          rows = await client.query(`SELECT * FROM ${table} WHERE updated_at > $1`, [last_sync_at]);
-        } else if (entity_type === 'apiary') {
-          if (user.role === 'tratador') continue;
-          const ids = user.apiary_local_ids;
-          if (ids.length === 0) continue;
-          rows = await client.query(`SELECT * FROM ${table} WHERE updated_at > $1 AND local_id = ANY($2::varchar[])`, [last_sync_at, ids]);
-        } else if (['hive', 'inspection', 'production', 'feeding'].includes(entity_type)) {
-          if (accessibleHiveIds.length === 0) continue;
-          const col = entity_type === 'hive' ? 'local_id' : 'hive_local_id';
-          rows = await client.query(`SELECT * FROM ${table} WHERE updated_at > $1 AND ${col} = ANY($2::varchar[])`, [last_sync_at, accessibleHiveIds]);
-        } else {
-          rows = await client.query(`SELECT * FROM ${table} WHERE updated_at > $1`, [last_sync_at]);
-        }
+      let rows;
+      if (accessibleHiveIds === null) {
+        rows = await client.query(
+          `SELECT * FROM ${table} WHERE updated_at > $1 AND deleted_at IS NULL`,
+          [since]
+        );
+      } else if (entity_type === 'apiary') {
+        if (user.role === 'tratador') continue;
+        const ids = user.apiary_local_ids;
+        if (ids.length === 0) continue;
+        rows = await client.query(
+          `SELECT * FROM ${table} WHERE updated_at > $1 AND local_id = ANY($2::varchar[]) AND deleted_at IS NULL`,
+          [since, ids]
+        );
+      } else if (['hive', 'inspection', 'production', 'feeding'].includes(entity_type)) {
+        if (accessibleHiveIds.length === 0) continue;
+        const col = entity_type === 'hive' ? 'local_id' : 'hive_local_id';
+        rows = await client.query(
+          `SELECT * FROM ${table} WHERE updated_at > $1 AND ${col} = ANY($2::varchar[]) AND deleted_at IS NULL`,
+          [since, accessibleHiveIds]
+        );
+      } else {
+        rows = await client.query(
+          `SELECT * FROM ${table} WHERE updated_at > $1 AND deleted_at IS NULL`,
+          [since]
+        );
+      }
 
-        if (rows && rows.rows.length > 0) {
-          server_changes.push({ entity_type, records: rows.rows });
-        }
+      if (rows && rows.rows.length > 0) {
+        server_changes.push({ entity_type, records: rows.rows });
       }
     }
 
