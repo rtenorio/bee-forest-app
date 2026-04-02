@@ -10,6 +10,7 @@ export interface Hive extends SyncMeta {
   installation_date: string | null;
   box_type: string;
   notes: string;
+  qr_code?: string | null;
   created_at: string;
 }
 

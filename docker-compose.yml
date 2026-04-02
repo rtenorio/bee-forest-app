@@ -21,7 +21,7 @@ services:
 
   backend:
     build:
-      context: ./packages/backend
+      context: .
       dockerfile: Dockerfile
     container_name: beeforest_api
     restart: unless-stopped

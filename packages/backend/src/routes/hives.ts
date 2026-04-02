@@ -1,10 +1,22 @@
 import { Router } from 'express';
 import { v4 as uuidv4 } from 'uuid';
-import { query, queryOne } from '../db/connection';
+import { query, queryOne, pool } from '../db/connection';
 import { validate } from '../middleware/validate';
 import { requireRole } from '../middleware/requireRole';
 import { HiveCreateSchema, HiveUpdateSchema } from '@bee-forest/shared';
 import type { Request } from 'express';
+
+function buildQrCode(locationOrName: string, seq: number): string {
+  const raw = (locationOrName || 'BEE').trim();
+  const locAbbr = raw
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z]/g, '')
+    .slice(0, 3)
+    .toUpperCase()
+    .padEnd(3, 'X');
+  return `CME-${String(seq).padStart(3, '0')}-${locAbbr}`;
+}
 
 const router = Router();
 
@@ -72,14 +84,44 @@ router.post('/', requireRole('socio', 'responsavel'), validate(HiveCreateSchema)
   try {
     const local_id = uuidv4();
     const { apiary_local_id, species_local_id, code, status, installation_date, box_type, notes } = req.body;
-    const apiary = await queryOne<{ server_id: number }>('SELECT server_id FROM apiaries WHERE local_id = $1', [apiary_local_id]);
-    const species = species_local_id ? await queryOne<{ server_id: number }>('SELECT server_id FROM species WHERE local_id = $1', [species_local_id]) : null;
-    const row = await queryOne(
-      `INSERT INTO hives (local_id,apiary_id,apiary_local_id,species_id,species_local_id,code,status,installation_date,box_type,notes)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`,
-      [local_id, apiary?.server_id ?? null, apiary_local_id, species?.server_id ?? null, species_local_id, code, status, installation_date, box_type, notes]
-    );
-    res.status(201).json(row);
+
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      const apiaryRow = await client.query<{ server_id: number; location: string; name: string }>(
+        'SELECT server_id, location, name FROM apiaries WHERE local_id = $1',
+        [apiary_local_id]
+      );
+      const apiary = apiaryRow.rows[0] ?? null;
+
+      const countRow = await client.query<{ n: number }>(
+        'SELECT COUNT(*)::int AS n FROM hives WHERE apiary_local_id = $1 AND deleted_at IS NULL',
+        [apiary_local_id]
+      );
+      const seq = (countRow.rows[0]?.n ?? 0) + 1;
+      const label = apiary?.location || apiary?.name || 'BEE';
+      const qr_code = buildQrCode(label, seq);
+
+      const speciesRow = species_local_id
+        ? await client.query<{ server_id: number }>('SELECT server_id FROM species WHERE local_id = $1', [species_local_id])
+        : null;
+      const speciesServerId = speciesRow?.rows[0]?.server_id ?? null;
+
+      const result = await client.query(
+        `INSERT INTO hives (local_id,apiary_id,apiary_local_id,species_id,species_local_id,code,status,installation_date,box_type,notes,qr_code)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,
+        [local_id, apiary?.server_id ?? null, apiary_local_id, speciesServerId, species_local_id, code, status, installation_date, box_type, notes, qr_code]
+      );
+
+      await client.query('COMMIT');
+      res.status(201).json(result.rows[0]);
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
   } catch (err) { next(err); }
 });
 

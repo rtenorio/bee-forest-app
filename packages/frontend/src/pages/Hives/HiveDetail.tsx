@@ -18,6 +18,7 @@ import { HiveForm } from './HiveForm';
 import { ProductionForm } from '../Productions/ProductionForm';
 import { FeedingForm } from '../Feedings/FeedingForm';
 import { formatDate, formatDateTime, daysSince } from '@/utils/dates';
+import { QRCodeDisplay } from '@/components/hive/QRCodeDisplay';
 
 export function HiveDetail() {
   const { id } = useParams<{ id: string }>();
@@ -122,6 +123,9 @@ export function HiveDetail() {
           </Card>
         ))}
       </div>
+
+      {/* QR Code */}
+      <QRCodeDisplay hiveLocalId={hive.local_id} qrCodeText={hive.qr_code} />
 
       {/* Tabs */}
       <div className="border-b border-stone-800">

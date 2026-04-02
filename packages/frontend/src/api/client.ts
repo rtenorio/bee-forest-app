@@ -15,7 +15,8 @@ export async function apiFetch<T = unknown>(path: string, options: FetchOptions 
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const res = await fetch(`/api${path}`, { ...fetchOptions, headers });
+  const base = import.meta.env.VITE_API_URL ?? '';
+  const res = await fetch(`${base}/api${path}`, { ...fetchOptions, headers });
 
   if (res.status === 401) {
     useAuthStore.getState().clearAuth();

@@ -2,6 +2,12 @@ import { openDB, DBSchema, IDBPDatabase } from 'idb';
 import type { Apiary, Species, Hive, Inspection, Production, Feeding } from '@bee-forest/shared';
 import type { SyncQueueItem } from '@bee-forest/shared';
 
+export interface PendingQRScan {
+  id: string;
+  hive_local_id: string;
+  scanned_at: string;
+}
+
 export interface BeeForestDB extends DBSchema {
   apiaries: {
     key: string;
@@ -38,10 +44,15 @@ export interface BeeForestDB extends DBSchema {
     value: SyncQueueItem;
     indexes: { 'by-entity': string; 'by-created': string };
   };
+  qr_scans: {
+    key: string;
+    value: PendingQRScan;
+    indexes: { 'by-hive': string; 'by-created': string };
+  };
 }
 
 const DB_NAME = 'bee-forest';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 let dbInstance: IDBPDatabase<BeeForestDB> | null = null;
 
@@ -49,42 +60,45 @@ export async function getDb(): Promise<IDBPDatabase<BeeForestDB>> {
   if (dbInstance) return dbInstance;
 
   dbInstance = await openDB<BeeForestDB>(DB_NAME, DB_VERSION, {
-    upgrade(db) {
-      // Apiaries
-      const apiariesStore = db.createObjectStore('apiaries', { keyPath: 'local_id' });
-      apiariesStore.createIndex('by-updated', 'updated_at');
-      apiariesStore.createIndex('by-dirty', 'is_dirty');
+    upgrade(db, oldVersion) {
+      // ── Version 1 stores ────────────────────────────────────────────────────
+      if (oldVersion < 1) {
+        const apiariesStore = db.createObjectStore('apiaries', { keyPath: 'local_id' });
+        apiariesStore.createIndex('by-updated', 'updated_at');
+        apiariesStore.createIndex('by-dirty', 'is_dirty');
 
-      // Species
-      const speciesStore = db.createObjectStore('species', { keyPath: 'local_id' });
-      speciesStore.createIndex('by-name', 'name');
+        const speciesStore = db.createObjectStore('species', { keyPath: 'local_id' });
+        speciesStore.createIndex('by-name', 'name');
 
-      // Hives
-      const hivesStore = db.createObjectStore('hives', { keyPath: 'local_id' });
-      hivesStore.createIndex('by-apiary', 'apiary_local_id');
-      hivesStore.createIndex('by-status', 'status');
-      hivesStore.createIndex('by-updated', 'updated_at');
+        const hivesStore = db.createObjectStore('hives', { keyPath: 'local_id' });
+        hivesStore.createIndex('by-apiary', 'apiary_local_id');
+        hivesStore.createIndex('by-status', 'status');
+        hivesStore.createIndex('by-updated', 'updated_at');
 
-      // Inspections
-      const inspectionsStore = db.createObjectStore('inspections', { keyPath: 'local_id' });
-      inspectionsStore.createIndex('by-hive', 'hive_local_id');
-      inspectionsStore.createIndex('by-date', 'inspected_at');
+        const inspectionsStore = db.createObjectStore('inspections', { keyPath: 'local_id' });
+        inspectionsStore.createIndex('by-hive', 'hive_local_id');
+        inspectionsStore.createIndex('by-date', 'inspected_at');
 
-      // Productions
-      const productionsStore = db.createObjectStore('productions', { keyPath: 'local_id' });
-      productionsStore.createIndex('by-hive', 'hive_local_id');
-      productionsStore.createIndex('by-date', 'harvested_at');
-      productionsStore.createIndex('by-type', 'product_type');
+        const productionsStore = db.createObjectStore('productions', { keyPath: 'local_id' });
+        productionsStore.createIndex('by-hive', 'hive_local_id');
+        productionsStore.createIndex('by-date', 'harvested_at');
+        productionsStore.createIndex('by-type', 'product_type');
 
-      // Feedings
-      const feedingsStore = db.createObjectStore('feedings', { keyPath: 'local_id' });
-      feedingsStore.createIndex('by-hive', 'hive_local_id');
-      feedingsStore.createIndex('by-date', 'fed_at');
+        const feedingsStore = db.createObjectStore('feedings', { keyPath: 'local_id' });
+        feedingsStore.createIndex('by-hive', 'hive_local_id');
+        feedingsStore.createIndex('by-date', 'fed_at');
 
-      // Sync Queue
-      const syncStore = db.createObjectStore('sync_queue', { keyPath: 'id' });
-      syncStore.createIndex('by-entity', 'entity_local_id');
-      syncStore.createIndex('by-created', 'created_at');
+        const syncStore = db.createObjectStore('sync_queue', { keyPath: 'id' });
+        syncStore.createIndex('by-entity', 'entity_local_id');
+        syncStore.createIndex('by-created', 'created_at');
+      }
+
+      // ── Version 2: QR scan offline queue ────────────────────────────────────
+      if (oldVersion < 2) {
+        const qrStore = db.createObjectStore('qr_scans', { keyPath: 'id' });
+        qrStore.createIndex('by-hive', 'hive_local_id');
+        qrStore.createIndex('by-created', 'scanned_at');
+      }
     },
   });
 

@@ -12,6 +12,7 @@ import { SettingsPage } from './pages/Settings/SettingsPage';
 import { ReportsPage } from './pages/Reports/ReportsPage';
 import LoginPage from './pages/Login/LoginPage';
 import ProtectedRoute from './components/auth/ProtectedRoute';
+import { QRScanPage } from './pages/QRScan/QRScanPage';
 import { SocioDashboard } from './pages/Dashboard/SocioDashboard';
 import { ResponsavelDashboard } from './pages/Dashboard/ResponsavelDashboard';
 import { TratadorDashboard } from './pages/Dashboard/TratadorDashboard';
@@ -30,8 +31,9 @@ export function App() {
       <Route path="/login" element={<LoginPage />} />
 
       <Route element={<ProtectedRoute />}>
-        {/* Wizard is full-screen (no AppShell chrome) */}
+        {/* Full-screen pages (no AppShell chrome) */}
         <Route path="inspections/new" element={<InspectionWizard />} />
+        <Route path="scan" element={<QRScanPage />} />
 
         <Route element={<AppShell />}>
           <Route index element={<RoleDashboard />} />

@@ -3,7 +3,7 @@ import path from 'path';
 import bcrypt from 'bcryptjs';
 import { pool } from './connection';
 
-const MIGRATIONS = ['0000_init.sql', '0001_auth.sql', '0002_inspection_v2.sql'];
+const MIGRATIONS = ['0000_init.sql', '0001_auth.sql', '0002_inspection_v2.sql', '0003_qr_codes.sql'];
 
 async function migrate() {
   const client = await pool.connect();

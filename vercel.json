@@ -1,0 +1,8 @@
+{
+  "installCommand": "npm ci",
+  "buildCommand": "npm run build -w packages/shared && npm run build -w packages/frontend",
+  "outputDirectory": "packages/frontend/dist",
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}

@@ -9,6 +9,7 @@ const items: Item[] = [
   { to: '/', icon: '📊', label: 'Dashboard', end: true },
   { to: '/hives', icon: '🏠', label: 'Colmeias', end: false },
   { to: '/inspections/new', icon: '🔍', label: 'Inspecionar', end: false },
+  { to: '/scan', icon: '📷', label: 'Escanear', end: false },
   { to: '/productions', icon: '🍯', label: 'Produção', end: false, roles: ['socio', 'responsavel'] },
   { to: '/settings', icon: '⚙️', label: 'Config', end: false },
 ];

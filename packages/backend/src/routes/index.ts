@@ -8,6 +8,7 @@ import feedingsRouter from './feedings';
 import syncRouter from './sync';
 import authRouter from './auth';
 import usersRouter from './users';
+import qrRouter from './qr';
 import { authenticate } from '../middleware/authenticate';
 
 const router = Router();
@@ -24,5 +25,6 @@ router.use('/productions', authenticate, productionsRouter);
 router.use('/feedings', authenticate, feedingsRouter);
 router.use('/sync', authenticate, syncRouter);
 router.use('/users', authenticate, usersRouter);
+router.use('/qr', authenticate, qrRouter);
 
 export default router;
