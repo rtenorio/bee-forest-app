@@ -61,9 +61,15 @@ router.post('/', validate(SyncPayloadSchema), async (req, res, next) => {
       const payload = item.payload as Record<string, unknown>;
       const existing = await client.query(`SELECT server_id, updated_at FROM ${table} WHERE local_id = $1`, [item.entity_local_id]);
 
+      // Fields that exist only on the client and must never be written to the DB
+      const CLIENT_ONLY = new Set(['local_id', 'server_id', 'is_dirty', 'synced_at', 'species_name']);
+      const dbPayload = Object.fromEntries(
+        Object.entries(payload).filter(([k]) => !CLIENT_ONLY.has(k))
+      );
+
       if (existing.rows.length === 0) {
-        const cols = ['local_id', ...Object.keys(payload)];
-        const vals = [item.entity_local_id, ...Object.values(payload)];
+        const cols = ['local_id', ...Object.keys(dbPayload)];
+        const vals = [item.entity_local_id, ...Object.values(dbPayload)];
         const placeholders = vals.map((_, i) => `$${i + 1}`).join(', ');
         const result = await client.query(
           `INSERT INTO ${table} (${cols.join(', ')}) VALUES (${placeholders})
@@ -79,8 +85,8 @@ router.post('/', validate(SyncPayloadSchema), async (req, res, next) => {
         const clientUpdatedAt = payload.updated_at ? new Date(payload.updated_at as string).getTime() : 0;
 
         if (clientUpdatedAt >= serverUpdatedAt) {
-          const setClauses = Object.keys(payload).filter(k => k !== 'local_id').map((k, i) => `${k} = $${i + 2}`).join(', ');
-          const vals = [item.entity_local_id, ...Object.values(payload).filter((_, i) => Object.keys(payload)[i] !== 'local_id')];
+          const setClauses = Object.keys(dbPayload).map((k, i) => `${k} = $${i + 2}`).join(', ');
+          const vals = [item.entity_local_id, ...Object.values(dbPayload)];
           if (setClauses) {
             const result = await client.query(
               `UPDATE ${table} SET ${setClauses} WHERE local_id = $1 RETURNING server_id, updated_at`, vals
