@@ -14,51 +14,69 @@ export const InspectionTaskSchema = z.object({
 // ─── Checklist schema ─────────────────────────────────────────────────────────
 
 export const InspectionChecklistSchema = z.object({
-  // Colônia
-  colony_strength: z.enum(['strong', 'medium', 'weak']).default('medium'),
-  brood_present: z.boolean().default(true),
-  agitation_level: z.enum(['calm', 'agitated', 'defensive']).nullable().default(null),
-  ready_for_split: z.boolean().default(false),
-  honey_ready_for_harvest: z.boolean().default(false),
-  intruder_species: z.boolean().default(false),
+  // Contexto
+  inspection_type: z.enum(['external_only', 'external_internal']).nullable().default(null),
+  time_of_day: z.enum(['morning', 'afternoon', 'night']).nullable().default(null),
 
-  // Alimentação
-  honey_stores: z.enum(['low', 'adequate', 'abundant']).default('adequate'),
-  pollen_stores: z.enum(['low', 'adequate', 'abundant']).default('adequate'),
-  propolis_quality: z.enum(['poor', 'normal', 'good']).nullable().default(null),
-  needs_syrup: z.boolean().default(false),
-  syrup_urgency: z.enum(['normal', 'urgent']).default('normal'),
-  needs_pollen_ball: z.boolean().default(false),
-  needs_wax: z.boolean().default(false),
+  // Clima extras
+  precipitation_observed: z.boolean().default(false),
+  weather_feel: z.array(z.string()).default([]),
+  perceived_bloom: z.enum(['low', 'medium', 'high']).nullable().default(null),
+  weather_notes: z.string().default(''),
 
-  // Pragas e Sanidade
-  ants: z.enum(['none', 'few', 'infested']).default('none'),
-  phorid_flies: z.enum(['none', 'few', 'infested']).default('none'),
-  wax_moths: z.boolean().default(false),
-  beetles: z.boolean().default(false),
-  caterpillar: z.boolean().default(false),
-  other_pests_text: z.string().default(''),
-  strange_odor: z.boolean().default(false),
-  diseases_observed: z.array(z.string()).default([]),
+  // Atividade
+  activity_level: z.enum(['very_low', 'low', 'normal', 'high']).nullable().default(null),
+  activity_observations: z.array(z.string()).default([]),
+  entry_notes: z.string().default(''),
 
-  // Estrutura da caixa
-  propolis_seal_intact: z.boolean().nullable().default(null),
-  entrance_blocked: z.boolean().default(false),
-  moisture_infiltration: z.boolean().default(false),
-  needs_box_replacement: z.boolean().default(false),
-  box_condition: z.enum(['poor', 'fair', 'good']).nullable().default(null),
+  // Força
+  colony_strength: z.enum(['very_weak', 'weak', 'medium', 'strong', 'very_strong']).nullable().default(null),
+  strength_observations: z.array(z.string()).default([]),
 
-  // Tarefas vinculadas
+  // Reservas
+  honey_stores: z.enum(['low', 'adequate', 'high']).nullable().default(null),
+  pollen_stores: z.enum(['low', 'adequate', 'high']).nullable().default(null),
+  food_observations: z.array(z.string()).default([]),
+  food_notes: z.string().default(''),
+
+  // Cria
+  brood_status: z.enum(['not_evaluated', 'reduced', 'normal', 'intense']).nullable().default(null),
+  brood_observations: z.array(z.string()).default([]),
+  brood_notes: z.string().default(''),
+
+  // Caixa
+  box_observations: z.array(z.string()).default([]),
+  box_notes: z.string().default(''),
+
+  // Sanidade
+  invaders: z.array(z.string()).default([]),
+  other_invader_text: z.string().default(''),
+  weakness_signs: z.array(z.string()).default([]),
+  internal_changes: z.array(z.string()).default([]),
+  odor_description: z.string().default(''),
+  sanitary_severity: z.enum(['mild', 'moderate', 'severe', 'critical']).nullable().default(null),
+
+  // Potencial produtivo
+  productive_potential: z.enum(['very_low', 'low', 'medium', 'high', 'very_high']).nullable().default(null),
+  productive_observations: z.array(z.string()).default([]),
+  productive_notes: z.string().default(''),
+
+  // Manejo
+  management_actions: z.array(z.string()).default([]),
+  management_description: z.string().default(''),
+  materials_used: z.string().default(''),
+
+  // Tarefas
   tasks: z.array(InspectionTaskSchema).default([]),
 
-  // Legado (aceita mas ignora em novos registros)
-  population_strength: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal(5)]).optional(),
-  queen_seen: z.boolean().nullable().optional(),
-  temperament: z.enum(['calm', 'nervous', 'aggressive']).nullable().optional(),
-  pests_observed: z.array(z.string()).optional(),
-  interventions: z.array(z.string()).optional(),
-  needs_feeding: z.boolean().optional(),
-  needs_space_expansion: z.boolean().optional(),
+  // Conclusão
+  overall_status: z.enum(['healthy', 'attention', 'high_risk', 'critical']).nullable().default(null),
+  recommendation: z.enum(['maintain_routine', 'reassess_soon', 'corrective_management', 'refer_to_technician']).nullable().default(null),
+  next_inspection_days: z.number().nullable().default(null),
+  final_summary: z.string().default(''),
+  generate_alert: z.boolean().default(false),
+  notify_technician: z.boolean().default(false),
+  mark_priority: z.boolean().default(false),
 });
 
 // ─── Inspection schemas ───────────────────────────────────────────────────────

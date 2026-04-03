@@ -5,7 +5,7 @@ import { ApiaryDetail } from './pages/Apiaries/ApiaryDetail';
 import { HivesPage } from './pages/Hives/HivesPage';
 import { HiveDetail } from './pages/Hives/HiveDetail';
 import { InspectionsPage } from './pages/Inspections/InspectionsPage';
-import { InspectionWizard } from './pages/Inspections/InspectionWizard';
+import { ColonyInspectionPage } from './pages/Inspections/ColonyInspectionPage';
 import { ProductionsPage } from './pages/Productions/ProductionsPage';
 import { FeedingsPage } from './pages/Feedings/FeedingsPage';
 import { HarvestsPage } from './pages/Harvests/HarvestsPage';
@@ -34,7 +34,7 @@ export function App() {
 
       <Route element={<ProtectedRoute />}>
         {/* Full-screen pages (no AppShell chrome) */}
-        <Route path="inspections/new" element={<InspectionWizard />} />
+        <Route path="inspections/new" element={<ColonyInspectionPage />} />
         <Route path="harvests/new" element={<HarvestWizard />} />
         <Route path="scan" element={<QRScanPage />} />
 

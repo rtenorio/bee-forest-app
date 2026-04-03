@@ -5,77 +5,83 @@ import { SyncMeta } from './sync';
 export type TaskPriority = 'normal' | 'urgent';
 
 export interface InspectionTask {
-  id: string;                    // client-generated UUID
-  label: string;                 // predefined key or 'custom'
-  custom_text: string;           // used when label === 'custom'
+  id: string;
+  label: string;
+  custom_text: string;
   due_date: string | null;       // YYYY-MM-DD
   assignee_name: string;
   priority: TaskPriority;
 }
 
-// ─── Inspection Checklist ─────────────────────────────────────────────────────
+// ─── Checklist ────────────────────────────────────────────────────────────────
 
 export interface InspectionChecklist {
-  // ── Colônia (Melipona — sem ferrão) ─────────────────────────────────────────
-  /** Força da colônia: forte / média / fraca */
-  colony_strength: 'strong' | 'medium' | 'weak';
-  /** Cria saudável presente */
-  brood_present: boolean;
-  /** Nível de agitação das abelhas */
-  agitation_level: 'calm' | 'agitated' | 'defensive' | null;
-  /** Pronta para divisão */
-  ready_for_split: boolean;
-  /** Mel disponível para colheita */
-  honey_ready_for_harvest: boolean;
-  /** Presença de intrusos (outras espécies) */
-  intruder_species: boolean;
+  // ── Contexto da inspeção ──────────────────────────────────────────────────
+  inspection_type: 'external_only' | 'external_internal' | null;
+  time_of_day: 'morning' | 'afternoon' | 'night' | null;
 
-  // ── Alimentação ─────────────────────────────────────────────────────────────
-  honey_stores: 'low' | 'adequate' | 'abundant';
-  pollen_stores: 'low' | 'adequate' | 'abundant';
-  propolis_quality: 'poor' | 'normal' | 'good' | null;
-  /** Precisa de xarope */
-  needs_syrup: boolean;
-  syrup_urgency: 'normal' | 'urgent';
-  /** Precisa de bombom de pólen */
-  needs_pollen_ball: boolean;
-  /** Precisa de cera */
-  needs_wax: boolean;
+  // ── Condições climáticas extras ───────────────────────────────────────────
+  precipitation_observed: boolean;
+  weather_feel: string[];          // 'dry' | 'humid' | 'rainy' | 'very_hot'
+  perceived_bloom: 'low' | 'medium' | 'high' | null;
+  weather_notes: string;
 
-  // ── Pragas e Sanidade ────────────────────────────────────────────────────────
-  ants: 'none' | 'few' | 'infested';
-  phorid_flies: 'none' | 'few' | 'infested';
-  wax_moths: boolean;
-  beetles: boolean;
-  caterpillar: boolean;
-  other_pests_text: string;
-  strange_odor: boolean;
-  diseases_observed: string[];
+  // ── Atividade na entrada ──────────────────────────────────────────────────
+  activity_level: 'very_low' | 'low' | 'normal' | 'high' | null;
+  activity_observations: string[];
+  entry_notes: string;
 
-  // ── Estrutura da Caixa ───────────────────────────────────────────────────────
-  /** Batume íntegro */
-  propolis_seal_intact: boolean | null;
-  entrance_blocked: boolean;
-  moisture_infiltration: boolean;
-  needs_box_replacement: boolean;
-  /** Estado geral da caixa */
-  box_condition: 'poor' | 'fair' | 'good' | null;
+  // ── Força da colônia ──────────────────────────────────────────────────────
+  colony_strength: 'very_weak' | 'weak' | 'medium' | 'strong' | 'very_strong' | null;
+  strength_observations: string[];
 
-  // ── Tarefas vinculadas ───────────────────────────────────────────────────────
+  // ── Reservas alimentares ──────────────────────────────────────────────────
+  honey_stores: 'low' | 'adequate' | 'high' | null;
+  pollen_stores: 'low' | 'adequate' | 'high' | null;
+  food_observations: string[];
+  food_notes: string;
+
+  // ── Cria (somente inspeção interna) ───────────────────────────────────────
+  brood_status: 'not_evaluated' | 'reduced' | 'normal' | 'intense' | null;
+  brood_observations: string[];
+  brood_notes: string;
+
+  // ── Condição da caixa ─────────────────────────────────────────────────────
+  box_observations: string[];
+  box_notes: string;
+
+  // ── Sanidade ──────────────────────────────────────────────────────────────
+  invaders: string[];
+  other_invader_text: string;
+  weakness_signs: string[];
+  internal_changes: string[];
+  odor_description: string;
+  sanitary_severity: 'mild' | 'moderate' | 'severe' | 'critical' | null;
+
+  // ── Potencial produtivo ───────────────────────────────────────────────────
+  productive_potential: 'very_low' | 'low' | 'medium' | 'high' | 'very_high' | null;
+  productive_observations: string[];
+  productive_notes: string;
+
+  // ── Manejo realizado ──────────────────────────────────────────────────────
+  management_actions: string[];
+  management_description: string;
+  materials_used: string;
+
+  // ── Tarefas vinculadas ────────────────────────────────────────────────────
   tasks: InspectionTask[];
 
-  // ── Legado (mantidos para compatibilidade com registros anteriores) ──────────
-  /** @deprecated use colony_strength */
-  population_strength?: 1 | 2 | 3 | 4 | 5;
-  queen_seen?: boolean | null;
-  temperament?: 'calm' | 'nervous' | 'aggressive' | null;
-  pests_observed?: string[];
-  interventions?: string[];
-  needs_feeding?: boolean;
-  needs_space_expansion?: boolean;
+  // ── Conclusão ─────────────────────────────────────────────────────────────
+  overall_status: 'healthy' | 'attention' | 'high_risk' | 'critical' | null;
+  recommendation: 'maintain_routine' | 'reassess_soon' | 'corrective_management' | 'refer_to_technician' | null;
+  next_inspection_days: number | null;
+  final_summary: string;
+  generate_alert: boolean;
+  notify_technician: boolean;
+  mark_priority: boolean;
 }
 
-// ─── Condition types ──────────────────────────────────────────────────────────
+// ─── Sky condition ────────────────────────────────────────────────────────────
 
 export type SkyCondition = 'sunny' | 'partly_cloudy' | 'cloudy';
 
@@ -87,13 +93,9 @@ export interface Inspection extends SyncMeta {
   inspector_name: string;
   checklist: InspectionChecklist;
   weight_kg: number | null;
-  /** Temperatura ambiente em °C */
   temperature_c: number | null;
-  /** Umidade do ar em % */
   humidity_pct: number | null;
-  /** Precipitação em mm */
   precipitation_mm: number | null;
-  /** Condição do céu */
   sky_condition: SkyCondition | null;
   notes: string;
   photos: string[];
