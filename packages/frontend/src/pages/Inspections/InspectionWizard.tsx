@@ -1,7 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { v4 as uuidv4 } from 'uuid';
 import { useCreateInspection } from '@/hooks/useInspections';
 import { useHives } from '@/hooks/useHives';
+import { useApiaries } from '@/hooks/useApiaries';
 import { useAuthStore } from '@/store/authStore';
 import { useUIStore } from '@/store/uiStore';
 import { AudioRecorder } from '@/components/inspection/AudioRecorder';
@@ -12,85 +14,160 @@ import { Textarea } from '@/components/ui/Textarea';
 import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
 import { cn } from '@/utils/cn';
-import { nowISO } from '@/utils/dates';
+import { nowISO, todayISO } from '@/utils/dates';
 import { InspectionCreateSchema } from '@bee-forest/shared';
-import type { InspectionChecklist } from '@bee-forest/shared';
+import type { InspectionChecklist, InspectionTask, SkyCondition } from '@bee-forest/shared';
 
-// ─── Wizard state ────────────────────────────────────────────────────────────
+// ─── Open-Meteo weather fetch ─────────────────────────────────────────────────
+
+interface OpenMeteoResponse {
+  current: {
+    temperature_2m: number;
+    relative_humidity_2m: number;
+    precipitation: number;
+    cloud_cover: number;
+  };
+}
+
+function cloudCoverToSky(pct: number): SkyCondition {
+  if (pct <= 25) return 'sunny';
+  if (pct <= 65) return 'partly_cloudy';
+  return 'cloudy';
+}
+
+async function fetchWeather(lat: number, lon: number): Promise<{
+  temperature_c: number;
+  humidity_pct: number;
+  precipitation_mm: number;
+  sky_condition: SkyCondition;
+} | null> {
+  try {
+    const url =
+      `https://api.open-meteo.com/v1/forecast` +
+      `?latitude=${lat}&longitude=${lon}` +
+      `&current=temperature_2m,relative_humidity_2m,precipitation,cloud_cover` +
+      `&timezone=America%2FRecife`;
+    const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
+    if (!res.ok) return null;
+    const data: OpenMeteoResponse = await res.json();
+    const c = data.current;
+    return {
+      temperature_c: Math.round(c.temperature_2m * 10) / 10,
+      humidity_pct: c.relative_humidity_2m,
+      precipitation_mm: c.precipitation,
+      sky_condition: cloudCoverToSky(c.cloud_cover),
+    };
+  } catch {
+    return null;
+  }
+}
+
+// ─── Wizard data ──────────────────────────────────────────────────────────────
 
 interface WizardData {
+  // Step 0 – Identificação
   hive_local_id: string;
   inspected_at: string;
   inspector_name: string;
-  weather: string;
+
+  // Step 1 – Condições Climáticas
   temperature_c: string;
-  population_strength: 1 | 2 | 3 | 4 | 5;
-  queen_seen: boolean | null;
+  humidity_pct: string;
+  precipitation_mm: string;
+  sky_condition: SkyCondition | '';
+
+  // Step 2 – Colônia
+  colony_strength: 'strong' | 'medium' | 'weak';
   brood_present: boolean;
-  temperament: 'calm' | 'nervous' | 'aggressive' | null;
+  agitation_level: 'calm' | 'agitated' | 'defensive' | null;
+  ready_for_split: boolean;
+  honey_ready_for_harvest: boolean;
+  intruder_species: boolean;
+
+  // Step 3 – Alimentação
   honey_stores: 'low' | 'adequate' | 'abundant';
   pollen_stores: 'low' | 'adequate' | 'abundant';
   propolis_quality: 'poor' | 'normal' | 'good' | null;
-  pests_observed: string[];
+  needs_syrup: boolean;
+  syrup_urgency: 'normal' | 'urgent';
+  needs_pollen_ball: boolean;
+  needs_wax: boolean;
+
+  // Step 4 – Sanidade
+  ants: 'none' | 'few' | 'infested';
+  phorid_flies: 'none' | 'few' | 'infested';
+  wax_moths: boolean;
+  beetles: boolean;
+  caterpillar: boolean;
+  other_pests_text: string;
+  strange_odor: boolean;
   diseases_observed: string[];
+
+  // Step 5 – Caixa
+  propolis_seal_intact: boolean | null;
+  entrance_blocked: boolean;
+  moisture_infiltration: boolean;
+  needs_box_replacement: boolean;
   box_condition: 'poor' | 'fair' | 'good' | null;
   weight_kg: string;
-  interventions: string[];
-  needs_feeding: boolean;
-  needs_space_expansion: boolean;
+
+  // Step 6 – Tarefas e finalização
+  tasks: InspectionTask[];
   next_inspection_due: string;
   notes: string;
-  stepPhotos: string[][];   // [step0photos, step1photos, …]
-  stepAudio: string[][];    // [step0audio, step1audio, …]
+
+  // Mídia por etapa
+  stepPhotos: string[][];
+  stepAudio: string[][];
 }
 
-function makeDefault(hiveId: string, inspector: string): WizardData {
+function makeDefault(inspector: string, hiveId: string): WizardData {
   return {
     hive_local_id: hiveId,
     inspected_at: nowISO().slice(0, 16),
     inspector_name: inspector,
-    weather: '',
-    temperature_c: '',
-    population_strength: 3,
-    queen_seen: null,
+    temperature_c: '', humidity_pct: '', precipitation_mm: '', sky_condition: '',
+    colony_strength: 'medium',
     brood_present: true,
-    temperament: null,
-    honey_stores: 'adequate',
-    pollen_stores: 'adequate',
-    propolis_quality: null,
-    pests_observed: [],
-    diseases_observed: [],
-    box_condition: null,
-    weight_kg: '',
-    interventions: [],
-    needs_feeding: false,
-    needs_space_expansion: false,
-    next_inspection_due: '',
-    notes: '',
-    stepPhotos: [[], [], [], [], [], []],
-    stepAudio: [[], [], [], [], [], []],
+    agitation_level: null,
+    ready_for_split: false,
+    honey_ready_for_harvest: false,
+    intruder_species: false,
+    honey_stores: 'adequate', pollen_stores: 'adequate', propolis_quality: null,
+    needs_syrup: false, syrup_urgency: 'normal', needs_pollen_ball: false, needs_wax: false,
+    ants: 'none', phorid_flies: 'none',
+    wax_moths: false, beetles: false, caterpillar: false,
+    other_pests_text: '', strange_odor: false, diseases_observed: [],
+    propolis_seal_intact: null,
+    entrance_blocked: false, moisture_infiltration: false, needs_box_replacement: false,
+    box_condition: null, weight_kg: '',
+    tasks: [], next_inspection_due: '', notes: '',
+    stepPhotos: [[], [], [], [], [], [], []],
+    stepAudio:  [[], [], [], [], [], [], []],
   };
 }
 
-// ─── Small reusable pieces ───────────────────────────────────────────────────
+// ─── Reusable UI pieces ───────────────────────────────────────────────────────
 
-function TriToggle<T>({
+function SLabel({ children }: { children: React.ReactNode }) {
+  return <p className="text-sm font-medium text-stone-300 mb-2">{children}</p>;
+}
+
+function Tri<T extends string | null>({
   label, options, value, onChange,
 }: {
   label: string;
-  options: { v: T | null; label: string; icon?: string }[];
-  value: T | null;
-  onChange: (v: T | null) => void;
+  options: { v: T; label: string; icon?: string }[];
+  value: T;
+  onChange: (v: T) => void;
 }) {
   return (
     <div>
-      <p className="text-sm font-medium text-stone-300 mb-2">{label}</p>
+      <SLabel>{label}</SLabel>
       <div className="flex gap-2">
         {options.map((o) => (
-          <button
-            key={String(o.v)}
-            type="button"
-            onClick={() => onChange(value === o.v ? null : o.v)}
+          <button key={String(o.v)} type="button"
+            onClick={() => onChange(value === o.v ? (null as T) : o.v)}
             className={cn(
               'flex-1 flex flex-col items-center gap-1 py-2.5 rounded-xl border text-xs font-medium transition-colors',
               value === o.v
@@ -107,27 +184,46 @@ function TriToggle<T>({
   );
 }
 
+function Toggle({
+  icon, label, desc, active, onClick, colorActive = 'amber',
+}: {
+  icon: string; label: string; desc?: string; active: boolean;
+  onClick: () => void; colorActive?: 'amber' | 'emerald' | 'red';
+}) {
+  const cls = {
+    amber: 'bg-amber-500/20 border-amber-500/60 text-amber-300',
+    emerald: 'bg-emerald-900/30 border-emerald-600/50 text-emerald-300',
+    red: 'bg-red-900/30 border-red-600/50 text-red-300',
+  }[colorActive];
+  return (
+    <button type="button" onClick={onClick}
+      className={cn(
+        'flex items-center gap-3 px-4 py-3 rounded-xl border text-left transition-colors w-full',
+        active ? cls : 'bg-stone-800 border-stone-700 text-stone-400 hover:border-stone-600'
+      )}
+    >
+      <span className="text-xl shrink-0">{icon}</span>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium">{label}</p>
+        {desc && <p className="text-xs opacity-70">{desc}</p>}
+      </div>
+      <span className={cn('text-base', active ? '' : 'text-stone-600')}>{active ? '✓' : '○'}</span>
+    </button>
+  );
+}
+
 function LevelPicker({
   label, value, onChange,
-}: {
-  label: string;
-  value: 'low' | 'adequate' | 'abundant';
-  onChange: (v: 'low' | 'adequate' | 'abundant') => void;
-}) {
+}: { label: string; value: 'low' | 'adequate' | 'abundant'; onChange: (v: 'low' | 'adequate' | 'abundant') => void }) {
   return (
     <div>
-      <p className="text-sm font-medium text-stone-300 mb-2">{label}</p>
+      <SLabel>{label}</SLabel>
       <div className="flex gap-2">
         {(['low', 'adequate', 'abundant'] as const).map((v) => (
-          <button
-            key={v}
-            type="button"
-            onClick={() => onChange(v)}
+          <button key={v} type="button" onClick={() => onChange(v)}
             className={cn(
               'flex-1 py-2 rounded-xl text-sm border transition-colors',
-              value === v
-                ? 'bg-amber-500/20 border-amber-500/60 text-amber-300'
-                : 'bg-stone-800 border-stone-700 text-stone-400 hover:border-stone-600'
+              value === v ? 'bg-amber-500/20 border-amber-500/60 text-amber-300' : 'bg-stone-800 border-stone-700 text-stone-400 hover:border-stone-600'
             )}
           >
             {v === 'low' ? '🟥 Baixa' : v === 'adequate' ? '🟨 Adequada' : '🟩 Abundante'}
@@ -138,69 +234,58 @@ function LevelPicker({
   );
 }
 
-function ToggleChip({
-  label, active, onClick,
-}: { label: string; active: boolean; onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        'px-3 py-1.5 rounded-full text-sm border transition-colors',
-        active
-          ? 'bg-red-900/50 border-red-500/60 text-red-300'
-          : 'bg-stone-800 border-stone-700 text-stone-400 hover:border-stone-600'
-      )}
-    >
-      {label}
-    </button>
-  );
-}
-
-function BeeStrengthPicker({ value, onChange }: { value: number; onChange: (v: 1 | 2 | 3 | 4 | 5) => void }) {
-  const LABELS = ['', 'Muito fraca', 'Fraca', 'Média', 'Forte', 'Muito forte'];
+function InfestationPicker({
+  label, icon, value, onChange,
+}: {
+  label: string; icon: string;
+  value: 'none' | 'few' | 'infested';
+  onChange: (v: 'none' | 'few' | 'infested') => void;
+}) {
   return (
     <div>
-      <div className="flex gap-2 mb-2">
-        {([1, 2, 3, 4, 5] as const).map((n) => (
-          <button
-            key={n}
-            type="button"
-            onClick={() => onChange(n)}
+      <SLabel>{icon} {label}</SLabel>
+      <div className="flex gap-2">
+        {([
+          { v: 'none', label: 'Nenhum', cls: 'bg-emerald-900/30 border-emerald-600/50 text-emerald-300' },
+          { v: 'few', label: 'Poucos', cls: 'bg-amber-500/20 border-amber-500/60 text-amber-300' },
+          { v: 'infested', label: 'Infestado', cls: 'bg-red-900/40 border-red-600/60 text-red-300' },
+        ] as const).map(({ v, label: l, cls }) => (
+          <button key={v} type="button" onClick={() => onChange(v)}
             className={cn(
-              'flex-1 py-3 rounded-xl text-2xl transition-colors border',
-              value >= n
-                ? 'bg-amber-500/25 border-amber-500/60'
-                : 'bg-stone-800 border-stone-700 hover:border-stone-600'
+              'flex-1 py-2 rounded-xl text-xs border font-medium transition-colors',
+              value === v ? cls : 'bg-stone-800 border-stone-700 text-stone-400 hover:border-stone-600'
             )}
           >
-            🐝
+            {l}
           </button>
         ))}
       </div>
-      <p className="text-xs text-stone-500 text-center">{LABELS[value]}</p>
     </div>
   );
 }
 
-// ─── Step components ─────────────────────────────────────────────────────────
+function DiseaseChip({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
+  return (
+    <button type="button" onClick={onClick}
+      className={cn(
+        'px-3 py-1.5 rounded-full text-sm border transition-colors',
+        active ? 'bg-red-900/50 border-red-500/60 text-red-300' : 'bg-stone-800 border-stone-700 text-stone-400 hover:border-stone-600'
+      )}
+    >{label}</button>
+  );
+}
+
+// ─── Media section (collapsible) ─────────────────────────────────────────────
 
 function MediaSection({ stepIdx, data, update }: { stepIdx: number; data: WizardData; update: (p: Partial<WizardData>) => void }) {
-  function setPhotos(photos: string[]) {
-    const s = [...data.stepPhotos]; s[stepIdx] = photos; update({ stepPhotos: s });
-  }
-  function setAudio(audios: string[]) {
-    const s = [...data.stepAudio]; s[stepIdx] = audios; update({ stepAudio: s });
-  }
+  const [open, setOpen] = useState(false);
+  const setPhotos = (photos: string[]) => { const s = [...data.stepPhotos]; s[stepIdx] = photos; update({ stepPhotos: s }); };
+  const setAudio  = (audios: string[]) => { const s = [...data.stepAudio];  s[stepIdx] = audios; update({ stepAudio: s }); };
   const photoCount = data.stepPhotos[stepIdx]?.length ?? 0;
   const audioCount = data.stepAudio[stepIdx]?.length ?? 0;
-  const [open, setOpen] = useState(false);
-
   return (
     <div className="border border-stone-700 rounded-xl overflow-hidden">
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
+      <button type="button" onClick={() => setOpen((o) => !o)}
         className="w-full flex items-center justify-between px-4 py-3 text-sm text-stone-400 hover:bg-stone-800 transition-colors"
       >
         <span className="flex items-center gap-2">
@@ -231,43 +316,110 @@ function MediaSection({ stepIdx, data, update }: { stepIdx: number; data: Wizard
   );
 }
 
-const PEST_OPTIONS = [
-  { id: 'small_hive_beetle', label: '🪲 Besouro da caixa' },
-  { id: 'phorid_flies', label: '🪰 Moscas fóridas' },
-  { id: 'ants', label: '🐜 Formigas' },
-  { id: 'wax_moth', label: '🦋 Traça da cera' },
-  { id: 'lizards', label: '🦎 Lagartos' },
-  { id: 'spiders', label: '🕷️ Aranhas' },
+// ─── Tasks step ───────────────────────────────────────────────────────────────
+
+const PREDEFINED_TASKS: { key: string; label: string; icon: string }[] = [
+  { key: 'fornecer_xarope',       label: 'Fornecer xarope',          icon: '🍬' },
+  { key: 'fornecer_pollen',       label: 'Fornecer bombom de pólen',  icon: '🌼' },
+  { key: 'fornecer_cera',         label: 'Fornecer cera',             icon: '🕯️' },
+  { key: 'aplicar_formicida',     label: 'Aplicar formicida',         icon: '🐜' },
+  { key: 'combater_forideos',     label: 'Combater forídeos',         icon: '🪰' },
+  { key: 'acrescentar_modulo',    label: 'Acrescentar módulo',        icon: '📦' },
+  { key: 'retirar_modulo',        label: 'Retirar módulo',            icon: '📤' },
+  { key: 'trocar_acetato',        label: 'Trocar acetato',            icon: '🔄' },
+  { key: 'trocar_fitas',          label: 'Trocar fitas',              icon: '🩹' },
+  { key: 'agendar_divisao',       label: 'Agendar divisão',           icon: '✂️' },
+  { key: 'colher_mel',            label: 'Colher mel',                icon: '🍯' },
+  { key: 'trocar_caixa',          label: 'Trocar caixa',              icon: '📦' },
+];
+
+function TaskCard({
+  task,
+  onChange,
+  onRemove,
+}: {
+  task: InspectionTask;
+  onChange: (t: InspectionTask) => void;
+  onRemove: () => void;
+}) {
+  const predefined = PREDEFINED_TASKS.find((p) => p.key === task.label);
+  const displayLabel = predefined
+    ? `${predefined.icon} ${predefined.label}`
+    : task.custom_text || '✏️ Tarefa personalizada';
+
+  return (
+    <div className="border border-stone-700 rounded-xl p-3 space-y-3 bg-stone-800/50">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-sm font-medium text-stone-200">{displayLabel}</p>
+        <button type="button" onClick={onRemove}
+          className="text-stone-500 hover:text-red-400 transition-colors text-xs px-2 py-1"
+        >✕</button>
+      </div>
+      {task.label === 'custom' && (
+        <Input
+          label="Descrição da tarefa"
+          value={task.custom_text}
+          onChange={(e) => onChange({ ...task, custom_text: e.target.value })}
+          placeholder="Descreva a tarefa..."
+        />
+      )}
+      <div className="grid grid-cols-2 gap-2">
+        <Input
+          label="Prazo"
+          type="date"
+          value={task.due_date ?? ''}
+          onChange={(e) => onChange({ ...task, due_date: e.target.value || null })}
+        />
+        <Input
+          label="Responsável"
+          value={task.assignee_name}
+          onChange={(e) => onChange({ ...task, assignee_name: e.target.value })}
+          placeholder="Nome"
+        />
+      </div>
+      <div className="flex gap-2">
+        {(['normal', 'urgent'] as const).map((p) => (
+          <button key={p} type="button"
+            onClick={() => onChange({ ...task, priority: p })}
+            className={cn(
+              'flex-1 py-1.5 rounded-lg text-xs border font-medium transition-colors',
+              task.priority === p
+                ? p === 'urgent'
+                  ? 'bg-red-900/40 border-red-600/60 text-red-300'
+                  : 'bg-stone-700 border-stone-600 text-stone-200'
+                : 'bg-stone-800 border-stone-700 text-stone-500 hover:border-stone-600'
+            )}
+          >
+            {p === 'normal' ? 'Normal' : '⚠️ Urgente'}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── Steps config ─────────────────────────────────────────────────────────────
+
+const STEPS = [
+  { id: 1, label: 'Identificação',  icon: '📋', desc: 'Caixa, data e responsável pela inspeção' },
+  { id: 2, label: 'Clima',          icon: '🌤️', desc: 'Condições climáticas no momento da visita' },
+  { id: 3, label: 'Colônia',        icon: '🐝', desc: 'Força, saúde e estado geral da colônia' },
+  { id: 4, label: 'Alimentação',    icon: '🌺', desc: 'Reservas e necessidades de suplementação' },
+  { id: 5, label: 'Sanidade',       icon: '🔬', desc: 'Pragas, doenças e odores' },
+  { id: 6, label: 'Caixa',          icon: '🏠', desc: 'Estado físico e estrutural da caixa' },
+  { id: 7, label: 'Tarefas',        icon: '✅', desc: 'Tarefas pendentes, notas e próxima visita' },
 ];
 
 const DISEASE_OPTIONS = [
-  { id: 'american_foulbrood', label: 'Loque americano' },
-  { id: 'nosemosis', label: 'Nosemose' },
-  { id: 'chalkbrood', label: 'Cria giz' },
-  { id: 'sacbrood', label: 'Cria ensacada' },
-  { id: 'stonebrood', label: 'Cria pedra' },
+  { id: 'podridao_cria',   label: '💀 Podridão de cria' },
+  { id: 'nosemose',        label: 'Nosemose' },
+  { id: 'mal_de_maio',     label: 'Mal de maio' },
+  { id: 'pillagem',        label: '🏴‍☠️ Pilhagem' },
+  { id: 'cria_seca',       label: 'Cria seca' },
+  { id: 'fungo',           label: '🍄 Fungo' },
 ];
 
-const INTERVENTION_OPTIONS = [
-  { id: 'fed_colony', label: '🌺 Alimentei a colônia' },
-  { id: 'expanded_box', label: '📦 Expandi a caixa' },
-  { id: 'removed_pests', label: '🧹 Removi pragas' },
-  { id: 'transferred_frames', label: '🔄 Transferi favos' },
-  { id: 'applied_treatment', label: '💊 Apliquei tratamento' },
-  { id: 'cleaned_box', label: '🧽 Limpei a caixa' },
-  { id: 'relocated_hive', label: '🚚 Mudei a posição' },
-];
-
-const STEPS = [
-  { id: 1, label: 'Identificação', icon: '📋' },
-  { id: 2, label: 'População', icon: '🐝' },
-  { id: 3, label: 'Mel e Pólen', icon: '🍯' },
-  { id: 4, label: 'Sanidade', icon: '🔬' },
-  { id: 5, label: 'Infraestrutura', icon: '🏠' },
-  { id: 6, label: 'Ações', icon: '✅' },
-];
-
-// ─── Wizard page ──────────────────────────────────────────────────────────────
+// ─── Main wizard ──────────────────────────────────────────────────────────────
 
 export function InspectionWizard() {
   const navigate = useNavigate();
@@ -275,11 +427,11 @@ export function InspectionWizard() {
   const user = useAuthStore((s) => s.user)!;
   const { inspectorName } = useUIStore();
   const { data: hives = [], isLoading: hivesLoading } = useHives();
+  const { data: apiaries = [] } = useApiaries();
   const createInspection = useCreateInspection();
 
   const defaultHiveId = searchParams.get('hive') ?? '';
 
-  // Filter hives by role
   const accessibleHives = user.role === 'tratador'
     ? hives.filter((h) => user.hive_local_ids.includes(h.local_id) && h.status === 'active')
     : hives.filter((h) => h.status === 'active');
@@ -289,19 +441,39 @@ export function InspectionWizard() {
     ...accessibleHives.map((h) => ({ value: h.local_id, label: h.code })),
   ];
 
-  const [step, setStep] = useState(0); // 0-indexed
-  const [data, setData] = useState<WizardData>(() => makeDefault(defaultHiveId, inspectorName));
+  const [step, setStep] = useState(0);
+  const [data, setData] = useState<WizardData>(() => makeDefault(inspectorName, defaultHiveId));
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
+  const [weatherLoading, setWeatherLoading] = useState(false);
+  const [weatherFetched, setWeatherFetched] = useState(false);
 
-  const update = (patch: Partial<WizardData>) => setData((d) => ({ ...d, ...patch }));
+  const update = useCallback((patch: Partial<WizardData>) => setData((d) => ({ ...d, ...patch })), []);
 
-  function toggleList(key: 'pests_observed' | 'diseases_observed' | 'interventions', id: string) {
-    const cur = data[key];
-    update({ [key]: cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id] });
-  }
+  // Auto-fetch weather when entering step 1 (climate)
+  useEffect(() => {
+    if (step !== 1 || weatherFetched || !data.hive_local_id) return;
+    const hive = hives.find((h) => h.local_id === data.hive_local_id);
+    if (!hive) return;
+    const apiary = apiaries.find((a) => a.local_id === hive.apiary_local_id);
+    if (!apiary?.latitude || !apiary?.longitude) return;
 
-  // ── Validation per step ──────────────────────────────────────────────────
+    setWeatherLoading(true);
+    fetchWeather(apiary.latitude, apiary.longitude).then((w) => {
+      setWeatherLoading(false);
+      if (w) {
+        update({
+          temperature_c: String(w.temperature_c),
+          humidity_pct: String(w.humidity_pct),
+          precipitation_mm: String(w.precipitation_mm),
+          sky_condition: w.sky_condition,
+        });
+        setWeatherFetched(true);
+      }
+    });
+  }, [step, weatherFetched, data.hive_local_id, hives, apiaries, update]);
+
+  // Validation per step
   function validate(): boolean {
     const errs: Record<string, string> = {};
     if (step === 0) {
@@ -314,7 +486,7 @@ export function InspectionWizard() {
 
   function next() {
     if (!validate()) return;
-    setStep((s) => Math.min(s + 1, 5));
+    setStep((s) => Math.min(s + 1, STEPS.length - 1));
     window.scrollTo(0, 0);
   }
 
@@ -323,24 +495,72 @@ export function InspectionWizard() {
     window.scrollTo(0, 0);
   }
 
+  // Tasks helpers
+  function addTask(label: string) {
+    const newTask: InspectionTask = {
+      id: uuidv4(), label,
+      custom_text: '', due_date: null, assignee_name: '', priority: 'normal',
+    };
+    update({ tasks: [...data.tasks, newTask] });
+  }
+
+  function updateTask(id: string, patch: InspectionTask) {
+    update({ tasks: data.tasks.map((t) => (t.id === id ? patch : t)) });
+  }
+
+  function removeTask(id: string) {
+    update({ tasks: data.tasks.filter((t) => t.id !== id) });
+  }
+
+  // Build colony_strength → population_strength mapping for backward compat
+  const populationStrengthMap: Record<string, 1 | 2 | 3 | 4 | 5> = {
+    weak: 1, medium: 3, strong: 5,
+  };
+
   async function submit() {
     if (!validate()) return;
     setSubmitting(true);
     try {
       const checklist: InspectionChecklist = {
-        population_strength: data.population_strength,
-        queen_seen: data.queen_seen,
+        colony_strength: data.colony_strength,
+        population_strength: populationStrengthMap[data.colony_strength], // backward compat
         brood_present: data.brood_present,
-        temperament: data.temperament,
+        agitation_level: data.agitation_level,
+        ready_for_split: data.ready_for_split,
+        honey_ready_for_harvest: data.honey_ready_for_harvest,
+        intruder_species: data.intruder_species,
         honey_stores: data.honey_stores,
         pollen_stores: data.pollen_stores,
         propolis_quality: data.propolis_quality,
-        pests_observed: data.pests_observed,
+        needs_syrup: data.needs_syrup,
+        syrup_urgency: data.syrup_urgency,
+        needs_pollen_ball: data.needs_pollen_ball,
+        needs_wax: data.needs_wax,
+        ants: data.ants,
+        phorid_flies: data.phorid_flies,
+        wax_moths: data.wax_moths,
+        beetles: data.beetles,
+        caterpillar: data.caterpillar,
+        other_pests_text: data.other_pests_text,
+        strange_odor: data.strange_odor,
         diseases_observed: data.diseases_observed,
+        // legacy field so pests_observed is populated
+        pests_observed: [
+          ...(data.ants !== 'none' ? ['ants'] : []),
+          ...(data.phorid_flies !== 'none' ? ['phorid_flies'] : []),
+          ...(data.wax_moths ? ['wax_moths'] : []),
+          ...(data.beetles ? ['beetles'] : []),
+          ...(data.caterpillar ? ['caterpillar'] : []),
+        ],
+        propolis_seal_intact: data.propolis_seal_intact,
+        entrance_blocked: data.entrance_blocked,
+        moisture_infiltration: data.moisture_infiltration,
+        needs_box_replacement: data.needs_box_replacement,
         box_condition: data.box_condition,
-        interventions: data.interventions,
-        needs_feeding: data.needs_feeding,
-        needs_space_expansion: data.needs_space_expansion,
+        tasks: data.tasks,
+        // legacy
+        needs_feeding: data.needs_syrup || data.needs_pollen_ball,
+        needs_space_expansion: false,
       };
 
       const payload = InspectionCreateSchema.parse({
@@ -350,7 +570,9 @@ export function InspectionWizard() {
         checklist,
         weight_kg: data.weight_kg ? parseFloat(data.weight_kg) : null,
         temperature_c: data.temperature_c ? parseFloat(data.temperature_c) : null,
-        weather: data.weather || null,
+        humidity_pct: data.humidity_pct ? parseFloat(data.humidity_pct) : null,
+        precipitation_mm: data.precipitation_mm ? parseFloat(data.precipitation_mm) : null,
+        sky_condition: data.sky_condition || null,
         notes: data.notes,
         photos: data.stepPhotos.flat(),
         audio_notes: data.stepAudio.flat(),
@@ -368,246 +590,404 @@ export function InspectionWizard() {
   if (hivesLoading) return <div className="flex justify-center py-16"><Spinner /></div>;
 
   const currentHive = hives.find((h) => h.local_id === data.hive_local_id);
+  const currentApiary = currentHive
+    ? apiaries.find((a) => a.local_id === currentHive.apiary_local_id)
+    : null;
   const stepInfo = STEPS[step];
 
-  // ── Step content ─────────────────────────────────────────────────────────
+  // ── Step content ────────────────────────────────────────────────────────────
 
-  const stepContent = [
+  const stepContent: React.ReactNode[] = [
 
-    // ── Step 0: Identificação ──────────────────────────────────────────────
+    // ── Step 0: Identificação ───────────────────────────────────────────────
     <div className="space-y-5" key="s0">
       <Select
         label="Caixa *"
         options={hiveOptions}
         value={data.hive_local_id}
-        onChange={(e) => update({ hive_local_id: e.target.value })}
+        onChange={(e) => { update({ hive_local_id: e.target.value }); setWeatherFetched(false); }}
         error={errors.hive_local_id}
       />
-      <div className="grid grid-cols-2 gap-3">
-        <div className="col-span-2">
-          <Input
-            label="Data e Hora *"
-            type="datetime-local"
-            value={data.inspected_at}
-            onChange={(e) => update({ inspected_at: e.target.value })}
-            error={errors.inspected_at}
-          />
-        </div>
-        <Input
-          label="Responsável"
-          value={data.inspector_name}
-          onChange={(e) => update({ inspector_name: e.target.value })}
-          placeholder="Nome do inspetor"
-        />
-        <Select
-          label="Clima"
-          options={[
-            { value: '', label: 'Não informado' },
-            { value: 'sunny', label: '☀️ Ensolarado' },
-            { value: 'cloudy', label: '⛅ Nublado' },
-            { value: 'rainy', label: '🌧️ Chuvoso' },
-          ]}
-          value={data.weather}
-          onChange={(e) => update({ weather: e.target.value })}
-        />
-        <div className="col-span-2">
-          <Input
-            label="Temperatura ambiente (°C)"
-            type="number"
-            step="0.1"
-            value={data.temperature_c}
-            onChange={(e) => update({ temperature_c: e.target.value })}
-            placeholder="ex: 28.5"
-          />
-        </div>
-      </div>
+      {currentApiary && (
+        <p className="text-xs text-stone-500 -mt-3">
+          📍 {currentApiary.name}{currentApiary.location ? ` · ${currentApiary.location}` : ''}
+        </p>
+      )}
+      <Input
+        label="Data e Hora *"
+        type="datetime-local"
+        value={data.inspected_at}
+        onChange={(e) => update({ inspected_at: e.target.value })}
+        error={errors.inspected_at}
+      />
+      <Input
+        label="Responsável pela inspeção"
+        value={data.inspector_name}
+        onChange={(e) => update({ inspector_name: e.target.value })}
+        placeholder="Nome do tratador ou responsável"
+      />
       <MediaSection stepIdx={0} data={data} update={update} />
     </div>,
 
-    // ── Step 1: População ──────────────────────────────────────────────────
-    <div className="space-y-6" key="s1">
+    // ── Step 1: Condições Climáticas ────────────────────────────────────────
+    <div className="space-y-5" key="s1">
+      {weatherLoading ? (
+        <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-sky-900/20 border border-sky-800/50 text-sky-300 text-sm">
+          <Spinner />
+          <span>Buscando dados climáticos da Open-Meteo...</span>
+        </div>
+      ) : weatherFetched ? (
+        <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-900/20 border border-emerald-800/50 text-emerald-400 text-xs">
+          ✅ Dados obtidos automaticamente — você pode editar abaixo.
+        </div>
+      ) : (
+        <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-stone-800 border border-stone-700 text-stone-500 text-xs">
+          {!data.hive_local_id
+            ? '⚠️ Selecione uma caixa para buscar o clima automaticamente.'
+            : !currentApiary?.latitude
+            ? '📍 Meliponário sem coordenadas cadastradas — preencha manualmente.'
+            : '📡 Sem conexão — preencha os dados manualmente.'}
+        </div>
+      )}
+
       <div>
-        <p className="text-sm font-medium text-stone-300 mb-3">Força da colônia</p>
-        <BeeStrengthPicker value={data.population_strength} onChange={(v) => update({ population_strength: v })} />
-      </div>
-      <TriToggle
-        label="Rainha vista?"
-        options={[
-          { v: true, label: 'Sim', icon: '👑' },
-          { v: false, label: 'Não', icon: '❌' },
-          { v: null, label: 'N/V', icon: '❓' },
-        ]}
-        value={data.queen_seen}
-        onChange={(v) => update({ queen_seen: v })}
-      />
-      <div>
-        <p className="text-sm font-medium text-stone-300 mb-2">Cria presente?</p>
-        <div className="flex gap-3">
-          {[true, false].map((v) => (
-            <button
-              key={String(v)}
-              type="button"
-              onClick={() => update({ brood_present: v })}
+        <SLabel>Condição do céu</SLabel>
+        <div className="flex gap-2">
+          {([
+            { v: 'sunny',        icon: '☀️',  label: 'Ensolarado' },
+            { v: 'partly_cloudy', icon: '⛅',  label: 'Parcialmente nublado' },
+            { v: 'cloudy',       icon: '☁️',  label: 'Nublado' },
+          ] as { v: SkyCondition; icon: string; label: string }[]).map((opt) => (
+            <button key={opt.v} type="button"
+              onClick={() => update({ sky_condition: data.sky_condition === opt.v ? '' : opt.v })}
               className={cn(
-                'flex-1 py-2.5 rounded-xl border text-sm font-medium transition-colors',
-                data.brood_present === v
-                  ? 'bg-emerald-900/40 border-emerald-600/60 text-emerald-300'
-                  : 'bg-stone-800 border-stone-700 text-stone-400'
+                'flex-1 flex flex-col items-center gap-1 py-3 rounded-xl border text-xs font-medium transition-colors',
+                data.sky_condition === opt.v
+                  ? 'bg-sky-900/30 border-sky-600/60 text-sky-300'
+                  : 'bg-stone-800 border-stone-700 text-stone-400 hover:border-stone-600'
               )}
             >
-              {v ? '🥚 Sim' : '❌ Não'}
+              <span className="text-2xl">{opt.icon}</span>
+              {opt.label}
             </button>
           ))}
         </div>
       </div>
-      <TriToggle
-        label="Temperamento"
-        options={[
-          { v: 'calm', label: 'Calma', icon: '😊' },
-          { v: 'nervous', label: 'Nervosa', icon: '😬' },
-          { v: 'aggressive', label: 'Agressiva', icon: '😡' },
-        ]}
-        value={data.temperament}
-        onChange={(v) => update({ temperament: v as typeof data.temperament })}
-      />
-      <MediaSection stepIdx={1} data={data} update={update} />
+
+      <div className="grid grid-cols-2 gap-3">
+        <Input
+          label="Temperatura (°C)"
+          type="number" step="0.1"
+          value={data.temperature_c}
+          onChange={(e) => update({ temperature_c: e.target.value })}
+          placeholder="ex: 29.5"
+        />
+        <Input
+          label="Umidade do ar (%)"
+          type="number" step="1" min="0" max="100"
+          value={data.humidity_pct}
+          onChange={(e) => update({ humidity_pct: e.target.value })}
+          placeholder="ex: 75"
+        />
+      </div>
+
+      <div>
+        <SLabel>Chuva</SLabel>
+        <div className="flex gap-3">
+          <button type="button"
+            onClick={() => update({ precipitation_mm: data.precipitation_mm === '0' ? '' : '0' })}
+            className={cn(
+              'flex-1 flex flex-col items-center gap-1 py-3 rounded-xl border text-sm font-medium transition-colors',
+              data.precipitation_mm === '0' || data.precipitation_mm === ''
+                ? 'bg-sky-900/20 border-sky-700/50 text-sky-300'
+                : 'bg-stone-800 border-stone-700 text-stone-400 hover:border-stone-600'
+            )}
+          >
+            <span className="text-2xl">🌤️</span>
+            Sem chuva
+          </button>
+          <div className="flex-1">
+            <Input
+              label="Chuva (mm)"
+              type="number" step="0.1" min="0"
+              value={data.precipitation_mm === '0' ? '' : data.precipitation_mm}
+              onChange={(e) => update({ precipitation_mm: e.target.value })}
+              placeholder="ex: 2.5"
+            />
+          </div>
+        </div>
+      </div>
     </div>,
 
-    // ── Step 2: Mel e Pólen ────────────────────────────────────────────────
+    // ── Step 2: Colônia ─────────────────────────────────────────────────────
     <div className="space-y-6" key="s2">
-      <LevelPicker label="Reserva de mel 🍯" value={data.honey_stores} onChange={(v) => update({ honey_stores: v })} />
-      <LevelPicker label="Reserva de pólen 🌼" value={data.pollen_stores} onChange={(v) => update({ pollen_stores: v })} />
-      <TriToggle
-        label="Qualidade da própolis"
+      <div>
+        <SLabel>Força da colônia</SLabel>
+        <div className="flex gap-2">
+          {([
+            { v: 'strong', icon: '🐝🐝🐝', label: 'Forte',  desc: 'Boa população, ativa' },
+            { v: 'medium', icon: '🐝🐝',   label: 'Média',  desc: 'População regular' },
+            { v: 'weak',   icon: '🐝',     label: 'Fraca',  desc: 'Pouquíssimas abelhas' },
+          ] as { v: 'strong' | 'medium' | 'weak'; icon: string; label: string; desc: string }[]).map((opt) => (
+            <button key={opt.v} type="button"
+              onClick={() => update({ colony_strength: opt.v })}
+              className={cn(
+                'flex-1 flex flex-col items-center gap-1 py-3 rounded-xl border text-xs font-medium transition-colors',
+                data.colony_strength === opt.v
+                  ? 'bg-amber-500/20 border-amber-500/60 text-amber-300'
+                  : 'bg-stone-800 border-stone-700 text-stone-400 hover:border-stone-600'
+              )}
+            >
+              <span className="text-xl">{opt.icon}</span>
+              <span className="text-sm">{opt.label}</span>
+              <span className="text-xs opacity-60">{opt.desc}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <Tri
+        label="Nível de agitação"
         options={[
-          { v: 'poor', label: 'Ruim', icon: '🔴' },
-          { v: 'normal', label: 'Normal', icon: '🟡' },
-          { v: 'good', label: 'Boa', icon: '🟢' },
+          { v: 'calm',       label: 'Calmas',     icon: '😌' },
+          { v: 'agitated',   label: 'Agitadas',   icon: '😬' },
+          { v: 'defensive',  label: 'Defensivas', icon: '😤' },
         ]}
-        value={data.propolis_quality}
-        onChange={(v) => update({ propolis_quality: v as typeof data.propolis_quality })}
+        value={data.agitation_level}
+        onChange={(v) => update({ agitation_level: v })}
       />
+
+      <div className="grid grid-cols-1 gap-2">
+        <Toggle icon="🥚" label="Cria presente e saudável"
+          active={data.brood_present} onClick={() => update({ brood_present: !data.brood_present })}
+          colorActive="emerald"
+        />
+        <Toggle icon="✂️" label="Pronta para divisão"
+          desc="Colônia forte o suficiente para ser dividida"
+          active={data.ready_for_split} onClick={() => update({ ready_for_split: !data.ready_for_split })}
+          colorActive="emerald"
+        />
+        <Toggle icon="🍯" label="Mel disponível para colheita"
+          active={data.honey_ready_for_harvest} onClick={() => update({ honey_ready_for_harvest: !data.honey_ready_for_harvest })}
+          colorActive="amber"
+        />
+        <Toggle icon="🐞" label="Presença de intrusos (outras espécies)"
+          active={data.intruder_species} onClick={() => update({ intruder_species: !data.intruder_species })}
+          colorActive="red"
+        />
+      </div>
       <MediaSection stepIdx={2} data={data} update={update} />
     </div>,
 
-    // ── Step 3: Sanidade ───────────────────────────────────────────────────
+    // ── Step 3: Alimentação ─────────────────────────────────────────────────
     <div className="space-y-6" key="s3">
-      <div>
-        <p className="text-sm font-medium text-stone-300 mb-3">Pragas observadas</p>
-        <div className="flex flex-wrap gap-2">
-          {PEST_OPTIONS.map(({ id, label }) => (
-            <ToggleChip
-              key={id}
-              label={label}
-              active={data.pests_observed.includes(id)}
-              onClick={() => toggleList('pests_observed', id)}
-            />
-          ))}
+      <LevelPicker label="Reserva de mel 🍯" value={data.honey_stores} onChange={(v) => update({ honey_stores: v })} />
+      <LevelPicker label="Reserva de pólen 🌼" value={data.pollen_stores} onChange={(v) => update({ pollen_stores: v })} />
+      <Tri
+        label="Qualidade da própolis"
+        options={[
+          { v: 'poor',   label: 'Ruim',   icon: '🔴' },
+          { v: 'normal', label: 'Normal', icon: '🟡' },
+          { v: 'good',   label: 'Boa',    icon: '🟢' },
+        ]}
+        value={data.propolis_quality}
+        onChange={(v) => update({ propolis_quality: v })}
+      />
+
+      <div className="border-t border-stone-700 pt-4">
+        <SLabel>Necessidades de suplementação</SLabel>
+        <div className="space-y-2">
+          <Toggle icon="🍬" label="Precisa de xarope"
+            active={data.needs_syrup} onClick={() => update({ needs_syrup: !data.needs_syrup })}
+            colorActive="amber"
+          />
+          {data.needs_syrup && (
+            <div className="ml-10 flex gap-2">
+              {(['normal', 'urgent'] as const).map((u) => (
+                <button key={u} type="button"
+                  onClick={() => update({ syrup_urgency: u })}
+                  className={cn(
+                    'flex-1 py-2 rounded-xl text-xs border font-medium transition-colors',
+                    data.syrup_urgency === u
+                      ? u === 'urgent'
+                        ? 'bg-red-900/40 border-red-600/60 text-red-300'
+                        : 'bg-stone-700 border-stone-600 text-stone-200'
+                      : 'bg-stone-800 border-stone-700 text-stone-500'
+                  )}
+                >
+                  {u === 'normal' ? 'Normal' : '⚠️ Urgente'}
+                </button>
+              ))}
+            </div>
+          )}
+          <Toggle icon="🌼" label="Precisa de bombom de pólen"
+            active={data.needs_pollen_ball} onClick={() => update({ needs_pollen_ball: !data.needs_pollen_ball })}
+            colorActive="amber"
+          />
+          <Toggle icon="🕯️" label="Precisa de cera"
+            active={data.needs_wax} onClick={() => update({ needs_wax: !data.needs_wax })}
+            colorActive="amber"
+          />
         </div>
-        {data.pests_observed.length === 0 && (
-          <p className="text-xs text-stone-500 mt-2">Nenhuma praga marcada = colônia sem pragas ✅</p>
-        )}
-      </div>
-      <div>
-        <p className="text-sm font-medium text-stone-300 mb-3">Doenças observadas</p>
-        <div className="flex flex-wrap gap-2">
-          {DISEASE_OPTIONS.map(({ id, label }) => (
-            <ToggleChip
-              key={id}
-              label={label}
-              active={data.diseases_observed.includes(id)}
-              onClick={() => toggleList('diseases_observed', id)}
-            />
-          ))}
-        </div>
-        {data.diseases_observed.length === 0 && (
-          <p className="text-xs text-stone-500 mt-2">Nenhuma doença marcada = colônia saudável ✅</p>
-        )}
       </div>
       <MediaSection stepIdx={3} data={data} update={update} />
     </div>,
 
-    // ── Step 4: Infraestrutura ─────────────────────────────────────────────
-    <div className="space-y-6" key="s4">
-      <TriToggle
-        label="Estado da caixa"
+    // ── Step 4: Sanidade ────────────────────────────────────────────────────
+    <div className="space-y-5" key="s4">
+      <InfestationPicker label="Formigas"   icon="🐜" value={data.ants}         onChange={(v) => update({ ants: v })} />
+      <InfestationPicker label="Forídeos"   icon="🪰" value={data.phorid_flies} onChange={(v) => update({ phorid_flies: v })} />
+
+      <div>
+        <SLabel>Outras pragas</SLabel>
+        <div className="grid grid-cols-2 gap-2">
+          <Toggle icon="🦋" label="Traças"    active={data.wax_moths}   onClick={() => update({ wax_moths: !data.wax_moths })}   colorActive="red" />
+          <Toggle icon="🪲" label="Besouros"  active={data.beetles}     onClick={() => update({ beetles: !data.beetles })}        colorActive="red" />
+          <Toggle icon="🐛" label="Lagarta"   active={data.caterpillar} onClick={() => update({ caterpillar: !data.caterpillar })} colorActive="red" />
+          <Toggle icon="👃" label="Odor estranho" active={data.strange_odor} onClick={() => update({ strange_odor: !data.strange_odor })} colorActive="red" />
+        </div>
+      </div>
+
+      <div>
+        <SLabel>Outras pragas (descrição livre)</SLabel>
+        <Textarea
+          label=""
+          value={data.other_pests_text}
+          onChange={(e) => update({ other_pests_text: e.target.value })}
+          placeholder="Descreva outras pragas ou problemas observados..."
+          rows={2}
+        />
+      </div>
+
+      <div>
+        <SLabel>Doenças observadas</SLabel>
+        <div className="flex flex-wrap gap-2">
+          {DISEASE_OPTIONS.map(({ id, label }) => (
+            <DiseaseChip key={id} label={label}
+              active={data.diseases_observed.includes(id)}
+              onClick={() => {
+                const cur = data.diseases_observed;
+                update({ diseases_observed: cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id] });
+              }}
+            />
+          ))}
+        </div>
+        {data.diseases_observed.length === 0 && (
+          <p className="text-xs text-stone-500 mt-2">✅ Nenhuma doença marcada</p>
+        )}
+      </div>
+      <MediaSection stepIdx={4} data={data} update={update} />
+    </div>,
+
+    // ── Step 5: Caixa ───────────────────────────────────────────────────────
+    <div className="space-y-5" key="s5">
+      <Tri
+        label="Estado geral da caixa"
         options={[
-          { v: 'poor', label: 'Ruim', icon: '🔴' },
+          { v: 'poor', label: 'Ruim',    icon: '🔴' },
           { v: 'fair', label: 'Regular', icon: '🟡' },
-          { v: 'good', label: 'Bom', icon: '🟢' },
+          { v: 'good', label: 'Bom',     icon: '🟢' },
         ]}
         value={data.box_condition}
-        onChange={(v) => update({ box_condition: v as typeof data.box_condition })}
+        onChange={(v) => update({ box_condition: v })}
       />
+      <Tri
+        label="Batume (propolis seal)"
+        options={[
+          { v: true as unknown as string,  label: 'Íntegro',   icon: '✅' },
+          { v: false as unknown as string, label: 'Danificado', icon: '⚠️' },
+        ]}
+        value={data.propolis_seal_intact === null ? null : String(data.propolis_seal_intact)}
+        onChange={(v) => update({ propolis_seal_intact: v === null ? null : v === 'true' })}
+      />
+
+      <div className="grid grid-cols-1 gap-2">
+        <Toggle icon="🚪" label="Entrada obstruída"
+          active={data.entrance_blocked} onClick={() => update({ entrance_blocked: !data.entrance_blocked })}
+          colorActive="red"
+        />
+        <Toggle icon="💧" label="Umidade ou infiltração"
+          active={data.moisture_infiltration} onClick={() => update({ moisture_infiltration: !data.moisture_infiltration })}
+          colorActive="red"
+        />
+        <Toggle icon="🔁" label="Necessita troca de caixa"
+          active={data.needs_box_replacement} onClick={() => update({ needs_box_replacement: !data.needs_box_replacement })}
+          colorActive="red"
+        />
+      </div>
+
       <Input
         label="Peso da caixa (kg)"
-        type="number"
-        step="0.01"
+        type="number" step="0.01"
         value={data.weight_kg}
         onChange={(e) => update({ weight_kg: e.target.value })}
         placeholder="ex: 4.50"
       />
-      <MediaSection stepIdx={4} data={data} update={update} />
+      <MediaSection stepIdx={5} data={data} update={update} />
     </div>,
 
-    // ── Step 5: Ações ──────────────────────────────────────────────────────
-    <div className="space-y-6" key="s5">
+    // ── Step 6: Tarefas e Ações ─────────────────────────────────────────────
+    <div className="space-y-5" key="s6">
+      {/* Predefined task selector */}
       <div>
-        <p className="text-sm font-medium text-stone-300 mb-3">Intervenções realizadas</p>
+        <SLabel>Adicionar tarefas à inspeção</SLabel>
         <div className="flex flex-wrap gap-2">
-          {INTERVENTION_OPTIONS.map(({ id, label }) => (
-            <button
-              key={id}
-              type="button"
-              onClick={() => toggleList('interventions', id)}
-              className={cn(
-                'px-3 py-1.5 rounded-full text-sm border transition-colors',
-                data.interventions.includes(id)
-                  ? 'bg-emerald-900/40 border-emerald-600/60 text-emerald-300'
-                  : 'bg-stone-800 border-stone-700 text-stone-400 hover:border-stone-600'
-              )}
-            >
-              {label}
-            </button>
-          ))}
+          {PREDEFINED_TASKS.map((pt) => {
+            const already = data.tasks.some((t) => t.label === pt.key);
+            return (
+              <button key={pt.key} type="button"
+                disabled={already}
+                onClick={() => addTask(pt.key)}
+                className={cn(
+                  'px-3 py-1.5 rounded-full text-sm border transition-colors',
+                  already
+                    ? 'bg-emerald-900/30 border-emerald-600/50 text-emerald-400 cursor-default'
+                    : 'bg-stone-800 border-stone-700 text-stone-400 hover:border-amber-600/50 hover:text-amber-400'
+                )}
+              >
+                {pt.icon} {pt.label}
+              </button>
+            );
+          })}
+          <button type="button" onClick={() => addTask('custom')}
+            className="px-3 py-1.5 rounded-full text-sm border border-stone-700 bg-stone-800 text-stone-400 hover:border-amber-600/50 hover:text-amber-400 transition-colors"
+          >
+            ✏️ Personalizada
+          </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        {([
-          { key: 'needs_feeding', label: '🌺 Precisa alimentar', icon: '' },
-          { key: 'needs_space_expansion', label: '📦 Precisa expandir', icon: '' },
-        ] as const).map(({ key, label }) => (
-          <button
-            key={key}
-            type="button"
-            onClick={() => update({ [key]: !data[key] })}
-            className={cn(
-              'py-3 rounded-xl border text-sm font-medium transition-colors',
-              data[key]
-                ? 'bg-amber-500/20 border-amber-500/60 text-amber-300'
-                : 'bg-stone-800 border-stone-700 text-stone-400'
-            )}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+      {/* Task cards */}
+      {data.tasks.length > 0 && (
+        <div className="space-y-2">
+          {data.tasks.map((task) => (
+            <TaskCard
+              key={task.id}
+              task={task}
+              onChange={(t) => updateTask(task.id, t)}
+              onRemove={() => removeTask(task.id)}
+            />
+          ))}
+        </div>
+      )}
 
-      <Input
-        label="Próxima inspeção prevista"
-        type="date"
-        value={data.next_inspection_due}
-        onChange={(e) => update({ next_inspection_due: e.target.value })}
-      />
-      <Textarea
-        label="Observações gerais"
-        value={data.notes}
-        onChange={(e) => update({ notes: e.target.value })}
-        placeholder="Notas adicionais sobre a inspeção..."
-        rows={4}
-      />
-      <MediaSection stepIdx={5} data={data} update={update} />
+      {/* Final fields */}
+      <div className="border-t border-stone-700 pt-4 space-y-4">
+        <Input
+          label="Próxima inspeção prevista"
+          type="date"
+          value={data.next_inspection_due}
+          onChange={(e) => update({ next_inspection_due: e.target.value })}
+        />
+        <Textarea
+          label="Observações gerais"
+          value={data.notes}
+          onChange={(e) => update({ notes: e.target.value })}
+          placeholder="Notas adicionais sobre a inspeção..."
+          rows={4}
+        />
+        <MediaSection stepIdx={6} data={data} update={update} />
+      </div>
 
       {errors.submit && (
         <p className="text-sm text-red-400 bg-red-900/20 border border-red-800 rounded-xl px-4 py-3">
@@ -617,47 +997,40 @@ export function InspectionWizard() {
     </div>,
   ];
 
-  // ─── Render ────────────────────────────────────────────────────────────────
-
+  // ── Summary badge counts ────────────────────────────────────────────────────
   const totalPhotos = data.stepPhotos.flat().length;
-  const totalAudio = data.stepAudio.flat().length;
+  const totalAudio  = data.stepAudio.flat().length;
+  const taskCount   = data.tasks.length;
 
   return (
     <div className="min-h-screen bg-stone-950 flex flex-col">
-      {/* ── Header ── */}
+      {/* Header */}
       <header className="sticky top-0 z-20 bg-stone-900 border-b border-stone-800">
         <div className="flex items-center gap-3 px-4 h-14">
-          <button
-            onClick={() => navigate(-1)}
-            className="text-stone-400 hover:text-stone-100 transition-colors p-1"
-            title="Cancelar"
-          >
-            ✕
-          </button>
+          <button onClick={() => navigate(-1)}
+            className="text-stone-400 hover:text-stone-100 transition-colors p-1" title="Cancelar"
+          >✕</button>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-stone-100 truncate">
               {currentHive ? `Inspeção · ${currentHive.code}` : 'Nova Inspeção'}
             </p>
             <p className="text-xs text-stone-500">{stepInfo.icon} {stepInfo.label}</p>
           </div>
-          {(totalPhotos > 0 || totalAudio > 0) && (
-            <div className="text-xs text-stone-500 flex gap-2">
-              {totalPhotos > 0 && <span>📷 {totalPhotos}</span>}
-              {totalAudio > 0 && <span>🎙 {totalAudio}</span>}
-            </div>
-          )}
+          <div className="flex gap-2 text-xs text-stone-500">
+            {totalPhotos > 0 && <span>📷 {totalPhotos}</span>}
+            {totalAudio  > 0 && <span>🎙 {totalAudio}</span>}
+            {taskCount   > 0 && <span className="text-amber-400">✅ {taskCount}</span>}
+          </div>
         </div>
 
         {/* Progress bar */}
         <div className="px-4 pb-3">
           <div className="flex items-center gap-1">
             {STEPS.map((s, i) => (
-              <button
-                key={s.id}
-                type="button"
+              <button key={s.id} type="button"
                 onClick={() => i < step && setStep(i)}
                 disabled={i > step}
-                className="flex-1 h-1.5 rounded-full transition-colors overflow-hidden"
+                className="flex-1 h-1.5 rounded-full overflow-hidden"
                 title={s.label}
               >
                 <div className={cn(
@@ -673,47 +1046,26 @@ export function InspectionWizard() {
         </div>
       </header>
 
-      {/* ── Content ── */}
+      {/* Content */}
       <main className="flex-1 px-4 py-6 max-w-2xl mx-auto w-full">
         <div className="mb-6">
-          <h2 className="text-xl font-bold text-stone-100">
-            {stepInfo.icon} {stepInfo.label}
-          </h2>
-          <p className="text-stone-500 text-sm mt-0.5">
-            {[
-              'Identifique a caixa e as condições da visita',
-              'Avalie o estado da população',
-              'Verifique os estoques de alimento',
-              'Registre pragas e doenças encontradas',
-              'Avalie as condições da caixa',
-              'Registre as ações realizadas e próximos passos',
-            ][step]}
-          </p>
+          <h2 className="text-xl font-bold text-stone-100">{stepInfo.icon} {stepInfo.label}</h2>
+          <p className="text-stone-500 text-sm mt-0.5">{stepInfo.desc}</p>
         </div>
-
         {stepContent[step]}
       </main>
 
-      {/* ── Bottom nav ── */}
+      {/* Footer */}
       <footer className="sticky bottom-0 bg-stone-900 border-t border-stone-800 px-4 py-3 flex gap-3">
         {step > 0 ? (
-          <Button variant="secondary" onClick={back} className="flex-1">
-            ← Voltar
-          </Button>
+          <Button variant="secondary" onClick={back} className="flex-1">← Voltar</Button>
         ) : (
-          <Button variant="secondary" onClick={() => navigate(-1)} className="flex-1">
-            Cancelar
-          </Button>
+          <Button variant="secondary" onClick={() => navigate(-1)} className="flex-1">Cancelar</Button>
         )}
-
         {step < STEPS.length - 1 ? (
-          <Button onClick={next} className="flex-2 flex-1">
-            Próxima →
-          </Button>
+          <Button onClick={next} className="flex-1">Próxima →</Button>
         ) : (
-          <Button
-            onClick={submit}
-            loading={submitting}
+          <Button onClick={submit} loading={submitting}
             className="flex-1 bg-emerald-600 hover:bg-emerald-500"
           >
             ✓ Finalizar Inspeção
