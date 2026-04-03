@@ -240,9 +240,9 @@ export function HarvestWizard() {
   ];
 
   // Filtra caixas ativas do meliponário selecionado
-  const apiaryHives = hives.filter(
-    (h) => h.apiary_local_id === data.apiary_local_id && h.status === 'active'
-  );
+  const apiaryHives = hives
+    .filter((h) => h.apiary_local_id === data.apiary_local_id && h.status === 'active')
+    .sort((a, b) => a.code.localeCompare(b.code, undefined, { numeric: true }));
 
   function toggleHive(local_id: string) {
     const cur = data.hive_local_ids;
