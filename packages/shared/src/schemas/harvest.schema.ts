@@ -5,8 +5,10 @@ export const HarvestCreateSchema = z.object({
   harvested_at: z.string().min(1, 'Data obrigatória'),
   responsible_name: z.string().default(''),
   hive_local_ids: z.array(z.string().uuid()).min(1, 'Selecione ao menos uma caixa'),
+  hive_volumes: z.record(z.number().nonnegative()).default({}),
 
   honey_type: z.enum(['vivo', 'maturado']),
+  maturation_status: z.enum(['aguardando_maturacao', 'em_maturacao', 'concluido']).nullable().default(null),
   total_volume_ml: z.number().positive().nullable().default(null),
   total_weight_kg: z.number().positive().nullable().default(null),
   humidity_pct: z.number().min(0).max(100).nullable().default(null),
@@ -19,6 +21,7 @@ export const HarvestCreateSchema = z.object({
   syrup_provided: z.boolean().default(false),
   pollen_ball_provided: z.boolean().default(false),
   wax_provided: z.boolean().default(false),
+  input_notes: z.string().default(''),
 
   notes: z.string().default(''),
 });

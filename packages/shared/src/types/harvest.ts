@@ -5,6 +5,7 @@ export type VisualAspect = 'clear' | 'cloudy' | 'crystallized';
 export type BubblesLevel = 'none' | 'few' | 'many';
 export type PaperTest = 'pass' | 'fail';
 export type ViscosityLevel = 1 | 2 | 3 | 4 | 5;
+export type MaturationStatus = 'aguardando_maturacao' | 'em_maturacao' | 'concluido';
 
 export interface Harvest extends SyncMeta {
   apiary_local_id: string;
@@ -12,8 +13,12 @@ export interface Harvest extends SyncMeta {
   responsible_name: string;
   hive_local_ids: string[]; // colmeias colhidas nesta colheita
 
+  /** Volume colhido por caixa individual: { hive_local_id → volume_ml } */
+  hive_volumes: Record<string, number>;
+
   // Parâmetros de qualidade do mel
   honey_type: HoneyType;
+  maturation_status: MaturationStatus | null;
   total_volume_ml: number | null;
   total_weight_kg: number | null;
   humidity_pct: number | null;
@@ -27,6 +32,7 @@ export interface Harvest extends SyncMeta {
   syrup_provided: boolean;
   pollen_ball_provided: boolean;
   wax_provided: boolean;
+  input_notes: string;
 
   notes: string;
   created_at: string;

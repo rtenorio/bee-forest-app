@@ -96,6 +96,11 @@ export function HiveDetail() {
           <Button variant="secondary" size="sm" onClick={() => navigate(`/inspections/new?hive=${id}`)}>
             + Inspeção
           </Button>
+          {canSeeProduction && (
+            <Button variant="secondary" size="sm" onClick={() => navigate(`/harvests/new?hive=${id}`)}>
+              🫙 Colheita
+            </Button>
+          )}
           {canManageHive && (
             <>
               <Button variant="ghost" size="sm" onClick={() => setEditHive(true)}>Editar</Button>

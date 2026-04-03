@@ -1,43 +1,28 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useHarvests, useDeleteHarvest } from '@/hooks/useHarvests';
+import { useHarvests } from '@/hooks/useHarvests';
 import { useApiaries } from '@/hooks/useApiaries';
 import { useHives } from '@/hooks/useHives';
 import { Card } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
+import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Select';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Spinner } from '@/components/ui/Spinner';
 import { formatDate } from '@/utils/dates';
 import type { Harvest } from '@bee-forest/shared';
 
-// ─── Labels e helpers ─────────────────────────────────────────────────────────
+// ─── Labels / helpers ─────────────────────────────────────────────────────────
 
 const HONEY_TYPE_LABEL: Record<string, string> = {
   maturado: '✨ Maturado',
-  vivo: '🌿 Vivo',
+  vivo:     '🌿 Vivo',
 };
 
-const VISUAL_ASPECT_LABEL: Record<string, string> = {
-  clear: '💎 Límpido',
-  cloudy: '🌫️ Turvo',
-  crystallized: '❄️ Cristalizado',
-};
-
-const BUBBLES_LABEL: Record<string, string> = {
-  none: '✅ Sem bolhas',
-  few: '🟡 Poucas bolhas',
-  many: '🔴 Muitas bolhas',
-};
-
-const PAPER_TEST_LABEL: Record<string, string> = {
-  pass: '✅ Aprovado',
-  fail: '❌ Reprovado',
-};
-
-const VISCOSITY_ICON: Record<number, string> = {
-  1: '💧', 2: '🫗', 3: '🍯', 4: '🫙', 5: '🧱',
+const MATURATION_BADGE: Record<string, { label: string; variant: 'warning' | 'amber' | 'success' }> = {
+  aguardando_maturacao: { label: 'Maturando', variant: 'warning' },
+  em_maturacao:         { label: 'Em maturação', variant: 'amber' },
+  concluido:            { label: 'Concluído', variant: 'success' },
 };
 
 type QualityColor = 'success' | 'warning' | 'danger';
@@ -45,160 +30,102 @@ type QualityColor = 'success' | 'warning' | 'danger';
 function qualityScore(h: Harvest): { color: QualityColor; label: string } | null {
   let score = 0;
   let total = 0;
-  if (h.paper_test !== null) { total++; if (h.paper_test === 'pass') score++; }
-  if (h.bubbles !== null) { total++; if (h.bubbles === 'none') score++; else if (h.bubbles === 'few') score += 0.5; }
-  if (h.humidity_pct !== null) { total++; if (h.humidity_pct <= 30) score++; else if (h.humidity_pct <= 35) score += 0.5; }
+  if (h.paper_test !== null)    { total++; if (h.paper_test === 'pass') score++; }
+  if (h.bubbles !== null)       { total++; if (h.bubbles === 'none') score++; else if (h.bubbles === 'few') score += 0.5; }
+  if (h.humidity_pct !== null)  { total++; if (h.humidity_pct <= 30) score++; else if (h.humidity_pct <= 35) score += 0.5; }
   if (total === 0) return null;
   const pct = score / total;
-  if (pct >= 0.8) return { color: 'success', label: 'Boa' };
-  if (pct >= 0.5) return { color: 'warning', label: 'Regular' };
+  if (pct >= 0.8) return { color: 'success', label: 'Boa qualidade' };
+  if (pct >= 0.5) return { color: 'warning', label: 'Qualidade regular' };
   return { color: 'danger', label: 'Atenção' };
 }
 
-// ─── Componente de card de colheita ───────────────────────────────────────────
+// ─── HarvestCard ──────────────────────────────────────────────────────────────
 
 function HarvestCard({
-  harvest,
-  apiaryName,
-  hiveCount,
-  onDelete,
+  harvest, apiaryName, hiveCount,
 }: {
-  harvest: Harvest;
-  apiaryName: string;
-  hiveCount: number;
-  onDelete: () => void;
+  harvest: Harvest; apiaryName: string; hiveCount: number;
 }) {
-  const [expanded, setExpanded] = useState(false);
+  const navigate = useNavigate();
   const quality = qualityScore(harvest);
+  const matBadge = harvest.maturation_status ? MATURATION_BADGE[harvest.maturation_status] : null;
 
   return (
-    <Card className="space-y-3">
-      {/* Header */}
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <p className="font-semibold text-stone-100 text-base">
-              {HONEY_TYPE_LABEL[harvest.honey_type] ?? harvest.honey_type}
+    <button
+      type="button"
+      onClick={() => navigate(`/harvests/${harvest.local_id}`)}
+      className="w-full text-left"
+    >
+      <Card className="hover:border-amber-600/40 transition-colors group">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <p className="font-semibold text-stone-100 text-base">
+                {HONEY_TYPE_LABEL[harvest.honey_type] ?? harvest.honey_type}
+              </p>
+              {quality && <Badge variant={quality.color}>{quality.label}</Badge>}
+              {matBadge && <Badge variant={matBadge.variant}>{matBadge.label}</Badge>}
+            </div>
+            <p className="text-xs text-stone-500 mt-0.5">
+              {apiaryName} · {formatDate(harvest.harvested_at)}
+              {harvest.responsible_name && ` · ${harvest.responsible_name}`}
             </p>
-            {quality && (
-              <Badge variant={quality.color}>
-                {quality.label}
-              </Badge>
-            )}
           </div>
-          <p className="text-xs text-stone-500 mt-0.5">
-            {apiaryName} · {formatDate(harvest.harvested_at)}
-            {harvest.responsible_name && ` · ${harvest.responsible_name}`}
-          </p>
+          <span className="text-stone-600 group-hover:text-stone-400 transition-colors text-sm flex-shrink-0 mt-0.5">
+            →
+          </span>
         </div>
-        <button
-          type="button"
-          onClick={() => setExpanded((o) => !o)}
-          className="text-stone-500 hover:text-stone-300 text-xs px-2 py-1 rounded-lg border border-stone-700 hover:border-stone-600 transition-colors flex-shrink-0"
-        >
-          {expanded ? '▲ Menos' : '▼ Detalhes'}
-        </button>
-      </div>
 
-      {/* Summary row */}
-      <div className="flex flex-wrap gap-3">
-        {hiveCount > 0 && (
-          <span className="text-xs text-stone-400">
-            🏠 {hiveCount} caixa{hiveCount > 1 ? 's' : ''}
-          </span>
-        )}
-        {harvest.total_volume_ml !== null && (
-          <span className="text-xs text-amber-400 font-medium">
-            🫙 {harvest.total_volume_ml.toLocaleString('pt-BR')} mL
-          </span>
-        )}
-        {harvest.total_weight_kg !== null && (
-          <span className="text-xs text-amber-300 font-medium">
-            ⚖️ {harvest.total_weight_kg.toLocaleString('pt-BR', { minimumFractionDigits: 3 })} kg
-          </span>
-        )}
-      </div>
-
-      {/* Insumos fornecidos */}
-      {(harvest.syrup_provided || harvest.pollen_ball_provided || harvest.wax_provided) && (
-        <div className="flex flex-wrap gap-1.5">
-          {harvest.syrup_provided && (
-            <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-900/30 text-emerald-400 border border-emerald-800/50">
-              🍬 Xarope
+        {/* Summary */}
+        <div className="flex flex-wrap gap-3 mt-2">
+          {hiveCount > 0 && (
+            <span className="text-xs text-stone-400">
+              🏠 {hiveCount} caixa{hiveCount > 1 ? 's' : ''}
             </span>
           )}
-          {harvest.pollen_ball_provided && (
-            <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-900/30 text-emerald-400 border border-emerald-800/50">
-              🌼 Pólen
+          {harvest.total_volume_ml !== null && (
+            <span className="text-xs text-amber-400 font-medium">
+              🫙 {harvest.total_volume_ml >= 1000
+                ? `${(harvest.total_volume_ml / 1000).toFixed(2)} L`
+                : `${harvest.total_volume_ml.toLocaleString('pt-BR')} mL`}
             </span>
           )}
-          {harvest.wax_provided && (
-            <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-900/30 text-emerald-400 border border-emerald-800/50">
-              🕯️ Cera
+          {harvest.total_weight_kg !== null && (
+            <span className="text-xs text-amber-300 font-medium">
+              ⚖️ {harvest.total_weight_kg.toLocaleString('pt-BR', { minimumFractionDigits: 3 })} kg
             </span>
+          )}
+          {harvest.brix !== null && (
+            <span className="text-xs text-stone-400">{harvest.brix}°Bx</span>
+          )}
+          {harvest.humidity_pct !== null && (
+            <span className="text-xs text-stone-400">{harvest.humidity_pct}% umidade</span>
           )}
         </div>
-      )}
 
-      {/* Expanded quality details */}
-      {expanded && (
-        <div className="border-t border-stone-700 pt-3 space-y-2">
-          <p className="text-xs font-medium text-stone-400">Parâmetros de qualidade</p>
-          <div className="grid grid-cols-2 gap-2 text-xs">
-            {harvest.humidity_pct !== null && (
-              <div className="bg-stone-800 rounded-lg px-3 py-2">
-                <p className="text-stone-500">Umidade</p>
-                <p className="text-stone-200 font-medium">{harvest.humidity_pct}%</p>
-              </div>
+        {/* Inputs */}
+        {(harvest.syrup_provided || harvest.pollen_ball_provided || harvest.wax_provided) && (
+          <div className="flex flex-wrap gap-1.5 mt-2">
+            {harvest.syrup_provided && (
+              <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-900/30 border border-emerald-800/50 text-emerald-400">
+                🍬 Xarope
+              </span>
             )}
-            {harvest.brix !== null && (
-              <div className="bg-stone-800 rounded-lg px-3 py-2">
-                <p className="text-stone-500">Brix</p>
-                <p className="text-stone-200 font-medium">{harvest.brix}°Bx</p>
-              </div>
+            {harvest.pollen_ball_provided && (
+              <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-900/30 border border-emerald-800/50 text-emerald-400">
+                🌼 Pólen
+              </span>
             )}
-            {harvest.viscosity !== null && (
-              <div className="bg-stone-800 rounded-lg px-3 py-2">
-                <p className="text-stone-500">Viscosidade</p>
-                <p className="text-stone-200 font-medium">
-                  {VISCOSITY_ICON[harvest.viscosity]} {harvest.viscosity}/5
-                </p>
-              </div>
-            )}
-            {harvest.visual_aspect && (
-              <div className="bg-stone-800 rounded-lg px-3 py-2">
-                <p className="text-stone-500">Aspecto</p>
-                <p className="text-stone-200 font-medium">{VISUAL_ASPECT_LABEL[harvest.visual_aspect]}</p>
-              </div>
-            )}
-            {harvest.bubbles && (
-              <div className="bg-stone-800 rounded-lg px-3 py-2 col-span-2">
-                <p className="text-stone-500">Bolhas</p>
-                <p className="text-stone-200 font-medium">{BUBBLES_LABEL[harvest.bubbles]}</p>
-              </div>
-            )}
-            {harvest.paper_test && (
-              <div className="bg-stone-800 rounded-lg px-3 py-2 col-span-2">
-                <p className="text-stone-500">Teste do papel</p>
-                <p className="text-stone-200 font-medium">{PAPER_TEST_LABEL[harvest.paper_test]}</p>
-              </div>
+            {harvest.wax_provided && (
+              <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-900/30 border border-emerald-800/50 text-emerald-400">
+                🕯️ Cera
+              </span>
             )}
           </div>
-          {harvest.notes && (
-            <p className="text-xs text-stone-500 italic">{harvest.notes}</p>
-          )}
-          <div className="flex justify-end pt-1">
-            <button
-              type="button"
-              onClick={onDelete}
-              className="text-xs text-red-500 hover:text-red-400 transition-colors"
-            >
-              Excluir colheita
-            </button>
-          </div>
-        </div>
-      )}
-    </Card>
+        )}
+      </Card>
+    </button>
   );
 }
 
@@ -209,27 +136,32 @@ export function HarvestsPage() {
   const { data: harvests = [], isLoading } = useHarvests();
   const { data: apiaries = [] } = useApiaries();
   const { data: hives = [] } = useHives();
-  const deleteHarvest = useDeleteHarvest();
 
-  const [filterApiary, setFilterApiary] = useState('');
-  const [filterPeriod, setFilterPeriod] = useState('all');
+  const [filterApiary, setFilterApiary]     = useState('');
+  const [filterHoneyType, setFilterHoneyType] = useState('');
+  const [filterPeriod, setFilterPeriod]     = useState('all');
 
-  // Opções de filtro
   const apiaryOptions = [
     { value: '', label: 'Todos os meliponários' },
     ...apiaries.map((a) => ({ value: a.local_id, label: a.name })),
   ];
 
-  const periodOptions = [
-    { value: 'all', label: 'Todos os períodos' },
-    { value: '30', label: 'Últimos 30 dias' },
-    { value: '90', label: 'Últimos 90 dias' },
-    { value: '365', label: 'Este ano' },
+  const honeyTypeOptions = [
+    { value: '', label: 'Qualquer tipo' },
+    { value: 'maturado', label: '✨ Mel maturado' },
+    { value: 'vivo',     label: '🌿 Mel vivo' },
   ];
 
-  // Filtragem
+  const periodOptions = [
+    { value: 'all',  label: 'Todos os períodos' },
+    { value: '30',   label: 'Últimos 30 dias' },
+    { value: '90',   label: 'Últimos 90 dias' },
+    { value: '365',  label: 'Este ano' },
+  ];
+
   const filtered = harvests.filter((h) => {
     if (filterApiary && h.apiary_local_id !== filterApiary) return false;
+    if (filterHoneyType && h.honey_type !== filterHoneyType) return false;
     if (filterPeriod !== 'all') {
       const days = parseInt(filterPeriod, 10);
       const cutoff = new Date();
@@ -239,9 +171,9 @@ export function HarvestsPage() {
     return true;
   });
 
-  // Totais para o período filtrado
   const totalVolume = filtered.reduce((acc, h) => acc + (h.total_volume_ml ?? 0), 0);
   const totalWeight = filtered.reduce((acc, h) => acc + (h.total_weight_kg ?? 0), 0);
+  const maturacaoCount = filtered.filter((h) => h.maturation_status === 'aguardando_maturacao').length;
 
   if (isLoading) return <div className="flex justify-center py-16"><Spinner /></div>;
 
@@ -262,43 +194,37 @@ export function HarvestsPage() {
 
       {/* Filtros */}
       {harvests.length > 0 && (
-        <div className="grid grid-cols-2 gap-3">
-          <Select
-            label=""
-            options={apiaryOptions}
-            value={filterApiary}
-            onChange={(e) => setFilterApiary(e.target.value)}
-          />
-          <Select
-            label=""
-            options={periodOptions}
-            value={filterPeriod}
-            onChange={(e) => setFilterPeriod(e.target.value)}
-          />
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          <Select options={apiaryOptions}   value={filterApiary}    onChange={(e) => setFilterApiary(e.target.value)} />
+          <Select options={honeyTypeOptions} value={filterHoneyType} onChange={(e) => setFilterHoneyType(e.target.value)} />
+          <Select options={periodOptions}   value={filterPeriod}    onChange={(e) => setFilterPeriod(e.target.value)}
+            className="col-span-2 sm:col-span-1" />
         </div>
       )}
 
       {/* Resumo do período */}
       {filtered.length > 0 && (
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <Card className="text-center">
             <p className="text-2xl font-bold text-amber-400">{filtered.length}</p>
             <p className="text-xs text-stone-500">Colheitas</p>
           </Card>
           <Card className="text-center">
-            <p className="text-2xl font-bold text-amber-300">
-              {totalVolume >= 1000
-                ? `${(totalVolume / 1000).toFixed(2)}L`
-                : `${totalVolume.toFixed(0)}mL`}
+            <p className="text-xl font-bold text-amber-300">
+              {totalVolume >= 1000 ? `${(totalVolume / 1000).toFixed(2)} L` : `${totalVolume.toFixed(0)} mL`}
             </p>
             <p className="text-xs text-stone-500">Volume total</p>
           </Card>
           <Card className="text-center">
-            <p className="text-2xl font-bold text-amber-200">
-              {totalWeight.toFixed(2)}kg
-            </p>
+            <p className="text-xl font-bold text-amber-200">{totalWeight.toFixed(2)} kg</p>
             <p className="text-xs text-stone-500">Peso total</p>
           </Card>
+          {maturacaoCount > 0 && (
+            <Card className="text-center">
+              <p className="text-xl font-bold text-amber-500">{maturacaoCount}</p>
+              <p className="text-xs text-stone-500">Aguardando maturação</p>
+            </Card>
+          )}
         </div>
       )}
 
@@ -308,14 +234,14 @@ export function HarvestsPage() {
           <EmptyState
             icon="🍯"
             title="Nenhuma colheita registrada"
-            description="Registre as colheitas de mel, incluindo parâmetros de qualidade e caixas colhidas."
+            description="Registre as colheitas de mel com parâmetros de qualidade e volumes por caixa."
             action={{ label: 'Registrar Colheita', onClick: () => navigate('/harvests/new') }}
           />
         ) : (
           <EmptyState
             icon="🔍"
             title="Nenhuma colheita neste filtro"
-            description="Tente ampliar o período ou selecionar outro meliponário."
+            description="Tente ampliar o período ou ajustar os filtros."
           />
         )
       ) : (
@@ -327,9 +253,8 @@ export function HarvestsPage() {
               <HarvestCard
                 key={harvest.local_id}
                 harvest={harvest}
-                apiaryName={apiary?.name ?? 'Meliponário desconhecido'}
+                apiaryName={apiary?.name ?? '—'}
                 hiveCount={hiveCount}
-                onDelete={() => deleteHarvest.mutate(harvest.local_id)}
               />
             );
           })}

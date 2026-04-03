@@ -16,6 +16,16 @@ export function useHarvests(apiary_local_id?: string) {
   });
 }
 
+export function useHarvest(local_id: string) {
+  return useQuery({
+    queryKey: [...QUERY_KEY, local_id],
+    queryFn: () => harvestRepo.getById(local_id),
+    networkMode: 'offlineFirst',
+    staleTime: 30_000,
+    enabled: !!local_id,
+  });
+}
+
 export function useCreateHarvest() {
   const qc = useQueryClient();
   const { setPendingCount } = useSyncStore();

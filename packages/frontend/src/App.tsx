@@ -10,6 +10,7 @@ import { ProductionsPage } from './pages/Productions/ProductionsPage';
 import { FeedingsPage } from './pages/Feedings/FeedingsPage';
 import { HarvestsPage } from './pages/Harvests/HarvestsPage';
 import { HarvestWizard } from './pages/Harvests/HarvestWizard';
+import { HarvestDetail } from './pages/Harvests/HarvestDetail';
 import { SettingsPage } from './pages/Settings/SettingsPage';
 import { ReportsPage } from './pages/Reports/ReportsPage';
 import LoginPage from './pages/Login/LoginPage';
@@ -49,6 +50,7 @@ export function App() {
           <Route path="reports" element={<ReportsPage />} />
           <Route path="feedings" element={<FeedingsPage />} />
           <Route path="harvests" element={<HarvestsPage />} />
+          <Route path="harvests/:id" element={<HarvestDetail />} />
           <Route path="settings" element={<SettingsPage />} />
         </Route>
       </Route>
