@@ -13,6 +13,7 @@ import { Card, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { HiveCard } from '@/components/hive/HiveCard';
 import { daysSince } from '@/utils/dates';
+import { normalizeChecklistHealth } from '@/utils/inspectionUtils';
 
 const PIE_COLORS = { active: '#10b981', inactive: '#f59e0b', dead: '#ef4444', transferred: '#6b7280' };
 const STATUS_LABELS: Record<string, string> = {
@@ -57,11 +58,12 @@ export function Dashboard() {
     }
     const latest = Array.from(latestByHive.values());
     if (latest.length === 0) return null;
+    const normalized = latest.map((i) => normalizeChecklistHealth(i.checklist));
     return {
-      avgStrength: latest.reduce((s, i) => s + i.checklist.population_strength, 0) / latest.length,
-      withAlerts: latest.filter((i) => i.checklist.pests_observed.length > 0 || i.checklist.diseases_observed.length > 0).length,
-      needsFeeding: latest.filter((i) => i.checklist.needs_feeding).length,
-      needsExpansion: latest.filter((i) => i.checklist.needs_space_expansion).length,
+      avgStrength: normalized.reduce((s, n) => s + n.strength, 0) / normalized.length,
+      withAlerts: normalized.filter((n) => n.hasAlerts).length,
+      needsFeeding: normalized.filter((n) => n.needsFeeding).length,
+      needsExpansion: normalized.filter((n) => n.needsExpansion).length,
     };
   }, [hives, inspections]);
 

@@ -10,10 +10,15 @@ import { Card, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { HiveCard } from '@/components/hive/HiveCard';
 import { daysSince } from '@/utils/dates';
+import { normalizeChecklistHealth } from '@/utils/inspectionUtils';
 
-const PEST_LABELS: Record<string, string> = {
+// v2 pest keys + v3 invader keys
+const INVADER_LABELS: Record<string, string> = {
   small_hive_beetle: 'Besouro', phorid_flies: 'Moscas fóridas', ants: 'Formigas',
   wax_moth: 'Traça da cera', lizards: 'Lagartos', spiders: 'Aranhas',
+  moscas_foridas: 'Moscas fóridas', formigas: 'Formigas', aranhas: 'Aranhas',
+  lagartos: 'Lagartos', traca_cera: 'Traça da cera', piolho_abelha: 'Piolho de abelha',
+  besouros: 'Besouros', outros: 'Outros invasores',
 };
 const DISEASE_LABELS: Record<string, string> = {
   american_foulbrood: 'Loque americano', nosemosis: 'Nosemose',
@@ -75,14 +80,14 @@ export function ResponsavelDashboard() {
       .sort((a, b) => a.dueDate.localeCompare(b.dueDate));
   }, [myActiveHives, latestByHive]);
 
-  // ── Health alerts (pests or diseases in last inspection) ──────────────────
+  // ── Health alerts (invaders / pests / diseases in last inspection) ────────
   const healthAlerts = useMemo(() => {
     return myActiveHives.flatMap((h) => {
       const latest = latestByHive.get(h.local_id);
       if (!latest) return [];
-      const { pests_observed, diseases_observed } = latest.checklist;
-      if (pests_observed.length === 0 && diseases_observed.length === 0) return [];
-      return [{ hive: h, pests: pests_observed, diseases: diseases_observed }];
+      const { hasAlerts, allInvaders, diseasesObserved } = normalizeChecklistHealth(latest.checklist);
+      if (!hasAlerts) return [];
+      return [{ hive: h, invaders: allInvaders, diseases: diseasesObserved }];
     });
   }, [myActiveHives, latestByHive]);
 
@@ -91,9 +96,9 @@ export function ResponsavelDashboard() {
     return myActiveHives.flatMap((h) => {
       const latest = latestByHive.get(h.local_id);
       if (!latest) return [];
-      const { needs_feeding, needs_space_expansion } = latest.checklist;
-      if (!needs_feeding && !needs_space_expansion) return [];
-      return [{ hive: h, needs_feeding, needs_space_expansion }];
+      const { needsFeeding, needsExpansion } = normalizeChecklistHealth(latest.checklist);
+      if (!needsFeeding && !needsExpansion) return [];
+      return [{ hive: h, needsFeeding, needsExpansion }];
     });
   }, [myActiveHives, latestByHive]);
 
@@ -228,7 +233,7 @@ export function ResponsavelDashboard() {
         <div>
           <h2 className="text-lg font-semibold text-stone-100 mb-3">🔬 Alertas de Saúde</h2>
           <div className="space-y-2">
-            {healthAlerts.map(({ hive, pests, diseases }) => (
+            {healthAlerts.map(({ hive, invaders, diseases }) => (
               <button
                 key={hive.local_id}
                 onClick={() => navigate(`/hives/${hive.local_id}`)}
@@ -239,9 +244,9 @@ export function ResponsavelDashboard() {
                   <span className="text-xs text-red-400">Ver detalhes →</span>
                 </div>
                 <div className="flex flex-wrap gap-1.5">
-                  {pests.map((p) => (
+                  {invaders.map((p) => (
                     <span key={p} className="px-2 py-0.5 rounded-full text-xs bg-orange-900/40 border border-orange-700/40 text-orange-300">
-                      🪲 {PEST_LABELS[p] ?? p}
+                      🪲 {INVADER_LABELS[p] ?? p}
                     </span>
                   ))}
                   {diseases.map((d) => (
@@ -261,7 +266,7 @@ export function ResponsavelDashboard() {
         <Card>
           <CardHeader><CardTitle>Ações Pendentes</CardTitle></CardHeader>
           <div className="space-y-1 pt-1">
-            {needsAction.map(({ hive, needs_feeding, needs_space_expansion }) => (
+            {needsAction.map(({ hive, needsFeeding, needsExpansion }) => (
               <button
                 key={hive.local_id}
                 onClick={() => navigate(`/hives/${hive.local_id}`)}
@@ -269,8 +274,8 @@ export function ResponsavelDashboard() {
               >
                 <span className="text-sm text-stone-100">{hive.code}</span>
                 <div className="flex gap-2">
-                  {needs_feeding && <span className="text-xs text-orange-400">🌺 Alimentar</span>}
-                  {needs_space_expansion && <span className="text-xs text-blue-400">📦 Expandir</span>}
+                  {needsFeeding && <span className="text-xs text-orange-400">🌺 Alimentar</span>}
+                  {needsExpansion && <span className="text-xs text-blue-400">📦 Expandir</span>}
                 </div>
               </button>
             ))}

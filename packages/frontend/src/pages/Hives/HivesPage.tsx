@@ -46,11 +46,13 @@ export function HivesPage() {
     ...apiaries.map((a) => ({ value: a.local_id, label: a.name })),
   ];
 
-  const filtered = hives.filter((h) => {
-    if (filterApiaryId && h.apiary_local_id !== filterApiaryId) return false;
-    if (filterStatus && h.status !== filterStatus) return false;
-    return true;
-  });
+  const filtered = hives
+    .filter((h) => {
+      if (filterApiaryId && h.apiary_local_id !== filterApiaryId) return false;
+      if (filterStatus && h.status !== filterStatus) return false;
+      return true;
+    })
+    .sort((a, b) => a.code.localeCompare(b.code, undefined, { numeric: true }));
 
   function openNew() { setEditing(null); setShowForm(true); }
   function openEdit(h: Hive) { setEditing(h); setShowForm(true); }
