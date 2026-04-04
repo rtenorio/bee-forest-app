@@ -31,4 +31,4 @@ COPY --from=builder /app/node_modules ./node_modules
 EXPOSE 3001
 
 # Run migrations then start the server
-CMD ["sh", "-c", "node dist/db/migrate.js && node dist/index.js"]
+CMD ["sh", "-c", "echo 'Starting migration...' && node dist/db/migrate.js && echo 'Migration done. Starting server...' && node dist/index.js"]
