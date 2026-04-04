@@ -124,28 +124,46 @@ export function PrintLabelsPage() {
       {/* Print-only styles */}
       <style>{`
         @media print {
-          body > * { display: none !important; }
-          .print-root { display: block !important; }
+          /* Force white background — overrides dark-mode on html/body */
+          html, body {
+            background: white !important;
+            background-color: white !important;
+            color: black !important;
+          }
+
+          /* Force background colors to render (browsers suppress them by default) */
+          * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+
+          /* Hide every UI element that should not appear in print */
           .no-print { display: none !important; }
+
+          /* Reveal and lay out the print area */
           .print-area {
             display: flex !important;
             flex-wrap: wrap;
             gap: 6mm;
             padding: 10mm;
-            background: white;
+            background: white !important;
           }
+
+          /* Label card overrides */
           .qr-label {
             width: 48mm !important;
             height: 54mm !important;
+            break-inside: avoid;
             page-break-inside: avoid;
             border: 1.5px solid #f59e0b !important;
             border-radius: 6px !important;
             background: white !important;
+            color: black !important;
           }
         }
       `}</style>
 
-      <div className="print-root space-y-5 max-w-5xl">
+      <div className="space-y-5 max-w-5xl">
         {/* Controles — no-print */}
         <div className="no-print space-y-4">
           <div className="flex items-center gap-3 flex-wrap">
@@ -243,8 +261,8 @@ export function PrintLabelsPage() {
           </div>
         )}
 
-        {/* Área de impressão (escondida na tela, visível no print) */}
-        <div className="print-area hidden">
+        {/* Área de impressão (oculta na tela via style, visível no print via @media print) */}
+        <div className="print-area" style={{ display: 'none' }}>
           {selectedLabels.map((l) => (
             <QRLabel key={l.hive.local_id} label={l} size={150} />
           ))}
