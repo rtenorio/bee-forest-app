@@ -1,4 +1,4 @@
-import type { UserRole } from '@bee-forest/shared';
+import type { UserRole } from '../shared';
 
 declare global {
   namespace Express {

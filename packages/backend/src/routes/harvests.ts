@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { pool, query, queryOne } from '../db/connection';
 import { validate } from '../middleware/validate';
 import { requireRole } from '../middleware/requireRole';
-import { HarvestCreateSchema, HarvestUpdateSchema } from '@bee-forest/shared';
+import { HarvestCreateSchema, HarvestUpdateSchema } from '../shared';
 import { autoHarvestStockEntry } from './stock';
 import type { Request } from 'express';
 

@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { config } from '../config';
 import { query } from '../db/connection';
-import type { UserRole } from '@bee-forest/shared';
+import type { UserRole } from '../shared';
 
 interface JwtPayload {
   sub: number;

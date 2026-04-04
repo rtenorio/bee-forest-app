@@ -4,7 +4,7 @@ import { pool, query, queryOne } from '../db/connection';
 import type { PoolClient } from 'pg';
 import { validate } from '../middleware/validate';
 import { requireRole } from '../middleware/requireRole';
-import { InspectionCreateSchema, InspectionUpdateSchema } from '@bee-forest/shared';
+import { InspectionCreateSchema, InspectionUpdateSchema } from '../shared';
 import type { Request } from 'express';
 
 const router = Router();

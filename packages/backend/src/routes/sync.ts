@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { pool, query } from '../db/connection';
 import { validate } from '../middleware/validate';
-import { SyncPayloadSchema, SyncQueueItem } from '@bee-forest/shared';
+import { SyncPayloadSchema, SyncQueueItem } from '../shared';
 import type { Request } from 'express';
 
 const router = Router();

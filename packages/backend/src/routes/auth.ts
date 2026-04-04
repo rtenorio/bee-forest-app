@@ -5,8 +5,8 @@ import { queryOne, query } from '../db/connection';
 import { validate } from '../middleware/validate';
 import { authenticate } from '../middleware/authenticate';
 import { config } from '../config';
-import { LoginSchema } from '@bee-forest/shared';
-import type { UserRole } from '@bee-forest/shared';
+import { LoginSchema } from '../shared';
+import type { UserRole } from '../shared';
 
 const router = Router();
 

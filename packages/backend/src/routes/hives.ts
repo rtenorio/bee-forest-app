@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { query, queryOne, pool } from '../db/connection';
 import { validate } from '../middleware/validate';
 import { requireRole } from '../middleware/requireRole';
-import { HiveCreateSchema, HiveUpdateSchema } from '@bee-forest/shared';
+import { HiveCreateSchema, HiveUpdateSchema } from '../shared';
 import type { Request } from 'express';
 
 function buildQrCode(locationOrName: string, seq: number): string {

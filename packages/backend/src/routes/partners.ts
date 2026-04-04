@@ -11,7 +11,7 @@ import {
   DeliveryCreateSchema,
   QualityTestCreateSchema,
   PayPaymentSchema,
-} from '@bee-forest/shared';
+} from '../shared';
 
 const router = Router();
 

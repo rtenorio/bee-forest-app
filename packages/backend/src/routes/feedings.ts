@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { query, queryOne } from '../db/connection';
 import { validate } from '../middleware/validate';
 import { requireRole } from '../middleware/requireRole';
-import { FeedingCreateSchema, FeedingUpdateSchema } from '@bee-forest/shared';
+import { FeedingCreateSchema, FeedingUpdateSchema } from '../shared';
 
 const router = Router();
 

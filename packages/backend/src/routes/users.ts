@@ -2,8 +2,8 @@ import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import { query, queryOne, pool } from '../db/connection';
 import { validate } from '../middleware/validate';
-import { CreateUserSchema, UpdateUserSchema, ChangeRoleSchema } from '@bee-forest/shared';
-import type { UserRole } from '@bee-forest/shared';
+import { CreateUserSchema, UpdateUserSchema, ChangeRoleSchema } from '../shared';
+import type { UserRole } from '../shared';
 
 const router = Router();
 

@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import type { UserRole } from '@bee-forest/shared';
+import type { UserRole } from '../shared';
 
 /**
  * Middleware RBAC — master_admin tem acesso irrestrito a todos os endpoints.

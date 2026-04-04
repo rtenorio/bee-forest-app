@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { query, queryOne } from '../db/connection';
 import { validate } from '../middleware/validate';
-import { SpeciesCreateSchema, SpeciesUpdateSchema } from '@bee-forest/shared';
+import { SpeciesCreateSchema, SpeciesUpdateSchema } from '../shared';
 
 const router = Router();
 

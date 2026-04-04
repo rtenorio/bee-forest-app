@@ -27,9 +27,6 @@ WORKDIR /app
 COPY --from=builder /app/packages/backend/dist ./dist
 COPY --from=builder /app/packages/backend/package*.json ./
 COPY --from=builder /app/node_modules ./node_modules
-# Copy shared package directly into node_modules — avoids symlink issues in multi-stage builds
-COPY --from=builder /app/packages/shared/dist ./node_modules/@bee-forest/shared/dist
-COPY --from=builder /app/packages/shared/package*.json ./node_modules/@bee-forest/shared/
 
 EXPOSE 3001
 
