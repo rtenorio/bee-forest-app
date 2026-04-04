@@ -3,6 +3,7 @@ import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
 import { BottomNav } from './BottomNav';
 import { useSync } from '@/hooks/useSync';
+import { useInitialLoad } from '@/hooks/useInitialLoad';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import { useSyncStore } from '@/store/syncStore';
 
@@ -62,6 +63,8 @@ function SyncBanner() {
 export function AppShell() {
   // Initialize sync
   useSync();
+  // Restore IDB from server when empty (fresh install / cache cleared)
+  useInitialLoad();
 
   return (
     <div className="flex h-screen bg-stone-950">

@@ -184,4 +184,75 @@ router.post('/', validate(SyncPayloadSchema), async (req, res, next) => {
   }
 });
 
+// ── GET /pull — pull-only endpoint for initial load / cache restore ───────────
+// Called by the frontend when IndexedDB is empty (after cache clear or new device).
+// Does NOT push anything — only returns server_changes for the requesting user.
+
+router.get('/pull', async (req, res, next) => {
+  const client = await pool.connect();
+  try {
+    const user = req.user!;
+    const since = (req.query.since as string | undefined) ?? '1970-01-01T00:00:00.000Z';
+
+    const server_changes: Array<{ entity_type: string; records: unknown[] }> = [];
+    const accessibleHiveIds = await resolveAccessibleHiveIds(req);
+
+    for (const [entity_type, table] of Object.entries(TABLE_MAP)) {
+      if (user.role === 'tratador' && ['production', 'feeding', 'harvest', 'batch', 'stock_item'].includes(entity_type)) continue;
+
+      let rows;
+      if (accessibleHiveIds === null) {
+        rows = await client.query(
+          `SELECT * FROM ${table} WHERE updated_at > $1 AND deleted_at IS NULL`,
+          [since]
+        );
+      } else if (entity_type === 'apiary') {
+        if (user.role === 'tratador') continue;
+        const ids = user.apiary_local_ids;
+        if (ids.length === 0) continue;
+        rows = await client.query(
+          `SELECT * FROM ${table} WHERE updated_at > $1 AND local_id = ANY($2::varchar[]) AND deleted_at IS NULL`,
+          [since, ids]
+        );
+      } else if (['hive', 'inspection', 'production', 'feeding'].includes(entity_type)) {
+        if (accessibleHiveIds.length === 0) continue;
+        const col = entity_type === 'hive' ? 'local_id' : 'hive_local_id';
+        rows = await client.query(
+          `SELECT * FROM ${table} WHERE updated_at > $1 AND ${col} = ANY($2::varchar[]) AND deleted_at IS NULL`,
+          [since, accessibleHiveIds]
+        );
+      } else if (entity_type === 'harvest' || entity_type === 'batch' || entity_type === 'stock_item') {
+        if (user.role === 'responsavel') {
+          const ids = user.apiary_local_ids;
+          if (ids.length === 0) continue;
+          rows = await client.query(
+            `SELECT * FROM ${table} WHERE updated_at > $1 AND apiary_local_id = ANY($2::varchar[]) AND deleted_at IS NULL`,
+            [since, ids]
+          );
+        } else {
+          rows = await client.query(
+            `SELECT * FROM ${table} WHERE updated_at > $1 AND deleted_at IS NULL`,
+            [since]
+          );
+        }
+      } else {
+        rows = await client.query(
+          `SELECT * FROM ${table} WHERE updated_at > $1 AND deleted_at IS NULL`,
+          [since]
+        );
+      }
+
+      if (rows && rows.rows.length > 0) {
+        server_changes.push({ entity_type, records: rows.rows });
+      }
+    }
+
+    res.json({ server_changes });
+  } catch (err) {
+    next(err);
+  } finally {
+    client.release();
+  }
+});
+
 export default router;

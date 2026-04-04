@@ -1,6 +1,6 @@
 import { SyncMeta } from './sync';
 
-export type ApiaryStatus = 'active' | 'inactive';
+export type ApiaryStatus = 'active' | 'inactive' | 'implantacao';
 
 export interface Apiary extends SyncMeta {
   name: string;
