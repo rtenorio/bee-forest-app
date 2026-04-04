@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { pool, query, queryOne } from '../db/connection';
+import type { PoolClient } from 'pg';
 import { validate } from '../middleware/validate';
 import { requireRole } from '../middleware/requireRole';
 import { InspectionCreateSchema, InspectionUpdateSchema } from '@bee-forest/shared';
@@ -67,7 +68,7 @@ router.get('/:local_id', async (req, res, next) => {
 
 // Helpers para manter inspection_tasks sincronizado
 async function upsertTasks(
-  client: Awaited<ReturnType<typeof pool.connect>>,
+  client: PoolClient,
   inspection_local_id: string,
   tasks: Array<{ label: string; custom_text?: string; due_date?: string | null; assignee_name?: string; priority?: string }>
 ) {
@@ -186,7 +187,7 @@ router.put('/:local_id', requireRole('socio', 'responsavel'), validate(Inspectio
     }
 
     if (checklist?.tasks) {
-      await upsertTasks(client, req.params.local_id, checklist.tasks);
+      await upsertTasks(client, req.params.local_id as string, checklist.tasks);
     }
 
     await client.query('COMMIT');
