@@ -9,6 +9,7 @@ export * from './types/production';
 export * from './types/feeding';
 export * from './types/harvest';
 export * from './types/batch';
+export * from './types/stock';
 
 // Schemas
 export * from './schemas/auth.schema';

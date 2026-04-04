@@ -9,6 +9,7 @@ import { useApiaries } from '@/hooks/useApiaries';
 import { useHives } from '@/hooks/useHives';
 import { useInspections } from '@/hooks/useInspections';
 import { useProductions } from '@/hooks/useProductions';
+import { useStockAlerts } from '@/hooks/useStock';
 import { Card, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { HiveCard } from '@/components/hive/HiveCard';
@@ -26,6 +27,7 @@ export function Dashboard() {
   const { data: hives = [] } = useHives();
   const { data: inspections = [] } = useInspections();
   const { data: productions = [] } = useProductions();
+  const { data: stockAlerts = [] } = useStockAlerts();
 
   // ── Summary stats ─────────────────────────────────────────────────────────
   const stats = useMemo(() => ({
@@ -132,7 +134,12 @@ export function Dashboard() {
           <h1 className="text-2xl font-bold text-stone-100">Dashboard</h1>
           <p className="text-stone-500 text-sm">Visão geral do meliponário</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          {stockAlerts.length > 0 && (
+            <Button variant="secondary" size="sm" onClick={() => navigate('/stock/alerts')}>
+              ⚠️ {stockAlerts.length} alerta{stockAlerts.length !== 1 ? 's' : ''} estoque
+            </Button>
+          )}
           <Button variant="secondary" size="sm" onClick={() => navigate('/reports')}>
             📊 Relatórios
           </Button>

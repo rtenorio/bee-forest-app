@@ -28,6 +28,10 @@ import { BatchQualityPage } from './pages/Batches/BatchQualityPage';
 import { BatchReportsPage } from './pages/Batches/BatchReportsPage';
 import { NotificationsPage } from './pages/Notifications/NotificationsPage';
 import { NotificationSettingsPage } from './pages/Notifications/NotificationSettingsPage';
+import { StockPage } from './pages/Stock/StockPage';
+import { StockApiaryPage } from './pages/Stock/StockApiaryPage';
+import { StockMovementsPage } from './pages/Stock/StockMovementsPage';
+import { StockAlertsPage } from './pages/Stock/StockAlertsPage';
 import { SocioDashboard } from './pages/Dashboard/SocioDashboard';
 import { ResponsavelDashboard } from './pages/Dashboard/ResponsavelDashboard';
 import { TratadorDashboard } from './pages/Dashboard/TratadorDashboard';
@@ -75,6 +79,10 @@ export function App() {
           <Route path="batches/quality" element={<BatchQualityPage />} />
           <Route path="batches/reports" element={<BatchReportsPage />} />
           <Route path="batches/:id" element={<BatchDetail />} />
+          <Route path="stock" element={<StockPage />} />
+          <Route path="stock/movements" element={<StockMovementsPage />} />
+          <Route path="stock/alerts" element={<StockAlertsPage />} />
+          <Route path="stock/:apiaryId" element={<StockApiaryPage />} />
           <Route path="notifications" element={<NotificationsPage />} />
           <Route path="settings" element={<SettingsPage />} />
           <Route path="settings/notifications" element={<NotificationSettingsPage />} />

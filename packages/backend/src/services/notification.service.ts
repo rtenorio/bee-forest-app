@@ -38,7 +38,8 @@ export type NotificationType =
   | 'inspection_overdue'
   | 'task_overdue'
   | 'batch_fermentation_risk'
-  | 'batch_stalled';
+  | 'batch_stalled'
+  | 'stock_alert';
 
 export type NotificationChannel = 'web_push' | 'whatsapp' | 'both';
 

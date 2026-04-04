@@ -4,6 +4,7 @@ import { pool, query, queryOne } from '../db/connection';
 import { validate } from '../middleware/validate';
 import { requireRole } from '../middleware/requireRole';
 import { HarvestCreateSchema, HarvestUpdateSchema } from '@bee-forest/shared';
+import { autoHarvestStockEntry } from './stock';
 import type { Request } from 'express';
 
 const router = Router();
@@ -155,7 +156,21 @@ router.post('/', validate(HarvestCreateSchema), async (req, res, next) => {
     }
 
     await client.query('COMMIT');
-    res.status(201).json(row.rows[0]);
+
+    // Auto-create stock entry for honey
+    const created = row.rows[0];
+    if (created.total_volume_ml || created.total_weight_kg) {
+      autoHarvestStockEntry(
+        apiary_local_id,
+        honey_type as 'vivo' | 'maturado',
+        created.total_volume_ml,
+        created.total_weight_kg,
+        local_id,
+        user.id
+      ).catch((e) => console.error('[stock] harvest auto-entry failed:', e));
+    }
+
+    res.status(201).json(created);
   } catch (err) {
     await client.query('ROLLBACK');
     next(err);

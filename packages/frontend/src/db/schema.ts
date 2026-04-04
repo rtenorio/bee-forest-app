@@ -1,5 +1,5 @@
 import { openDB, DBSchema, IDBPDatabase } from 'idb';
-import type { Apiary, Species, Hive, Inspection, Production, Feeding, Harvest, HoneyBatch } from '@bee-forest/shared';
+import type { Apiary, Species, Hive, Inspection, Production, Feeding, Harvest, HoneyBatch, StockItem } from '@bee-forest/shared';
 import type { SyncQueueItem } from '@bee-forest/shared';
 
 export interface PendingQRScan {
@@ -59,10 +59,15 @@ export interface BeeForestDB extends DBSchema {
     value: HoneyBatch;
     indexes: { 'by-apiary': string; 'by-status': string; 'by-date': string };
   };
+  stock_items: {
+    key: string;
+    value: StockItem;
+    indexes: { 'by-apiary': string; 'by-category': string };
+  };
 }
 
 const DB_NAME = 'bee-forest';
-const DB_VERSION = 4;
+const DB_VERSION = 5;
 
 let dbInstance: IDBPDatabase<BeeForestDB> | null = null;
 
@@ -123,6 +128,13 @@ export async function getDb(): Promise<IDBPDatabase<BeeForestDB>> {
         batchesStore.createIndex('by-apiary', 'apiary_local_id');
         batchesStore.createIndex('by-status', 'current_status');
         batchesStore.createIndex('by-date', 'harvest_date');
+      }
+
+      // ── Version 5: Estoque ────────────────────────────────────────────────────
+      if (oldVersion < 5) {
+        const stockStore = db.createObjectStore('stock_items', { keyPath: 'local_id' });
+        stockStore.createIndex('by-apiary', 'apiary_local_id');
+        stockStore.createIndex('by-category', 'category');
       }
     },
   });
