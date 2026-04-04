@@ -2,7 +2,7 @@
 FROM node:22-alpine AS builder
 WORKDIR /app
 
-# Copy all workspace manifests first for better layer caching
+# Copy workspace manifests — shared package.json needed for workspace resolution
 COPY package*.json ./
 COPY packages/shared/package*.json ./packages/shared/
 COPY packages/backend/package*.json ./packages/backend/
@@ -10,11 +10,9 @@ COPY packages/frontend/package*.json ./packages/frontend/
 
 RUN npm ci --ignore-scripts
 
-# Copy source for shared + backend only
-COPY packages/shared ./packages/shared
+# Copy backend source and compile (shared is now inlined in src/shared/)
 COPY packages/backend ./packages/backend
 
-RUN npm run build -w packages/shared
 RUN npm run build -w packages/backend
 
 # SQL migrations are not compiled by tsc — copy them manually to dist
