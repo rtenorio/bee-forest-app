@@ -20,7 +20,8 @@ router.get('/hives/:codigo', async (req, res, next) => {
        FROM hives h
        LEFT JOIN apiaries a ON h.apiary_local_id = a.local_id
        LEFT JOIN species s  ON h.species_id = s.server_id
-       WHERE h.qr_code = $1 AND h.deleted_at IS NULL`,
+       WHERE (LOWER(h.qr_code) = LOWER($1) OR LOWER(h.code) = LOWER($1))
+         AND h.deleted_at IS NULL`,
       [codigo]
     );
 

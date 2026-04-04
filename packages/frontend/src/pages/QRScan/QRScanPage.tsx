@@ -8,18 +8,28 @@ type ParsedQR =
   | { type: 'old'; hiveLocalId: string }
   | null;
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 function parseQRResult(text: string): ParsedQR {
+  const trimmed = text.trim();
   try {
-    const url = new URL(text);
+    const url = new URL(trimmed);
+    // Novo formato: https://beeforest.app/h/CME-001-ALD
     const newMatch = url.pathname.match(/^\/h\/([A-Za-z0-9_-]+)$/i);
     if (newMatch) return { type: 'new', codigo: newMatch[1] };
+    // Formato legado: /hives/{uuid}
     const oldMatch = url.pathname.match(/^\/hives\/([0-9a-f-]{36})$/i);
     if (oldMatch) return { type: 'old', hiveLocalId: oldMatch[1] };
   } catch {
-    const newMatch = text.match(/^\/h\/([A-Za-z0-9_-]+)$/i);
+    // Não é URL — tenta formatos de caminho relativo
+    const newMatch = trimmed.match(/^\/h\/([A-Za-z0-9_-]+)$/i);
     if (newMatch) return { type: 'new', codigo: newMatch[1] };
-    const oldMatch = text.match(/^\/hives\/([0-9a-f-]{36})$/i);
+    const oldMatch = trimmed.match(/^\/hives\/([0-9a-f-]{36})$/i);
     if (oldMatch) return { type: 'old', hiveLocalId: oldMatch[1] };
+    // Código bare impresso na etiqueta: CME-001-ALD (não é UUID, não tem espaço)
+    if (/^[A-Za-z0-9_-]+$/.test(trimmed) && !UUID_RE.test(trimmed)) {
+      return { type: 'new', codigo: trimmed };
+    }
   }
   return null;
 }

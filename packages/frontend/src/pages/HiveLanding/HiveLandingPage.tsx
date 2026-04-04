@@ -75,7 +75,10 @@ export function HiveLandingPage() {
         // Offline: tenta IDB (apenas se logado)
         if (user) {
           const hives = await hiveRepo.getAll();
-          const hive = hives.find((h) => h.qr_code === codigo);
+          const needle = codigo.toLowerCase();
+          const hive = hives.find(
+            (h) => h.qr_code?.toLowerCase() === needle || h.code?.toLowerCase() === needle
+          );
           if (hive) {
             setOffline(true);
             const apiary = await apiaryRepo.getById(hive.apiary_local_id);
