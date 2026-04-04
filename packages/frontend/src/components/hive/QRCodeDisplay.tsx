@@ -12,7 +12,10 @@ export function QRCodeDisplay({ hiveLocalId, qrCodeText }: Props) {
   const [open, setOpen] = useState(false);
   const [dataUrl, setDataUrl] = useState<string | null>(null);
 
-  const qrContent = `${window.location.origin}/hives/${hiveLocalId}`;
+  const appUrl = import.meta.env.VITE_APP_URL ?? window.location.origin;
+  const qrContent = qrCodeText
+    ? `${appUrl}/h/${qrCodeText}`
+    : `${window.location.origin}/hives/${hiveLocalId}`;
 
   useEffect(() => {
     if (!open) return;

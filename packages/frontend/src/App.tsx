@@ -4,6 +4,7 @@ import { ApiariesPage } from './pages/Apiaries/ApiariesPage';
 import { ApiaryDetail } from './pages/Apiaries/ApiaryDetail';
 import { HivesPage } from './pages/Hives/HivesPage';
 import { HiveDetail } from './pages/Hives/HiveDetail';
+import { PrintLabelsPage } from './pages/Hives/PrintLabelsPage';
 import { InspectionsPage } from './pages/Inspections/InspectionsPage';
 import { ColonyInspectionPage } from './pages/Inspections/ColonyInspectionPage';
 import { ProductionsPage } from './pages/Productions/ProductionsPage';
@@ -16,6 +17,8 @@ import { ReportsPage } from './pages/Reports/ReportsPage';
 import LoginPage from './pages/Login/LoginPage';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import { QRScanPage } from './pages/QRScan/QRScanPage';
+import { HiveLandingPage } from './pages/HiveLanding/HiveLandingPage';
+import { TracePage } from './pages/Trace/TracePage';
 import { SocioDashboard } from './pages/Dashboard/SocioDashboard';
 import { ResponsavelDashboard } from './pages/Dashboard/ResponsavelDashboard';
 import { TratadorDashboard } from './pages/Dashboard/TratadorDashboard';
@@ -33,6 +36,10 @@ export function App() {
     <Routes>
       <Route path="/login" element={<LoginPage />} />
 
+      {/* Páginas públicas — sem autenticação */}
+      <Route path="h/:codigo" element={<HiveLandingPage />} />
+      <Route path="trace/:codigo" element={<TracePage />} />
+
       <Route element={<ProtectedRoute />}>
         {/* Full-screen pages (no AppShell chrome) */}
         <Route path="inspections/new" element={<ColonyInspectionPage />} />
@@ -44,6 +51,7 @@ export function App() {
           <Route path="apiaries" element={<ApiariesPage />} />
           <Route path="apiaries/:id" element={<ApiaryDetail />} />
           <Route path="hives" element={<HivesPage />} />
+          <Route path="hives/print-labels" element={<PrintLabelsPage />} />
           <Route path="hives/:id" element={<HiveDetail />} />
           <Route path="inspections" element={<InspectionsPage />} />
           <Route path="productions" element={<ProductionsPage />} />

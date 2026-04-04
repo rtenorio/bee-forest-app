@@ -3,15 +3,25 @@ import { useNavigate } from 'react-router-dom';
 import { QRCodeScanner } from '@/components/qr/QRCodeScanner';
 import { useQRScan } from '@/hooks/useQRScan';
 
-function parseHiveLocalId(text: string): string | null {
+type ParsedQR =
+  | { type: 'new'; codigo: string }
+  | { type: 'old'; hiveLocalId: string }
+  | null;
+
+function parseQRResult(text: string): ParsedQR {
   try {
     const url = new URL(text);
-    const match = url.pathname.match(/^\/hives\/([0-9a-f-]{36})$/i);
-    return match ? match[1] : null;
+    const newMatch = url.pathname.match(/^\/h\/([A-Za-z0-9_-]+)$/i);
+    if (newMatch) return { type: 'new', codigo: newMatch[1] };
+    const oldMatch = url.pathname.match(/^\/hives\/([0-9a-f-]{36})$/i);
+    if (oldMatch) return { type: 'old', hiveLocalId: oldMatch[1] };
   } catch {
-    const match = text.match(/^\/hives\/([0-9a-f-]{36})$/i);
-    return match ? match[1] : null;
+    const newMatch = text.match(/^\/h\/([A-Za-z0-9_-]+)$/i);
+    if (newMatch) return { type: 'new', codigo: newMatch[1] };
+    const oldMatch = text.match(/^\/hives\/([0-9a-f-]{36})$/i);
+    if (oldMatch) return { type: 'old', hiveLocalId: oldMatch[1] };
   }
+  return null;
 }
 
 export function QRScanPage() {
@@ -25,20 +35,24 @@ export function QRScanPage() {
     async (text: string) => {
       if (!active) return;
 
-      const hiveLocalId = parseHiveLocalId(text);
-      if (!hiveLocalId) {
+      const parsed = parseQRResult(text);
+      if (!parsed) {
         setError('QR Code não pertence a uma colmeia. Tente novamente.');
         return;
       }
 
       setActive(false);
-      setStatus('Registrando acesso...');
+      setStatus('Identificando caixa...');
 
       try {
-        await recordScan(hiveLocalId);
-        navigate(`/hives/${hiveLocalId}`, { replace: true });
+        if (parsed.type === 'new') {
+          navigate(`/h/${parsed.codigo}`, { replace: true });
+        } else {
+          await recordScan(parsed.hiveLocalId);
+          navigate(`/hives/${parsed.hiveLocalId}`, { replace: true });
+        }
       } catch {
-        setError('Erro ao registrar acesso. Tente novamente.');
+        setError('Erro ao processar QR Code. Tente novamente.');
         setActive(true);
         setStatus(null);
       }
@@ -62,26 +76,42 @@ export function QRScanPage() {
   };
 
   return (
-    <div className="min-h-screen bg-stone-950 flex flex-col items-center pt-12 px-4 gap-6">
+    <div className="min-h-screen bg-stone-950 flex flex-col items-center pt-10 px-4 gap-6">
       {/* Header */}
       <div className="text-center">
-        <div className="text-4xl mb-2">📷</div>
-        <h1 className="text-xl font-bold text-stone-100">Escanear QR Code</h1>
+        <div className="flex items-center justify-center gap-2 mb-1">
+          <span className="text-3xl">🐝</span>
+          <span className="font-bold text-amber-400 text-xl">Bee Forest</span>
+        </div>
+        <h1 className="text-lg font-semibold text-stone-100">Escanear QR Code</h1>
         <p className="text-sm text-stone-400 mt-1">
           Aponte a câmera para o código QR da colmeia
         </p>
       </div>
 
-      {/* Scanner */}
+      {/* Scanner com viewfinder */}
       {active && (
-        <QRCodeScanner onScan={handleScan} onError={handleCameraError} />
+        <div className="relative w-full max-w-sm">
+          {/* Cantos animados */}
+          <div className="absolute inset-0 z-10 pointer-events-none" style={{ margin: '12px' }}>
+            <span className="absolute top-0 left-0 w-7 h-7 border-t-[3px] border-l-[3px] border-amber-400 rounded-tl-md animate-pulse" />
+            <span className="absolute top-0 right-0 w-7 h-7 border-t-[3px] border-r-[3px] border-amber-400 rounded-tr-md animate-pulse" />
+            <span className="absolute bottom-0 left-0 w-7 h-7 border-b-[3px] border-l-[3px] border-amber-400 rounded-bl-md animate-pulse" />
+            <span className="absolute bottom-0 right-0 w-7 h-7 border-b-[3px] border-r-[3px] border-amber-400 rounded-br-md animate-pulse" />
+          </div>
+          <QRCodeScanner onScan={handleScan} onError={handleCameraError} />
+        </div>
       )}
 
-      {/* Status / feedback */}
+      {/* Status */}
       {status && !error && (
-        <p className="text-amber-400 text-sm animate-pulse">{status}</p>
+        <div className="flex items-center gap-2 text-amber-400 text-sm animate-pulse">
+          <span className="inline-block w-4 h-4 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" />
+          {status}
+        </div>
       )}
 
+      {/* Erro */}
       {error && (
         <div className="flex flex-col items-center gap-3 text-center">
           <div className="bg-red-900/30 border border-red-700/40 rounded-xl px-4 py-3 max-w-xs">
@@ -89,14 +119,21 @@ export function QRScanPage() {
           </div>
           <button
             onClick={retry}
-            className="text-amber-400 hover:text-amber-300 text-sm underline transition-colors"
+            className="px-4 py-2 bg-amber-500/20 border border-amber-500/40 text-amber-400 rounded-lg text-sm hover:bg-amber-500/30 transition-colors"
           >
             Tentar novamente
           </button>
         </div>
       )}
 
-      {/* Back */}
+      {/* Instrução */}
+      {active && !error && (
+        <p className="text-xs text-stone-500 text-center max-w-xs">
+          Funciona offline — dados armazenados localmente se sem conexão
+        </p>
+      )}
+
+      {/* Voltar */}
       <button
         onClick={() => navigate(-1)}
         className="text-stone-500 hover:text-stone-300 text-sm transition-colors mt-auto mb-8"

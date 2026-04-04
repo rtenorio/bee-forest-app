@@ -61,6 +61,20 @@ router.get('/', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+router.get('/:local_id/qrcode', async (req, res, next) => {
+  try {
+    const row = await queryOne<{ qr_code: string | null }>(
+      'SELECT qr_code FROM hives WHERE local_id = $1 AND deleted_at IS NULL',
+      [req.params.local_id]
+    );
+    if (!row) { res.status(404).json({ error: 'Colmeia não encontrada' }); return; }
+
+    const appUrl = process.env.APP_URL ?? 'https://beeforest.app';
+    const url = row.qr_code ? `${appUrl}/h/${row.qr_code}` : null;
+    res.json({ qr_code: row.qr_code, url });
+  } catch (err) { next(err); }
+});
+
 router.get('/:local_id', async (req, res, next) => {
   try {
     const row = await queryOne<Record<string, unknown>>(

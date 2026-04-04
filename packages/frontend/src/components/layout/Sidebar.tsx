@@ -12,6 +12,7 @@ const navItems: NavItem[] = [
   { to: '/hives', label: 'Colmeias', icon: '🏠', end: false },
   { to: '/inspections', label: 'Inspeções', icon: '🔍', end: false },
   { to: '/scan', label: 'Escanear QR', icon: '📷', end: false },
+  { to: '/hives/print-labels', label: 'Etiquetas QR', icon: '🏷️', end: false, roles: ['socio', 'responsavel'] },
   { to: '/productions', label: 'Produções', icon: '🍯', end: false, roles: ['socio', 'responsavel'] },
   { to: '/feedings', label: 'Alimentações', icon: '🌺', end: false, roles: ['socio', 'responsavel'] },
   { to: '/harvests', label: 'Colheitas', icon: '🫙', end: false, roles: ['socio', 'responsavel'] },

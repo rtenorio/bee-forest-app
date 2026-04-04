@@ -10,12 +10,14 @@ import syncRouter from './sync';
 import authRouter from './auth';
 import usersRouter from './users';
 import qrRouter from './qr';
+import publicRouter from './public';
 import { authenticate } from '../middleware/authenticate';
 
 const router = Router();
 
-// Public routes
+// Public routes (sem autenticação)
 router.use('/auth', authRouter);
+router.use('/public', publicRouter);
 
 // Protected routes
 router.use('/apiaries', authenticate, apiariesRouter);
