@@ -155,6 +155,16 @@ export interface BatchSale {
   notes: string | null;
 }
 
+// ── Audit log entry ───────────────────────────────────────────────────────────
+
+export interface BatchAuditLog {
+  id: number;
+  actor_name: string | null;
+  action: string;
+  metadata: Record<string, unknown>;
+  created_at: string;
+}
+
 // ── Detail response from API ──────────────────────────────────────────────────
 
 export interface HoneyBatchDetail extends HoneyBatch {
@@ -163,4 +173,5 @@ export interface HoneyBatchDetail extends HoneyBatch {
   maturation_sessions: MaturationSession[];
   bottlings: BatchBottling[];
   sales: BatchSale[];
+  audit_logs: BatchAuditLog[];
 }

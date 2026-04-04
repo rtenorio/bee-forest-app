@@ -255,6 +255,24 @@ export function HarvestDetail() {
         </Card>
       )}
 
+      {/* Criar lote de maturação */}
+      {harvest.honey_type === 'maturado' && canManage && (
+        <Card>
+          <CardHeader><CardTitle>🍯 Lote de Processamento</CardTitle></CardHeader>
+          <div className="flex items-center justify-between gap-4 mt-2">
+            <p className="text-sm text-stone-400">Mel maturado pode ser vinculado a um lote de pós-colheita para acompanhamento completo.</p>
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => navigate(`/batches/new?harvest=${harvest.local_id}&apiary=${harvest.apiary_local_id}&date=${harvest.harvested_at?.slice(0, 10) ?? ''}`)}
+              className="shrink-0"
+            >
+              + Criar lote
+            </Button>
+          </div>
+        </Card>
+      )}
+
       {/* Metadata */}
       <p className="text-xs text-stone-600 text-center pb-4">
         Registrado em {formatDate(harvest.created_at)}

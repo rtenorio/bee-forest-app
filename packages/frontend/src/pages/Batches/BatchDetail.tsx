@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import {
   useBatchDetail,
   useUpdateBatchStatus,
@@ -91,7 +92,7 @@ function DehumidificationSection({
 
           {/* Medições */}
           {s.measurements.length > 0 && (
-            <div className="space-y-1">
+            <div className="space-y-2">
               <p className="text-xs text-stone-500 uppercase tracking-wider">Medições</p>
               <div className="grid grid-cols-3 gap-1 text-xs text-stone-400">
                 <span>Data</span><span>Umidade</span><span>Brix</span>
@@ -103,6 +104,28 @@ function DehumidificationSection({
                   <span className="text-stone-300">{m.brix ?? '—'}°Bx</span>
                 </div>
               ))}
+              {s.measurements.length >= 2 && (
+                <div className="pt-2">
+                  <p className="text-xs text-stone-500 mb-2">Evolução</p>
+                  <ResponsiveContainer width="100%" height={120}>
+                    <LineChart
+                      data={s.measurements.map((m) => ({
+                        data: new Date(m.measured_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
+                        Umidade: Number(m.moisture),
+                        ...(m.brix != null ? { Brix: Number(m.brix) } : {}),
+                      }))}
+                      margin={{ top: 4, right: 4, left: -24, bottom: 0 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke="#292524" />
+                      <XAxis dataKey="data" tick={{ fill: '#78716c', fontSize: 10 }} />
+                      <YAxis tick={{ fill: '#78716c', fontSize: 10 }} />
+                      <Tooltip contentStyle={{ background: '#1c1917', border: '1px solid #292524', color: '#e7e5e4', borderRadius: 6, fontSize: 12 }} />
+                      <Line type="monotone" dataKey="Umidade" stroke="#f59e0b" strokeWidth={1.5} dot={{ r: 2 }} />
+                      <Line type="monotone" dataKey="Brix" stroke="#10b981" strokeWidth={1.5} dot={{ r: 2 }} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
             </div>
           )}
 
@@ -265,6 +288,16 @@ export function BatchDetail() {
   const status = batch.current_status;
   const activeDehum = batch.dehumidification_sessions.find((s) => s.result_status === 'in_progress');
   const activeMat = batch.maturation_sessions.find((s) => s.maturation_status === 'in_progress');
+
+  // Alert computations
+  const hasCriticalMoisture = batch.initial_moisture != null && batch.initial_moisture > 30 && !['sold', 'rejected'].includes(status);
+  const hasFermentationSigns = batch.maturation_sessions.some((ms) =>
+    ms.observations.some((o) => o.visible_fermentation_signs)
+  );
+  const daysSinceCreated = (Date.now() - new Date(batch.created_at).getTime()) / 86_400_000;
+  const isStale = status === 'collected' && daysSinceCreated > 7;
+  const lastCompletedDehum = batch.dehumidification_sessions.findLast((s) => s.result_status === 'completed');
+  const highFinalMoisture = lastCompletedDehum?.final_moisture != null && lastCompletedDehum.final_moisture > 25;
 
   // ── Modal submit handlers ─────────────────────────────────────────────────
 
@@ -438,6 +471,32 @@ export function BatchDetail() {
           <Button variant="danger" size="sm" onClick={() => setActiveModal('reject')}>Reprovar</Button>
         )}
       </div>
+
+      {/* Alert banners */}
+      {hasFermentationSigns && (
+        <div className="flex items-center gap-3 p-3 rounded-xl border border-red-700/40 bg-red-900/20 text-red-300 text-sm">
+          <span className="text-xl shrink-0">🚨</span>
+          <p><span className="font-semibold">Sinais de fermentação detectados</span> — verifique as observações de maturação.</p>
+        </div>
+      )}
+      {hasCriticalMoisture && (
+        <div className="flex items-center gap-3 p-3 rounded-xl border border-amber-700/40 bg-amber-900/20 text-amber-300 text-sm">
+          <span className="text-xl shrink-0">💧</span>
+          <p><span className="font-semibold">Umidade inicial alta ({batch.initial_moisture}%)</span> — considere desumidificação antes do envase.</p>
+        </div>
+      )}
+      {highFinalMoisture && (
+        <div className="flex items-center gap-3 p-3 rounded-xl border border-amber-700/40 bg-amber-900/20 text-amber-300 text-sm">
+          <span className="text-xl shrink-0">⚠️</span>
+          <p><span className="font-semibold">Umidade final ainda elevada ({lastCompletedDehum!.final_moisture}%)</span> após desumidificação.</p>
+        </div>
+      )}
+      {isStale && (
+        <div className="flex items-center gap-3 p-3 rounded-xl border border-stone-700/40 bg-stone-800/60 text-stone-400 text-sm">
+          <span className="text-xl shrink-0">⏰</span>
+          <p><span className="font-semibold">Lote parado há {Math.floor(daysSinceCreated)} dias</span> — nenhuma ação registrada desde a coleta.</p>
+        </div>
+      )}
 
       {/* Timeline */}
       <Card>
@@ -980,6 +1039,31 @@ export function BatchDetail() {
           </div>
         </div>
       </Modal>
+
+      {/* Histórico de auditoria */}
+      {batch.audit_logs.length > 0 && (
+        <Card>
+          <CardHeader><CardTitle>📜 Histórico</CardTitle></CardHeader>
+          <div className="space-y-1.5 mt-2">
+            {batch.audit_logs.map((log) => (
+              <div key={log.id} className="flex items-start gap-3 text-xs py-1.5 border-b border-stone-800 last:border-0">
+                <span className="text-stone-600 shrink-0 pt-0.5">
+                  {new Date(log.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' })}
+                  {' '}
+                  {new Date(log.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                </span>
+                <div>
+                  <span className="text-stone-300 font-medium">{log.action.replace(/_/g, ' ')}</span>
+                  {log.actor_name && <span className="text-stone-500"> · {log.actor_name}</span>}
+                  {log.metadata.from && log.metadata.to && (
+                    <span className="text-stone-500"> · {String(log.metadata.from)} → {String(log.metadata.to)}</span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
 
       <p className="text-xs text-stone-600 text-center pb-4">
         Criado em {new Date(batch.created_at).toLocaleDateString('pt-BR')}

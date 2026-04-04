@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useCreateBatch } from '@/hooks/useBatches';
 import { useApiaries } from '@/hooks/useApiaries';
 import { useAuthStore } from '@/store/authStore';
@@ -10,16 +10,20 @@ import { Spinner } from '@/components/ui/Spinner';
 
 export function BatchNewPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const user = useAuthStore((s) => s.user)!;
   const { data: apiaries = [] } = useApiaries();
   const createBatch = useCreateBatch();
 
   const today = new Date().toISOString().split('T')[0];
+  const harvestLocalId = searchParams.get('harvest') ?? '';
+  const harvestApiaryId = searchParams.get('apiary') ?? '';
+  const harvestDate = searchParams.get('date') ?? today;
 
   const [form, setForm] = useState({
-    apiary_local_id: '',
-    harvest_date: today,
-    honey_type: 'vivo' as 'vivo' | 'maturado',
+    apiary_local_id: harvestApiaryId,
+    harvest_date: harvestDate,
+    honey_type: harvestLocalId ? 'maturado' as 'vivo' | 'maturado' : 'vivo' as 'vivo' | 'maturado',
     bee_species: '',
     floral_context: '',
     gross_weight_grams: '',
@@ -49,7 +53,7 @@ export function BatchNewPage() {
     try {
       const batch = await createBatch.mutateAsync({
         apiary_local_id: form.apiary_local_id,
-        harvest_local_id: null,
+        harvest_local_id: harvestLocalId || null,
         harvest_date: form.harvest_date,
         honey_type: form.honey_type,
         bee_species: form.bee_species || null,

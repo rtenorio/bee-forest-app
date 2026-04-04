@@ -4,7 +4,7 @@ import { useAuthStore } from '@/store/authStore';
 import { cn } from '@/utils/cn';
 import type { UserRole } from '@bee-forest/shared';
 
-type NavItem = { to: string; label: string; icon: string; end: boolean; roles?: UserRole[] };
+type NavItem = { to: string; label: string; icon: string; end: boolean; roles?: UserRole[]; indent?: boolean };
 
 const navItems: NavItem[] = [
   { to: '/', label: 'Dashboard', icon: '📊', end: true },
@@ -16,13 +16,15 @@ const navItems: NavItem[] = [
   { to: '/productions', label: 'Produções', icon: '🍯', end: false, roles: ['socio', 'responsavel'] },
   { to: '/feedings', label: 'Alimentações', icon: '🌺', end: false, roles: ['socio', 'responsavel'] },
   { to: '/harvests', label: 'Colheitas', icon: '🫙', end: false, roles: ['socio', 'responsavel'] },
-  { to: '/batches', label: 'Lotes de Mel', icon: '🍯', end: false, roles: ['socio', 'responsavel'] },
+  { to: '/batches', label: 'Lotes de Mel', icon: '🍯', end: true, roles: ['socio', 'responsavel'] },
+  { to: '/batches/quality', label: 'Painel de Qualidade', icon: '⚠️', end: false, roles: ['master_admin', 'socio', 'responsavel'], indent: true },
+  { to: '/batches/reports', label: 'Relatórios de Lotes', icon: '📈', end: false, roles: ['master_admin', 'socio', 'responsavel'], indent: true },
   { to: '/reports', label: 'Relatórios', icon: '📊', end: false, roles: ['socio', 'responsavel'] },
   { to: '/users', label: 'Usuários', icon: '👥', end: false, roles: ['master_admin', 'socio', 'responsavel'] },
   { to: '/settings', label: 'Configurações', icon: '⚙️', end: false },
 ];
 
-function NavItem({ to, label, icon, end, onClick }: NavItem & { onClick?: () => void }) {
+function NavItem({ to, label, icon, end, indent, onClick }: NavItem & { onClick?: () => void }) {
   return (
     <NavLink
       to={to}
@@ -30,15 +32,16 @@ function NavItem({ to, label, icon, end, onClick }: NavItem & { onClick?: () => 
       onClick={onClick}
       className={({ isActive }) =>
         cn(
-          'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
+          'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+          indent ? 'pl-8 py-1.5' : 'py-2.5',
           isActive
             ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
             : 'text-stone-400 hover:text-stone-100 hover:bg-stone-800'
         )
       }
     >
-      <span className="text-lg w-6 text-center">{icon}</span>
-      {label}
+      <span className={cn('text-center', indent ? 'text-base w-5' : 'text-lg w-6')}>{icon}</span>
+      <span className={indent ? 'text-xs' : ''}>{label}</span>
     </NavLink>
   );
 }

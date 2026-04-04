@@ -24,6 +24,8 @@ import { UserDetail } from './pages/Users/UserDetail';
 import { BatchesPage } from './pages/Batches/BatchesPage';
 import { BatchNewPage } from './pages/Batches/BatchNewPage';
 import { BatchDetail } from './pages/Batches/BatchDetail';
+import { BatchQualityPage } from './pages/Batches/BatchQualityPage';
+import { BatchReportsPage } from './pages/Batches/BatchReportsPage';
 import { SocioDashboard } from './pages/Dashboard/SocioDashboard';
 import { ResponsavelDashboard } from './pages/Dashboard/ResponsavelDashboard';
 import { TratadorDashboard } from './pages/Dashboard/TratadorDashboard';
@@ -68,6 +70,8 @@ export function App() {
           <Route path="users/:id" element={<UserDetail />} />
           <Route path="batches" element={<BatchesPage />} />
           <Route path="batches/new" element={<BatchNewPage />} />
+          <Route path="batches/quality" element={<BatchQualityPage />} />
+          <Route path="batches/reports" element={<BatchReportsPage />} />
           <Route path="batches/:id" element={<BatchDetail />} />
           <Route path="settings" element={<SettingsPage />} />
         </Route>

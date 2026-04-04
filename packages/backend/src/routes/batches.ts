@@ -81,7 +81,23 @@ async function fetchBatchDetail(local_id: string) {
     [local_id]
   );
 
-  return { ...batch, dehumidification_sessions: dehumSessions, maturation_sessions: matSessions, bottlings, sales };
+  const auditLogs = await query(
+    `SELECT al.id, al.action, al.metadata, al.created_at, u.name AS actor_name
+     FROM audit_logs al
+     LEFT JOIN users u ON u.id = al.actor_user_id
+     WHERE al.metadata->>'batch_local_id' = $1
+     ORDER BY al.created_at DESC LIMIT 20`,
+    [local_id]
+  );
+
+  return {
+    ...batch,
+    dehumidification_sessions: dehumSessions,
+    maturation_sessions: matSessions,
+    bottlings,
+    sales,
+    audit_logs: auditLogs,
+  };
 }
 
 // ── GET / ─────────────────────────────────────────────────────────────────────
@@ -135,6 +151,160 @@ router.get('/', async (req, res, next) => {
     );
 
     res.json(rows);
+  } catch (err) { next(err); }
+});
+
+// ── GET /quality-summary ─────────────────────────────────────────────────────
+
+router.get('/quality-summary', async (req, res, next) => {
+  try {
+    const { clause: scopeFilter, params: scopeParams } = scopeClause(req);
+
+    const [attention, inProcessing, readyForNext, stats] = await Promise.all([
+      query(
+        `SELECT b.*, a.name AS apiary_name,
+          (b.initial_moisture > 30) AS high_moisture,
+          (b.current_status = 'collected' AND b.created_at < NOW() - INTERVAL '7 days') AS stale,
+          EXISTS (
+            SELECT 1 FROM maturation_sessions ms
+            JOIN maturation_observations mo ON mo.maturation_session_id = ms.id
+            WHERE ms.batch_local_id = b.local_id AND mo.visible_fermentation_signs = TRUE
+          ) AS has_fermentation_signs
+         FROM honey_batches b
+         LEFT JOIN apiaries a ON a.local_id = b.apiary_local_id
+         WHERE b.deleted_at IS NULL AND b.current_status NOT IN ('sold', 'rejected')
+           ${scopeFilter}
+           AND (
+             b.initial_moisture > 30
+             OR (b.current_status = 'collected' AND b.created_at < NOW() - INTERVAL '7 days')
+             OR EXISTS (
+               SELECT 1 FROM maturation_sessions ms
+               JOIN maturation_observations mo ON mo.maturation_session_id = ms.id
+               WHERE ms.batch_local_id = b.local_id AND mo.visible_fermentation_signs = TRUE
+             )
+           )
+         ORDER BY b.created_at DESC`,
+        scopeParams
+      ),
+      query(
+        `SELECT b.*, a.name AS apiary_name
+         FROM honey_batches b
+         LEFT JOIN apiaries a ON a.local_id = b.apiary_local_id
+         WHERE b.deleted_at IS NULL AND b.current_status IN ('in_dehumidification', 'in_maturation')
+           ${scopeFilter}
+         ORDER BY b.updated_at DESC`,
+        scopeParams
+      ),
+      query(
+        `SELECT b.*, a.name AS apiary_name
+         FROM honey_batches b
+         LEFT JOIN apiaries a ON a.local_id = b.apiary_local_id
+         WHERE b.deleted_at IS NULL AND b.current_status IN ('in_natura_ready', 'dehumidified', 'matured')
+           ${scopeFilter}
+         ORDER BY b.updated_at DESC`,
+        scopeParams
+      ),
+      queryOne(
+        `SELECT
+          COUNT(*) FILTER (WHERE b.current_status NOT IN ('sold', 'rejected')) AS active,
+          COUNT(*) FILTER (WHERE b.current_status = 'bottled') AS bottled,
+          COUNT(*) FILTER (WHERE b.current_status = 'sold') AS sold,
+          COUNT(*) FILTER (WHERE b.current_status = 'rejected') AS rejected,
+          COUNT(*) AS total
+         FROM honey_batches b WHERE b.deleted_at IS NULL ${scopeFilter}`,
+        scopeParams
+      ),
+    ]);
+
+    res.json({ attention, in_processing: inProcessing, ready_for_next: readyForNext, stats });
+  } catch (err) { next(err); }
+});
+
+// ── GET /reports ──────────────────────────────────────────────────────────────
+
+router.get('/reports', async (req, res, next) => {
+  try {
+    const { clause: scopeFilter, params: scopeParams } = scopeClause(req);
+    const { period, apiary_local_id } = req.query;
+
+    const extraParams: unknown[] = [...scopeParams];
+    const extraConds: string[] = [];
+
+    if (apiary_local_id) {
+      extraParams.push(apiary_local_id);
+      extraConds.push(`b.apiary_local_id = $${extraParams.length}`);
+    }
+
+    const days = period === 'year' ? 365 : period === 'quarter' ? 90 : period === 'week' ? 7 : 30;
+    extraParams.push(days);
+    extraConds.push(`b.harvest_date >= NOW() - ($${extraParams.length} || ' days')::interval`);
+
+    const extraFilter = extraConds.length > 0 ? 'AND ' + extraConds.join(' AND ') : '';
+    const baseWhere = `b.deleted_at IS NULL ${scopeFilter} ${extraFilter}`;
+
+    const [byMonth, byRoute, byStatus, moistureStats, dehumStats, matStats, moistureEvolution] = await Promise.all([
+      query(
+        `SELECT TO_CHAR(b.harvest_date, 'YYYY-MM') AS month,
+          COUNT(*) AS count,
+          ROUND(SUM(b.net_weight_grams) / 1000, 2) AS total_kg
+         FROM honey_batches b WHERE ${baseWhere}
+         GROUP BY month ORDER BY month`,
+        extraParams
+      ),
+      query(
+        `SELECT b.processing_route, COUNT(*) AS count
+         FROM honey_batches b WHERE ${baseWhere}
+         GROUP BY b.processing_route`,
+        extraParams
+      ),
+      query(
+        `SELECT b.current_status, COUNT(*) AS count
+         FROM honey_batches b WHERE ${baseWhere}
+         GROUP BY b.current_status`,
+        extraParams
+      ),
+      queryOne(
+        `SELECT
+          ROUND(AVG(b.initial_moisture)::numeric, 2) AS avg_moisture,
+          ROUND(AVG(b.initial_brix)::numeric, 2) AS avg_brix,
+          MIN(b.initial_moisture) AS min_moisture,
+          MAX(b.initial_moisture) AS max_moisture
+         FROM honey_batches b WHERE ${baseWhere} AND b.initial_moisture IS NOT NULL`,
+        extraParams
+      ),
+      queryOne(
+        `SELECT
+          ROUND(AVG(ds.initial_moisture - ds.final_moisture)::numeric, 2) AS avg_moisture_reduction,
+          ROUND(AVG(EXTRACT(EPOCH FROM (ds.end_datetime - ds.start_datetime)) / 3600)::numeric, 1) AS avg_duration_hours,
+          COUNT(*) AS total_sessions
+         FROM dehumidification_sessions ds
+         JOIN honey_batches b ON b.local_id = ds.batch_local_id
+         WHERE ${baseWhere} AND ds.result_status = 'completed' AND ds.end_datetime IS NOT NULL`,
+        extraParams
+      ),
+      query(
+        `SELECT ms.final_decision, COUNT(*) AS count
+         FROM maturation_sessions ms
+         JOIN honey_batches b ON b.local_id = ms.batch_local_id
+         WHERE ${baseWhere} AND ms.final_decision IS NOT NULL
+         GROUP BY ms.final_decision`,
+        extraParams
+      ),
+      query(
+        `SELECT TO_CHAR(DATE_TRUNC('day', dm.measured_at), 'DD/MM') AS day,
+          ROUND(AVG(dm.moisture)::numeric, 2) AS avg_moisture,
+          ROUND(AVG(dm.brix)::numeric, 2) AS avg_brix
+         FROM dehumidification_measurements dm
+         JOIN dehumidification_sessions ds ON ds.id = dm.dehumidification_session_id
+         JOIN honey_batches b ON b.local_id = ds.batch_local_id
+         WHERE ${baseWhere}
+         GROUP BY DATE_TRUNC('day', dm.measured_at)
+         ORDER BY DATE_TRUNC('day', dm.measured_at)`,
+        extraParams
+      ),
+    ]);
+
+    res.json({ by_month: byMonth, by_route: byRoute, by_status: byStatus, moisture_stats: moistureStats, dehum_stats: dehumStats, maturation_stats: matStats, moisture_evolution: moistureEvolution });
   } catch (err) { next(err); }
 });
 
