@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useApiary, useDeleteApiary } from '@/hooks/useApiaries';
+import { useApiary, useDeleteApiary, useToggleApiaryStatus } from '@/hooks/useApiaries';
 import { useHives, useDeleteHive } from '@/hooks/useHives';
 import { useInspections } from '@/hooks/useInspections';
 import { useSpecies } from '@/hooks/useSpecies';
@@ -27,6 +27,9 @@ export function ApiaryDetail() {
   const { data: speciesList = [] } = useSpecies();
   const deleteApiary = useDeleteApiary();
   const deleteHive = useDeleteHive();
+  const toggleStatus = useToggleApiaryStatus();
+
+  const canToggleStatus = user.role === 'master_admin' || user.role === 'socio';
 
   const [editApiary, setEditApiary] = useState(false);
   const [addHive, setAddHive] = useState(false);
@@ -57,6 +60,7 @@ export function ApiaryDetail() {
           <div>
             <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-2xl font-bold text-stone-100">{apiary.name}</h1>
+              {(apiary.status ?? 'active') === 'inactive' && <Badge variant="default">Inativo</Badge>}
               {apiary.is_dirty && <Badge variant="warning">Não sincronizado</Badge>}
             </div>
             {apiary.location && (
@@ -66,9 +70,25 @@ export function ApiaryDetail() {
         </div>
 
         {canManage && (
-          <div className="flex gap-2">
-            <Button size="sm" onClick={() => setAddHive(true)}>+ Nova Caixa</Button>
+          <div className="flex gap-2 flex-wrap">
+            {apiary.status !== 'inactive' && (
+              <Button size="sm" onClick={() => setAddHive(true)}>+ Nova Caixa</Button>
+            )}
             <Button variant="secondary" size="sm" onClick={() => setEditApiary(true)}>Editar</Button>
+            {canToggleStatus && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  const action = apiary.status === 'inactive' ? 'reativar' : 'desativar';
+                  if (confirm(`${action.charAt(0).toUpperCase() + action.slice(1)} "${apiary.name}"?`)) {
+                    toggleStatus.mutate({ local_id: apiary.local_id, status: apiary.status === 'inactive' ? 'active' : 'inactive' });
+                  }
+                }}
+              >
+                {apiary.status === 'inactive' ? 'Reativar' : 'Desativar'}
+              </Button>
+            )}
             <Button variant="danger" size="sm" onClick={handleDeleteApiary}>Excluir</Button>
           </div>
         )}

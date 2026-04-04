@@ -139,7 +139,7 @@ export function ResponsavelDashboard() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
           { label: 'Meliponários', value: myApiaries.length, icon: '🏡', color: 'text-blue-400' },
-          { label: 'Colmeias', value: myHives.length, icon: '🏠', color: 'text-amber-400' },
+          { label: 'Caixas de abelha', value: myHives.length, icon: '🏠', color: 'text-amber-400' },
           { label: 'Ativas', value: myActiveHives.length, icon: '✅', color: 'text-emerald-400' },
           {
             label: 'Alertas saúde',
@@ -297,7 +297,7 @@ export function ResponsavelDashboard() {
                   className="w-full text-left flex items-center justify-between px-3 py-2 rounded-lg hover:bg-stone-800 transition-colors"
                 >
                   <span className="text-sm text-stone-100">{apiary.name}</span>
-                  <span className="text-xs text-stone-500">{count} colmeia{count !== 1 ? 's' : ''}</span>
+                  <span className="text-xs text-stone-500">{count} caixa de abelha{count !== 1 ? 's' : ''}</span>
                 </button>
               );
             })}

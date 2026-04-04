@@ -206,7 +206,7 @@ export function PrintLabelsPage() {
       {(hivesLoading || generating) ? (
         <div className="flex justify-center py-8"><Spinner /></div>
       ) : labels.length === 0 ? (
-        <p className="text-stone-500 text-sm py-4">Nenhuma colmeia encontrada.</p>
+        <p className="text-stone-500 text-sm py-4">Nenhuma caixa de abelha encontrada.</p>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-52 overflow-y-auto border border-stone-800 rounded-xl p-3 bg-stone-900/40">
           {labels.map((l) => (

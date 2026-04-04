@@ -187,7 +187,7 @@ export function UserDetail() {
         <Card>
           <CardHeader>
             <CardTitle>
-              {user.role === 'responsavel' ? 'Meliponários Vinculados' : 'Colmeias Vinculadas'}
+              {user.role === 'responsavel' ? 'Meliponários Vinculados' : 'Caixas de abelha Vinculadas'}
             </CardTitle>
           </CardHeader>
           <div className="mt-3">

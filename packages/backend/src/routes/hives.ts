@@ -67,7 +67,7 @@ router.get('/:local_id/qrcode', async (req, res, next) => {
       'SELECT qr_code FROM hives WHERE local_id = $1 AND deleted_at IS NULL',
       [req.params.local_id]
     );
-    if (!row) { res.status(404).json({ error: 'Colmeia não encontrada' }); return; }
+    if (!row) { res.status(404).json({ error: 'Caixa de abelha não encontrada' }); return; }
 
     const appUrl = process.env.APP_URL ?? 'https://beeforest.app';
     const url = row.qr_code ? `${appUrl}/h/${row.qr_code}` : null;
@@ -81,7 +81,7 @@ router.get('/:local_id', async (req, res, next) => {
       'SELECT h.*, s.name as species_name FROM hives h LEFT JOIN species s ON h.species_id = s.server_id WHERE h.local_id = $1 AND h.deleted_at IS NULL',
       [req.params.local_id]
     );
-    if (!row) { res.status(404).json({ error: 'Colmeia não encontrada' }); return; }
+    if (!row) { res.status(404).json({ error: 'Caixa de abelha não encontrada' }); return; }
 
     const role = req.user!.role;
     if (role === 'responsavel' && !req.user!.apiary_local_ids.includes(row.apiary_local_id as string)) {
@@ -97,7 +97,7 @@ router.get('/:local_id', async (req, res, next) => {
 router.post('/', requireRole('socio', 'responsavel'), validate(HiveCreateSchema), async (req, res, next) => {
   try {
     const local_id = uuidv4();
-    const { apiary_local_id, species_local_id, code, status, installation_date, box_type, notes } = req.body;
+    const { apiary_local_id, species_local_id, code, status, installation_date, box_type, modules_count, wood_type, wood_type_other, notes } = req.body;
 
     const client = await pool.connect();
     try {
@@ -123,9 +123,9 @@ router.post('/', requireRole('socio', 'responsavel'), validate(HiveCreateSchema)
       const speciesServerId = speciesRow?.rows[0]?.server_id ?? null;
 
       const result = await client.query(
-        `INSERT INTO hives (local_id,apiary_id,apiary_local_id,species_id,species_local_id,code,status,installation_date,box_type,notes,qr_code)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,
-        [local_id, apiary?.server_id ?? null, apiary_local_id, speciesServerId, species_local_id, code, status, installation_date, box_type, notes, qr_code]
+        `INSERT INTO hives (local_id,apiary_id,apiary_local_id,species_id,species_local_id,code,status,installation_date,box_type,modules_count,wood_type,wood_type_other,notes,qr_code)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING *`,
+        [local_id, apiary?.server_id ?? null, apiary_local_id, speciesServerId, species_local_id, code, status, installation_date, box_type, modules_count ?? null, wood_type ?? null, wood_type_other ?? null, notes, qr_code]
       );
 
       await client.query('COMMIT');
@@ -141,18 +141,19 @@ router.post('/', requireRole('socio', 'responsavel'), validate(HiveCreateSchema)
 
 router.put('/:local_id', requireRole('socio', 'responsavel'), validate(HiveUpdateSchema), async (req, res, next) => {
   try {
-    const { species_local_id, code, status, installation_date, box_type, notes } = req.body;
+    const { species_local_id, code, status, installation_date, box_type, modules_count, wood_type, wood_type_other, notes } = req.body;
     const species = species_local_id ? await queryOne<{ server_id: number }>('SELECT server_id FROM species WHERE local_id = $1', [species_local_id]) : undefined;
     const row = await queryOne(
       `UPDATE hives SET
         species_id = COALESCE($1, species_id), species_local_id = COALESCE($2, species_local_id),
         code = COALESCE($3, code), status = COALESCE($4, status),
         installation_date = COALESCE($5, installation_date), box_type = COALESCE($6, box_type),
-        notes = COALESCE($7, notes)
-       WHERE local_id = $8 AND deleted_at IS NULL RETURNING *`,
-      [species?.server_id ?? null, species_local_id, code, status, installation_date, box_type, notes, req.params.local_id]
+        modules_count = COALESCE($7, modules_count), wood_type = COALESCE($8, wood_type),
+        wood_type_other = COALESCE($9, wood_type_other), notes = COALESCE($10, notes)
+       WHERE local_id = $11 AND deleted_at IS NULL RETURNING *`,
+      [species?.server_id ?? null, species_local_id, code, status, installation_date, box_type, modules_count ?? null, wood_type ?? null, wood_type_other ?? null, notes, req.params.local_id]
     );
-    if (!row) { res.status(404).json({ error: 'Colmeia não encontrada' }); return; }
+    if (!row) { res.status(404).json({ error: 'Caixa de abelha não encontrada' }); return; }
     res.json(row);
   } catch (err) { next(err); }
 });
@@ -163,7 +164,7 @@ router.delete('/:local_id', requireRole('socio', 'responsavel'), async (req, res
       'UPDATE hives SET deleted_at = NOW() WHERE local_id = $1 AND deleted_at IS NULL RETURNING local_id',
       [req.params.local_id]
     );
-    if (!row) { res.status(404).json({ error: 'Colmeia não encontrada' }); return; }
+    if (!row) { res.status(404).json({ error: 'Caixa de abelha não encontrada' }); return; }
     res.status(204).send();
   } catch (err) { next(err); }
 });

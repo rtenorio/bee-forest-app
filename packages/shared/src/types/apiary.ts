@@ -1,5 +1,7 @@
 import { SyncMeta } from './sync';
 
+export type ApiaryStatus = 'active' | 'inactive';
+
 export interface Apiary extends SyncMeta {
   name: string;
   location: string;
@@ -7,6 +9,7 @@ export interface Apiary extends SyncMeta {
   longitude: number | null;
   owner_name: string;
   notes: string;
+  status: ApiaryStatus;
   created_at: string;
 }
 

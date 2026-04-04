@@ -41,7 +41,7 @@ export function TratadorDashboard() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-stone-100">Minhas Colmeias</h1>
+          <h1 className="text-2xl font-bold text-stone-100">Minhas Caixas de abelha</h1>
           <p className="text-stone-500 text-sm">Olá, {user.name}</p>
         </div>
         <Button onClick={() => navigate('/inspections/new')} size="sm">
@@ -51,7 +51,7 @@ export function TratadorDashboard() {
 
       <div className="grid grid-cols-2 gap-3">
         {[
-          { label: 'Colmeias', value: myHives.length, icon: '🏠', color: 'text-amber-400' },
+          { label: 'Caixas de abelha', value: myHives.length, icon: '🏠', color: 'text-amber-400' },
           { label: 'Atenção', value: attentionHives.length, icon: '⚠️', color: 'text-red-400' },
         ].map((stat) => (
           <Card key={stat.label}>
@@ -121,7 +121,7 @@ export function TratadorDashboard() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Todas as Colmeias</CardTitle>
+          <CardTitle>Todas as Caixas de abelha</CardTitle>
         </CardHeader>
         <div className="grid sm:grid-cols-2 gap-3">
           {myHives.map((hive) => {
@@ -131,7 +131,7 @@ export function TratadorDashboard() {
           })}
         </div>
         {myHives.length === 0 && (
-          <p className="text-stone-500 text-sm text-center py-4">Nenhuma colmeia atribuída</p>
+          <p className="text-stone-500 text-sm text-center py-4">Nenhuma caixa de abelha atribuída</p>
         )}
       </Card>
     </div>

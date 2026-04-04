@@ -33,7 +33,7 @@ export function ProductionForm({ defaultHiveId, onSuccess, onCancel }: Props) {
   const { data: hives = [] } = useHives();
 
   const hiveOptions = [
-    { value: '', label: 'Selecionar colmeia...' },
+    { value: '', label: 'Selecionar caixa de abelha...' },
     ...hives.filter((h) => h.status === 'active').map((h) => ({ value: h.local_id, label: h.code })),
   ];
 
@@ -69,7 +69,7 @@ export function ProductionForm({ defaultHiveId, onSuccess, onCancel }: Props) {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {!defaultHiveId && (
-        <Select label="Colmeia *" options={hiveOptions} value={form.hive_local_id} onChange={(e) => set('hive_local_id', e.target.value)} error={errors.hive_local_id} />
+        <Select label="Caixa de abelha *" options={hiveOptions} value={form.hive_local_id} onChange={(e) => set('hive_local_id', e.target.value)} error={errors.hive_local_id} />
       )}
       <Select label="Produto *" options={PRODUCT_OPTIONS} value={form.product_type} onChange={(e) => set('product_type', e.target.value)} />
       <div className="grid grid-cols-2 gap-3">

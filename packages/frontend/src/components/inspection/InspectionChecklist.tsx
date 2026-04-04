@@ -8,7 +8,7 @@ interface Props {
 }
 
 const PEST_OPTIONS = [
-  { id: 'small_hive_beetle', label: 'Pequeno besouro da colmeia' },
+  { id: 'small_hive_beetle', label: 'Pequeno besouro da caixa de abelha' },
   { id: 'phorid_flies', label: 'Moscas fóridas' },
   { id: 'ants', label: 'Formigas' },
   { id: 'wax_moth', label: 'Traça da cera' },

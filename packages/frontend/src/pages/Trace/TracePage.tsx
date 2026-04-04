@@ -285,14 +285,14 @@ export function TracePage() {
         {/* Footer */}
         <div className="text-center pt-4 pb-6 space-y-2">
           <p className="text-stone-500 text-xs">
-            Este QR Code garante a rastreabilidade completa do mel desde a colmeia até você.
+            Este QR Code garante a rastreabilidade completa do mel desde a caixa de abelha até você.
           </p>
           <div className="flex items-center justify-center gap-1.5">
             <span className="text-lg">🐝</span>
             <span className="text-xs text-stone-600">Bee Forest · Meliponicultura sustentável</span>
           </div>
           <Link to={`/h/${data.qr_code}`} className="text-xs text-stone-600 hover:text-amber-400 transition-colors">
-            Ver ficha da colmeia →
+            Ver ficha da caixa de abelha →
           </Link>
         </div>
       </div>

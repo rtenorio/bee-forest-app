@@ -146,7 +146,7 @@ export function Dashboard() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
           { label: 'Meliponários', value: stats.totalApiaries, icon: '🏡', color: 'text-blue-400' },
-          { label: 'Colmeias', value: stats.totalHives, icon: '🏠', color: 'text-amber-400' },
+          { label: 'Caixas de abelha', value: stats.totalHives, icon: '🏠', color: 'text-amber-400' },
           { label: 'Ativas', value: stats.activeHives, icon: '✅', color: 'text-emerald-400' },
           { label: 'Inspeções', value: stats.totalInspections, icon: '🔍', color: 'text-purple-400' },
         ].map((s) => (
@@ -226,7 +226,7 @@ export function Dashboard() {
         </Card>
 
         <Card>
-          <CardHeader><CardTitle>Status das Colmeias</CardTitle></CardHeader>
+          <CardHeader><CardTitle>Status das Caixas de abelha</CardTitle></CardHeader>
           {statusData.length > 0 ? (
             <>
               <div className="h-36">
@@ -252,7 +252,7 @@ export function Dashboard() {
               </div>
             </>
           ) : (
-            <p className="text-stone-500 text-sm text-center py-8">Nenhuma colmeia</p>
+            <p className="text-stone-500 text-sm text-center py-8">Nenhuma caixa de abelha</p>
           )}
         </Card>
       </div>

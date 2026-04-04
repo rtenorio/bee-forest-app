@@ -76,7 +76,7 @@ export function ProductionsPage() {
                       {PRODUCT_LABELS[p.product_type] ?? p.product_type} — {p.quantity_g}g
                     </p>
                     <p className="text-xs text-stone-500">
-                      {hive?.code ?? 'Colmeia desconhecida'} • {formatDate(p.harvested_at)}
+                      {hive?.code ?? 'Caixa de abelha desconhecida'} • {formatDate(p.harvested_at)}
                     </p>
                   </div>
                   {p.quality_grade && <Badge variant="amber">{p.quality_grade}</Badge>}

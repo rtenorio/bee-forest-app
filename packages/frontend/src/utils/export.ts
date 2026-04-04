@@ -19,7 +19,7 @@ function downloadFile(content: string, filename: string, type: string) {
 export function exportHivesCSV(hives: Hive[]) {
   const headers = ['Código', 'Status', 'Tipo de Caixa', 'Data Instalação', 'Notas'];
   const rows = hives.map((h) => [h.code, h.status, h.box_type, h.installation_date ?? '', h.notes]);
-  downloadFile(toCSV(headers, rows), 'colmeias.csv', 'text/csv;charset=utf-8;');
+  downloadFile(toCSV(headers, rows), 'caixas de abelha.csv', 'text/csv;charset=utf-8;');
 }
 
 export function exportInspectionsCSV(inspections: Inspection[]) {

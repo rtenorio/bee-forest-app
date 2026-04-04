@@ -9,7 +9,7 @@ type NavItem = { to: string; label: string; icon: string; end: boolean; roles?: 
 const navItems: NavItem[] = [
   { to: '/', label: 'Dashboard', icon: '📊', end: true },
   { to: '/apiaries', label: 'Meliponários', icon: '🏡', end: false, roles: ['socio', 'responsavel'] },
-  { to: '/hives', label: 'Colmeias', icon: '🏠', end: false },
+  { to: '/hives', label: 'Caixas de abelha', icon: '🏠', end: false },
   { to: '/inspections', label: 'Inspeções', icon: '🔍', end: false },
   { to: '/scan', label: 'Escanear QR', icon: '📷', end: false },
   { to: '/hives/print-labels', label: 'Etiquetas QR', icon: '🏷️', end: false, roles: ['socio', 'responsavel'] },

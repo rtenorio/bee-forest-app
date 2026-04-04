@@ -72,6 +72,21 @@ router.put('/:local_id', requireRole('socio', 'responsavel'), validate(ApiaryUpd
   } catch (err) { next(err); }
 });
 
+router.patch('/:local_id/status', requireRole('socio'), async (req, res, next) => {
+  try {
+    const { status } = req.body;
+    if (!status || !['active', 'inactive'].includes(status)) {
+      res.status(400).json({ error: 'status deve ser "active" ou "inactive"' }); return;
+    }
+    const row = await queryOne(
+      'UPDATE apiaries SET status = $1, updated_at = NOW() WHERE local_id = $2 AND deleted_at IS NULL RETURNING *',
+      [status, req.params.local_id]
+    );
+    if (!row) { res.status(404).json({ error: 'Meliponário não encontrado' }); return; }
+    res.json(row);
+  } catch (err) { next(err); }
+});
+
 router.delete('/:local_id', requireRole('socio'), async (req, res, next) => {
   try {
     const row = await queryOne(

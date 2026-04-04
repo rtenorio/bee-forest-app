@@ -2,7 +2,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiaryRepo } from '@/db/repositories/apiary.repository';
 import { syncQueueRepo } from '@/db/repositories/syncQueue.repository';
 import { useSyncStore } from '@/store/syncStore';
-import type { ApiaryCreate, ApiaryUpdate } from '@bee-forest/shared';
+import { apiFetch } from '@/api/client';
+import type { ApiaryCreate, ApiaryUpdate, Apiary } from '@bee-forest/shared';
 
 const QUERY_KEY = ['apiaries'];
 
@@ -48,6 +49,21 @@ export function useUpdateApiary() {
       setPendingCount(await syncQueueRepo.count());
     },
     networkMode: 'offlineFirst',
+  });
+}
+
+export function useToggleApiaryStatus() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ local_id, status }: { local_id: string; status: 'active' | 'inactive' }) =>
+      apiFetch<Apiary>(`/apiaries/${local_id}/status`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status }),
+      }),
+    onSuccess: async (updated) => {
+      await apiaryRepo.upsertFromServer(updated);
+      qc.invalidateQueries({ queryKey: QUERY_KEY });
+    },
   });
 }
 

@@ -47,7 +47,7 @@ export function QRScanPage() {
 
       const parsed = parseQRResult(text);
       if (!parsed) {
-        setError('QR Code não pertence a uma colmeia. Tente novamente.');
+        setError('QR Code não pertence a uma caixa de abelha. Tente novamente.');
         return;
       }
 
@@ -95,7 +95,7 @@ export function QRScanPage() {
         </div>
         <h1 className="text-lg font-semibold text-stone-100">Escanear QR Code</h1>
         <p className="text-sm text-stone-400 mt-1">
-          Aponte a câmera para o código QR da colmeia
+          Aponte a câmera para o código QR da caixa de abelha
         </p>
       </div>
 

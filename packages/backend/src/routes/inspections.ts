@@ -96,7 +96,7 @@ router.post('/', validate(InspectionCreateSchema), async (req, res, next) => {
 
     if (req.user!.role === 'tratador' && !req.user!.hive_local_ids.includes(req.body.hive_local_id)) {
       await client.query('ROLLBACK');
-      res.status(403).json({ error: 'Colmeia não atribuída a este tratador' }); return;
+      res.status(403).json({ error: 'Caixa de abelha não atribuída a este tratador' }); return;
     }
 
     const local_id = uuidv4();

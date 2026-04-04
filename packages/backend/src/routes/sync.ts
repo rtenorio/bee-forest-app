@@ -48,7 +48,7 @@ router.post('/', validate(SyncPayloadSchema), async (req, res, next) => {
       const table = TABLE_MAP[item.entity_type];
       if (!table) continue;
 
-      // Tratador só pode push de inspeções das suas colmeias
+      // Tratador só pode push de inspeções das suas caixas de abelha
       if (user.role === 'tratador') {
         if (!['inspection'].includes(item.entity_type)) continue;
         const payload = item.payload as Record<string, unknown>;

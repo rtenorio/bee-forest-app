@@ -225,10 +225,10 @@ export function UserForm({ initial, onSuccess, onCancel }: Props) {
         </div>
       )}
 
-      {/* Colmeias (Tratador) */}
+      {/* Caixas de abelha (Tratador) */}
       {(isEdit ? initial?.role === 'tratador' : role === 'tratador') && hives.length > 0 && (
         <div>
-          <label className="text-xs text-stone-400 block mb-2">Colmeias vinculadas</label>
+          <label className="text-xs text-stone-400 block mb-2">Caixas de abelha vinculadas</label>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-1 max-h-48 overflow-y-auto border border-stone-800 rounded-lg p-2">
             {hives.map((h) => (
               <label

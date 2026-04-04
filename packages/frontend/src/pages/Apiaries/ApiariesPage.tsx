@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useApiaries, useDeleteApiary } from '@/hooks/useApiaries';
+import { useApiaries, useDeleteApiary, useToggleApiaryStatus } from '@/hooks/useApiaries';
 import { useHives } from '@/hooks/useHives';
 import { useAuthStore } from '@/store/authStore';
 import { Card } from '@/components/ui/Card';
@@ -20,50 +20,79 @@ export function ApiariesPage() {
   const { data: apiaries = [], isLoading } = useApiaries();
   const { data: hives = [] } = useHives();
   const deleteApiary = useDeleteApiary();
+  const toggleStatus = useToggleApiaryStatus();
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Apiary | null>(null);
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('active');
 
   if (isLoading) return <div className="flex justify-center py-16"><Spinner /></div>;
 
   function openNew() { setEditing(null); setShowForm(true); }
   function openEdit(a: Apiary) { setEditing(a); setShowForm(true); }
 
+  const filtered = apiaries.filter((a) =>
+    statusFilter === 'all' ? true : (a.status ?? 'active') === statusFilter
+  );
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold text-stone-100">Meliponários</h1>
           <p className="text-stone-500 text-sm">
-            {apiaries.length} meliponário{apiaries.length !== 1 ? 's' : ''}
+            {filtered.length} de {apiaries.length} meliponário{apiaries.length !== 1 ? 's' : ''}
           </p>
         </div>
-        {canManage && (
-          <Button onClick={openNew}>+ Novo Meliponário</Button>
-        )}
+        <div className="flex items-center gap-3 flex-wrap">
+          {/* Status filter */}
+          <div className="flex gap-1">
+            {(['active', 'inactive', 'all'] as const).map((s) => (
+              <button
+                key={s}
+                onClick={() => setStatusFilter(s)}
+                className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
+                  statusFilter === s
+                    ? 'bg-amber-500/20 border-amber-500/50 text-amber-300'
+                    : 'border-stone-700 text-stone-400 hover:text-stone-200'
+                }`}
+              >
+                {s === 'active' ? 'Ativos' : s === 'inactive' ? 'Inativos' : 'Todos'}
+              </button>
+            ))}
+          </div>
+          {canManage && (
+            <Button onClick={openNew}>+ Novo Meliponário</Button>
+          )}
+        </div>
       </div>
 
-      {apiaries.length === 0 ? (
+      {filtered.length === 0 ? (
         <EmptyState
           icon="🏡"
-          title="Nenhum meliponário cadastrado"
-          description="Adicione o primeiro meliponário para começar a gerenciar suas caixas."
-          action={canManage ? { label: 'Adicionar Meliponário', onClick: openNew } : undefined}
+          title={statusFilter === 'inactive' ? 'Nenhum meliponário inativo' : 'Nenhum meliponário cadastrado'}
+          description={statusFilter === 'inactive' ? 'Todos os meliponários estão ativos.' : 'Adicione o primeiro meliponário para começar a gerenciar suas caixas.'}
+          action={canManage && statusFilter !== 'inactive' ? { label: 'Adicionar Meliponário', onClick: openNew } : undefined}
         />
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {apiaries.map((apiary) => {
+          {filtered.map((apiary) => {
             const apiaryHives = hives.filter((h) => h.apiary_local_id === apiary.local_id);
             const activeCount = apiaryHives.filter((h) => h.status === 'active').length;
+            const isInactive = (apiary.status ?? 'active') === 'inactive';
 
             return (
               <Card
                 key={apiary.local_id}
                 hover
                 onClick={() => navigate(`/apiaries/${apiary.local_id}`)}
+                className={isInactive ? 'opacity-60' : ''}
               >
-                <div className="flex items-start justify-between mb-2">
+                <div className="flex items-start justify-between mb-2 gap-2">
                   <h3 className="font-semibold text-stone-100 leading-snug">{apiary.name}</h3>
-                  {apiary.is_dirty && <Badge variant="warning">Não sincronizado</Badge>}
+                  <div className="flex gap-1.5 shrink-0">
+                    {isInactive && <Badge variant="default">Inativo</Badge>}
+                    {apiary.is_dirty && <Badge variant="warning">Não sincronizado</Badge>}
+                  </div>
                 </div>
 
                 {apiary.location && (
@@ -99,6 +128,16 @@ export function ApiariesPage() {
                       onClick={(e) => { e.stopPropagation(); openEdit(apiary); }}
                     >
                       Editar
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleStatus.mutate({ local_id: apiary.local_id, status: isInactive ? 'active' : 'inactive' });
+                      }}
+                    >
+                      {isInactive ? 'Reativar' : 'Desativar'}
                     </Button>
                     <Button
                       variant="danger"

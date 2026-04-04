@@ -7,7 +7,7 @@ type Item = { to: string; icon: string; label: string; end: boolean; roles?: Use
 
 const items: Item[] = [
   { to: '/', icon: '📊', label: 'Dashboard', end: true },
-  { to: '/hives', icon: '🏠', label: 'Colmeias', end: false },
+  { to: '/hives', icon: '🏠', label: 'Caixas de abelha', end: false },
   { to: '/inspections/new', icon: '🔍', label: 'Inspecionar', end: false },
   { to: '/scan', icon: '📷', label: 'Escanear', end: false },
   { to: '/harvests', icon: '🫙', label: 'Colheitas', end: false, roles: ['socio', 'responsavel'] },

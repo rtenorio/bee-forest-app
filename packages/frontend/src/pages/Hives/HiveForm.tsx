@@ -19,12 +19,24 @@ const STATUS_OPTIONS = [
 ];
 
 const BOX_TYPES = [
-  { value: '', label: 'Selecionar tipo...' },
+  { value: '', label: 'Selecionar modelo...' },
   { value: 'INPA', label: 'INPA' },
   { value: 'PNN', label: 'PNN' },
+  { value: 'Rádio', label: 'Rádio' },
+  { value: 'Vertical', label: 'Vertical' },
   { value: 'Racional', label: 'Racional' },
   { value: 'Jolminha', label: 'Jolminha' },
   { value: 'Outro', label: 'Outro' },
+];
+
+const WOOD_TYPES = [
+  { value: '', label: 'Selecionar madeira...' },
+  { value: 'Pinus', label: 'Pinus' },
+  { value: 'Eucalipto', label: 'Eucalipto' },
+  { value: 'Jaqueira', label: 'Jaqueira' },
+  { value: 'Cedro', label: 'Cedro' },
+  { value: 'Peroba', label: 'Peroba' },
+  { value: 'Outra', label: 'Outra (especificar)' },
 ];
 
 interface Props {
@@ -63,6 +75,9 @@ export function HiveForm({ initial, defaultApiaryId, onSuccess, onCancel }: Prop
     status: initial?.status ?? 'active',
     installation_date: initial?.installation_date ?? todayISO(),
     box_type: initial?.box_type ?? '',
+    modules_count: initial?.modules_count != null ? String(initial.modules_count) : '1',
+    wood_type: initial?.wood_type ?? '',
+    wood_type_other: initial?.wood_type_other ?? '',
     notes: initial?.notes ?? '',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -78,6 +93,9 @@ export function HiveForm({ initial, defaultApiaryId, onSuccess, onCancel }: Prop
       species_local_id: form.species_local_id || null,
       installation_date: form.installation_date || null,
       box_type: form.box_type || '',
+      modules_count: form.modules_count ? parseInt(form.modules_count, 10) : null,
+      wood_type: form.wood_type || null,
+      wood_type_other: form.wood_type === 'Outra' ? (form.wood_type_other || null) : null,
     });
 
     if (!result.success) {
@@ -129,19 +147,38 @@ export function HiveForm({ initial, defaultApiaryId, onSuccess, onCancel }: Prop
           onChange={(e) => set('species_local_id', e.target.value)}
         />
         <Select
-          label="Tipo de Caixa"
+          label="Modelo"
           options={BOX_TYPES}
           value={form.box_type}
           onChange={(e) => set('box_type', e.target.value)}
         />
-        <div className="col-span-2">
+        <Input
+          label="Data de Instalação"
+          type="date"
+          value={form.installation_date ?? ''}
+          onChange={(e) => set('installation_date', e.target.value)}
+        />
+        <Input
+          label="Nº de módulos"
+          type="number"
+          min={1}
+          value={form.modules_count}
+          onChange={(e) => set('modules_count', e.target.value)}
+        />
+        <Select
+          label="Madeira da caixa"
+          options={WOOD_TYPES}
+          value={form.wood_type}
+          onChange={(e) => set('wood_type', e.target.value)}
+        />
+        {form.wood_type === 'Outra' && (
           <Input
-            label="Data de Instalação"
-            type="date"
-            value={form.installation_date ?? ''}
-            onChange={(e) => set('installation_date', e.target.value)}
+            label="Especifique a madeira"
+            value={form.wood_type_other}
+            onChange={(e) => set('wood_type_other', e.target.value)}
+            placeholder="ex: Cedro rosa"
           />
-        </div>
+        )}
       </div>
       <Textarea label="Observações" value={form.notes} onChange={(e) => set('notes', e.target.value)} />
       <div className="flex gap-3 pt-2">

@@ -9,6 +9,9 @@ export interface Hive extends SyncMeta {
   status: HiveStatus;
   installation_date: string | null;
   box_type: string;
+  modules_count: number | null;
+  wood_type: string | null;
+  wood_type_other: string | null;
   notes: string;
   qr_code?: string | null;
   created_at: string;

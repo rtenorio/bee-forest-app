@@ -119,7 +119,7 @@ export function HiveDetail() {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
           { label: 'Instalação', value: formatDate(hive.installation_date) },
-          { label: 'Tipo de Caixa', value: hive.box_type || '—' },
+          { label: 'Modelo', value: hive.box_type || '—' },
           { label: 'Última Inspeção', value: days !== null ? `há ${days} dia${days !== 1 ? 's' : ''}` : 'Nunca' },
           { label: 'Total Inspeções', value: String(inspections.length) },
         ].map((item) => (
@@ -129,6 +129,22 @@ export function HiveDetail() {
           </Card>
         ))}
       </div>
+
+      {/* Hive details: modules + wood */}
+      {(hive.modules_count != null || hive.wood_type) && (
+        <div className="flex flex-wrap gap-2">
+          {hive.modules_count != null && (
+            <span className="text-xs px-3 py-1.5 rounded-full bg-stone-800 border border-stone-700 text-stone-300">
+              🏗️ {hive.modules_count} módulo{hive.modules_count !== 1 ? 's' : ''}
+            </span>
+          )}
+          {hive.wood_type && (
+            <span className="text-xs px-3 py-1.5 rounded-full bg-stone-800 border border-stone-700 text-stone-300">
+              🪵 {hive.wood_type === 'Outra' && hive.wood_type_other ? hive.wood_type_other : hive.wood_type}
+            </span>
+          )}
+        </div>
+      )}
 
       {/* QR Code */}
       <QRCodeDisplay hiveLocalId={hive.local_id} qrCodeText={hive.qr_code} />

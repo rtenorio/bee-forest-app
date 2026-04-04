@@ -41,7 +41,7 @@ export function FeedingsPage() {
         <EmptyState
           icon="🌺"
           title="Nenhuma alimentação registrada"
-          description="Registre as alimentações para acompanhar o manejo das colmeias."
+          description="Registre as alimentações para acompanhar o manejo das caixas de abelha."
           action={{ label: 'Registrar Alimentação', onClick: () => setShowForm(true) }}
         />
       ) : (
@@ -57,7 +57,7 @@ export function FeedingsPage() {
                       {f.quantity_ml && <span className="text-stone-400 font-normal"> — {f.quantity_ml}ml</span>}
                     </p>
                     <p className="text-xs text-stone-500">
-                      {hive?.code ?? 'Colmeia desconhecida'} • {formatDate(f.fed_at)}
+                      {hive?.code ?? 'Caixa de abelha desconhecida'} • {formatDate(f.fed_at)}
                     </p>
                   </div>
                 </div>

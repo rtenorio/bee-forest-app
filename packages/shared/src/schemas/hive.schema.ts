@@ -9,6 +9,9 @@ export const HiveCreateSchema = z.object({
   status: HiveStatusSchema.default('active'),
   installation_date: z.string().nullable().default(null),
   box_type: z.string().max(50).default(''),
+  modules_count: z.number().int().min(1).nullable().default(null),
+  wood_type: z.string().max(50).nullable().default(null),
+  wood_type_other: z.string().max(100).nullable().default(null),
   notes: z.string().default(''),
 });
 

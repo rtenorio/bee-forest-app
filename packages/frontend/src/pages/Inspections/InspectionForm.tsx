@@ -48,7 +48,7 @@ export function InspectionForm({ defaultHiveId, onSuccess, onCancel }: Props) {
   const { inspectorName } = useUIStore();
 
   const hiveOptions = [
-    { value: '', label: 'Selecionar colmeia...' },
+    { value: '', label: 'Selecionar caixa de abelha...' },
     ...hives.filter((h) => h.status === 'active').map((h) => ({ value: h.local_id, label: h.code })),
   ];
 
@@ -101,7 +101,7 @@ export function InspectionForm({ defaultHiveId, onSuccess, onCancel }: Props) {
       <div className="grid grid-cols-2 gap-3">
         <div className="col-span-2">
           <Select
-            label="Colmeia *"
+            label="Caixa de abelha *"
             options={hiveOptions}
             value={form.hive_local_id}
             onChange={(e) => set('hive_local_id', e.target.value)}
