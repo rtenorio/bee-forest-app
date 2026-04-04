@@ -13,6 +13,9 @@ export const HiveCreateSchema = z.object({
   wood_type: z.string().max(50).nullable().default(null),
   wood_type_other: z.string().max(100).nullable().default(null),
   notes: z.string().default(''),
+  has_honey_super: z.boolean().default(false),
+  honey_super_placed_at: z.string().nullable().default(null),
+  honey_super_removed_at: z.string().nullable().default(null),
 });
 
 export const HiveUpdateSchema = HiveCreateSchema.partial().omit({ apiary_local_id: true });

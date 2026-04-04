@@ -160,8 +160,8 @@ export function HiveDetail() {
         ))}
       </div>
 
-      {/* Hive details: modules + wood */}
-      {(hive.modules_count != null || hive.wood_type) && (
+      {/* Hive details: modules + wood + honey super */}
+      {(hive.modules_count != null || hive.wood_type || hive.has_honey_super) && (
         <div className="flex flex-wrap gap-2">
           {hive.modules_count != null && (
             <span className="text-xs px-3 py-1.5 rounded-full bg-stone-800 border border-stone-700 text-stone-300">
@@ -171,6 +171,16 @@ export function HiveDetail() {
           {hive.wood_type && (
             <span className="text-xs px-3 py-1.5 rounded-full bg-stone-800 border border-stone-700 text-stone-300">
               🪵 {hive.wood_type === 'Outra' && hive.wood_type_other ? hive.wood_type_other : hive.wood_type}
+            </span>
+          )}
+          {hive.has_honey_super && (
+            <span className="text-xs px-3 py-1.5 rounded-full bg-amber-900/40 border border-amber-700/50 text-amber-300">
+              🍯 Melgueira{hive.honey_super_placed_at ? ` desde ${formatDate(hive.honey_super_placed_at)}` : ''}
+            </span>
+          )}
+          {!hive.has_honey_super && hive.honey_super_removed_at && (
+            <span className="text-xs px-3 py-1.5 rounded-full bg-stone-800 border border-stone-700 text-stone-400">
+              🍯 Melgueira retirada em {formatDate(hive.honey_super_removed_at)}
             </span>
           )}
         </div>

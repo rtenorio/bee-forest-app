@@ -13,6 +13,9 @@ export interface Hive extends SyncMeta {
   wood_type: string | null;
   wood_type_other: string | null;
   notes: string;
+  has_honey_super: boolean;
+  honey_super_placed_at: string | null;
+  honey_super_removed_at: string | null;
   qr_code?: string | null;
   created_at: string;
 }

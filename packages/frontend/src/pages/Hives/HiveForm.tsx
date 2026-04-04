@@ -34,9 +34,9 @@ const WOOD_TYPES = [
   { value: 'Pinus', label: 'Pinus' },
   { value: 'Eucalipto', label: 'Eucalipto' },
   { value: 'Jaqueira', label: 'Jaqueira' },
-  { value: 'Cedro', label: 'Cedro' },
-  { value: 'Peroba', label: 'Peroba' },
-  { value: 'Outra', label: 'Outra (especificar)' },
+  { value: 'Vinhático', label: 'Vinhático' },
+  { value: 'Tauari', label: 'Tauari' },
+  { value: 'Outra', label: 'Outra (campo livre)' },
 ];
 
 interface Props {
@@ -79,10 +79,13 @@ export function HiveForm({ initial, defaultApiaryId, onSuccess, onCancel }: Prop
     wood_type: initial?.wood_type ?? '',
     wood_type_other: initial?.wood_type_other ?? '',
     notes: initial?.notes ?? '',
+    has_honey_super: initial?.has_honey_super ?? false,
+    honey_super_placed_at: initial?.honey_super_placed_at ?? '',
+    honey_super_removed_at: initial?.honey_super_removed_at ?? '',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const set = (key: string, value: string) => setForm((f) => ({ ...f, [key]: value }));
+  const set = (key: string, value: string | boolean) => setForm((f) => ({ ...f, [key]: value }));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -96,6 +99,8 @@ export function HiveForm({ initial, defaultApiaryId, onSuccess, onCancel }: Prop
       modules_count: form.modules_count ? parseInt(form.modules_count, 10) : null,
       wood_type: form.wood_type || null,
       wood_type_other: form.wood_type === 'Outra' ? (form.wood_type_other || null) : null,
+      honey_super_placed_at: form.has_honey_super && form.honey_super_placed_at ? form.honey_super_placed_at : null,
+      honey_super_removed_at: !form.has_honey_super && form.honey_super_removed_at ? form.honey_super_removed_at : null,
     });
 
     if (!result.success) {
@@ -180,6 +185,39 @@ export function HiveForm({ initial, defaultApiaryId, onSuccess, onCancel }: Prop
           />
         )}
       </div>
+
+      {/* Melgueira */}
+      <div className="space-y-3 border border-stone-700 rounded-lg p-3">
+        <label className="flex items-center gap-3 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={form.has_honey_super}
+            onChange={(e) => {
+              set('has_honey_super', e.target.checked);
+              if (!e.target.checked) set('honey_super_placed_at', '');
+            }}
+            className="w-4 h-4 rounded accent-amber-500"
+          />
+          <span className="text-sm font-medium text-stone-200">Tem melgueira</span>
+        </label>
+        {form.has_honey_super && (
+          <Input
+            label="Data de colocação"
+            type="date"
+            value={form.honey_super_placed_at}
+            onChange={(e) => set('honey_super_placed_at', e.target.value)}
+          />
+        )}
+        {!form.has_honey_super && !!initial?.has_honey_super && (
+          <Input
+            label="Data de retirada"
+            type="date"
+            value={form.honey_super_removed_at}
+            onChange={(e) => set('honey_super_removed_at', e.target.value)}
+          />
+        )}
+      </div>
+
       <Textarea label="Observações" value={form.notes} onChange={(e) => set('notes', e.target.value)} />
       <div className="flex gap-3 pt-2">
         <Button type="submit" loading={isPending} className="flex-1">
