@@ -124,7 +124,7 @@ export function ApiaryDetail() {
               <div>
                 <dt className="text-stone-500 text-xs">Coordenadas</dt>
                 <dd className="text-stone-200 font-mono text-xs">
-                  {apiary.latitude.toFixed(6)}, {apiary.longitude.toFixed(6)}
+                  {Number(apiary.latitude).toFixed(6)}, {Number(apiary.longitude).toFixed(6)}
                 </dd>
               </div>
             )}
