@@ -68,7 +68,7 @@ export function InspectionChecklistForm({ value, onChange, readOnly = false }: P
   };
 
   const toggleList = (list: 'pests_observed' | 'diseases_observed', item: string) => {
-    const current = value[list];
+    const current = value[list] ?? [];
     const updated = current.includes(item) ? current.filter((i) => i !== item) : [...current, item];
     update({ [list]: updated });
   };
@@ -217,7 +217,7 @@ export function InspectionChecklistForm({ value, onChange, readOnly = false }: P
             <ToggleBadge
               key={id}
               label={label}
-              active={value.pests_observed.includes(id)}
+              active={(value.pests_observed ?? []).includes(id)}
               onClick={() => toggleList('pests_observed', id)}
             />
           ))}
@@ -232,7 +232,7 @@ export function InspectionChecklistForm({ value, onChange, readOnly = false }: P
             <ToggleBadge
               key={id}
               label={label}
-              active={value.diseases_observed.includes(id)}
+              active={(value.diseases_observed ?? []).includes(id)}
               onClick={() => toggleList('diseases_observed', id)}
             />
           ))}
