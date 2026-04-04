@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 export const SyncQueueItemSchema = z.object({
   id: z.string().uuid(),
-  entity_type: z.enum(['apiary', 'hive', 'species', 'inspection', 'production', 'feeding']),
+  entity_type: z.enum(['apiary', 'hive', 'species', 'inspection', 'production', 'feeding', 'harvest', 'batch', 'stock_item']),
   entity_local_id: z.string().uuid(),
   operation: z.enum(['CREATE', 'UPDATE', 'DELETE']),
   payload: z.record(z.unknown()),

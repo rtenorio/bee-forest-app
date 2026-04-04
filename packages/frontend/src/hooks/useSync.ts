@@ -11,9 +11,13 @@ import { productionRepo } from '@/db/repositories/production.repository';
 import { feedingRepo } from '@/db/repositories/feeding.repository';
 import { harvestRepo } from '@/db/repositories/harvest.repository';
 import { batchRepo } from '@/db/repositories/batch.repository';
+import { stockRepo } from '@/db/repositories/stock.repository';
 import type { SyncResult, EntityType } from '@bee-forest/shared';
 
 const CLIENT_ID_KEY = 'bee-forest-client-id';
+
+// Items that fail this many times get purged from the queue to prevent infinite loops
+const MAX_ATTEMPTS = 5;
 
 function getClientId(): string {
   let id = localStorage.getItem(CLIENT_ID_KEY);
@@ -33,6 +37,7 @@ const repoMap = {
   feeding: feedingRepo,
   harvest: harvestRepo,
   batch: batchRepo,
+  stock_item: stockRepo,
 };
 
 export function useSync() {
@@ -53,7 +58,16 @@ export function useSync() {
     setLastError(null);
 
     try {
-      const items = await syncQueueRepo.getAll();
+      let items = await syncQueueRepo.getAll();
+
+      // Purge items that have exceeded the max retry threshold
+      const stuckItems = items.filter((i) => i.attempts >= MAX_ATTEMPTS);
+      if (stuckItems.length > 0) {
+        console.warn(`[Sync] Removing ${stuckItems.length} stuck item(s) after ${MAX_ATTEMPTS}+ failed attempts`);
+        await syncQueueRepo.removeMany(stuckItems.map((i) => i.id));
+        items = items.filter((i) => i.attempts < MAX_ATTEMPTS);
+      }
+
       if (items.length === 0) {
         setIsSyncing(false);
         return;
@@ -72,7 +86,11 @@ export function useSync() {
         body: JSON.stringify(payload),
       });
 
-      if (!response.ok) throw new Error(`Sync failed: ${response.status}`);
+      if (!response.ok) {
+        // Increment attempt counter for all pending items so they eventually get purged
+        await Promise.all(items.map((i) => syncQueueRepo.incrementAttempt(i.id, `HTTP ${response.status}`)));
+        throw new Error(`Sync failed: ${response.status}`);
+      }
 
       const result: SyncResult = await response.json();
 
