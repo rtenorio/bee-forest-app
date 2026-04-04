@@ -99,6 +99,17 @@ export function useSync() {
       const toRemove = items.filter((i) => resolvedIds.has(i.entity_local_id)).map((i) => i.id);
       await syncQueueRepo.removeMany(toRemove);
 
+      // Clear is_dirty for resolved records — server_changes may not include them
+      // if their updated_at <= last_sync_at (timing race between edit and sync cycles)
+      await Promise.all(
+        items
+          .filter((i) => resolvedIds.has(i.entity_local_id))
+          .map((i) => {
+            const repo = repoMap[i.entity_type as EntityType];
+            return repo ? repo.clearDirty(i.entity_local_id) : Promise.resolve();
+          })
+      );
+
       // Apply server changes to IDB
       for (const change of result.server_changes) {
         const repo = repoMap[change.entity_type as EntityType];

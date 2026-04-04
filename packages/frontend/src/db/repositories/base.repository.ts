@@ -90,6 +90,15 @@ export abstract class BaseRepository<T extends SyncMeta> {
     await db.put(this.storeName, record);
   }
 
+  async clearDirty(local_id: string): Promise<void> {
+    const db = await this.getDb();
+    // @ts-expect-error dynamic store
+    const existing = await db.get(this.storeName, local_id) as T | undefined;
+    if (!existing) return;
+    // @ts-expect-error dynamic store
+    await db.put(this.storeName, { ...existing, is_dirty: false, synced_at: new Date().toISOString() });
+  }
+
   private async enqueueSync(operation: 'CREATE' | 'UPDATE' | 'DELETE', entity: T): Promise<void> {
     const db = await this.getDb();
     const queueItem: SyncQueueItem = {
