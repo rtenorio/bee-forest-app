@@ -5,7 +5,8 @@ export type EntityType =
   | 'inspection'
   | 'production'
   | 'feeding'
-  | 'harvest';
+  | 'harvest'
+  | 'batch';
 
 export interface SyncMeta {
   local_id: string;

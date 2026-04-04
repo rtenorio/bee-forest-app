@@ -11,6 +11,7 @@ import authRouter from './auth';
 import usersRouter from './users';
 import qrRouter from './qr';
 import publicRouter from './public';
+import batchesRouter from './batches';
 import { authenticate } from '../middleware/authenticate';
 
 const router = Router();
@@ -30,5 +31,6 @@ router.use('/harvests', authenticate, harvestsRouter);
 router.use('/sync', authenticate, syncRouter);
 router.use('/users', authenticate, usersRouter);
 router.use('/qr', authenticate, qrRouter);
+router.use('/batches', authenticate, batchesRouter);
 
 export default router;

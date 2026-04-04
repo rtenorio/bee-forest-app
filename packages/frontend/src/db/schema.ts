@@ -1,5 +1,5 @@
 import { openDB, DBSchema, IDBPDatabase } from 'idb';
-import type { Apiary, Species, Hive, Inspection, Production, Feeding, Harvest } from '@bee-forest/shared';
+import type { Apiary, Species, Hive, Inspection, Production, Feeding, Harvest, HoneyBatch } from '@bee-forest/shared';
 import type { SyncQueueItem } from '@bee-forest/shared';
 
 export interface PendingQRScan {
@@ -54,10 +54,15 @@ export interface BeeForestDB extends DBSchema {
     value: Harvest;
     indexes: { 'by-apiary': string; 'by-date': string };
   };
+  honey_batches: {
+    key: string;
+    value: HoneyBatch;
+    indexes: { 'by-apiary': string; 'by-status': string; 'by-date': string };
+  };
 }
 
 const DB_NAME = 'bee-forest';
-const DB_VERSION = 3;
+const DB_VERSION = 4;
 
 let dbInstance: IDBPDatabase<BeeForestDB> | null = null;
 
@@ -110,6 +115,14 @@ export async function getDb(): Promise<IDBPDatabase<BeeForestDB>> {
         const harvestsStore = db.createObjectStore('harvests', { keyPath: 'local_id' });
         harvestsStore.createIndex('by-apiary', 'apiary_local_id');
         harvestsStore.createIndex('by-date', 'harvested_at');
+      }
+
+      // ── Version 4: Lotes de mel ───────────────────────────────────────────────
+      if (oldVersion < 4) {
+        const batchesStore = db.createObjectStore('honey_batches', { keyPath: 'local_id' });
+        batchesStore.createIndex('by-apiary', 'apiary_local_id');
+        batchesStore.createIndex('by-status', 'current_status');
+        batchesStore.createIndex('by-date', 'harvest_date');
       }
     },
   });

@@ -21,6 +21,9 @@ import { HiveLandingPage } from './pages/HiveLanding/HiveLandingPage';
 import { TracePage } from './pages/Trace/TracePage';
 import { UsersPage } from './pages/Users/UsersPage';
 import { UserDetail } from './pages/Users/UserDetail';
+import { BatchesPage } from './pages/Batches/BatchesPage';
+import { BatchNewPage } from './pages/Batches/BatchNewPage';
+import { BatchDetail } from './pages/Batches/BatchDetail';
 import { SocioDashboard } from './pages/Dashboard/SocioDashboard';
 import { ResponsavelDashboard } from './pages/Dashboard/ResponsavelDashboard';
 import { TratadorDashboard } from './pages/Dashboard/TratadorDashboard';
@@ -63,6 +66,9 @@ export function App() {
           <Route path="harvests/:id" element={<HarvestDetail />} />
           <Route path="users" element={<UsersPage />} />
           <Route path="users/:id" element={<UserDetail />} />
+          <Route path="batches" element={<BatchesPage />} />
+          <Route path="batches/new" element={<BatchNewPage />} />
+          <Route path="batches/:id" element={<BatchDetail />} />
           <Route path="settings" element={<SettingsPage />} />
         </Route>
       </Route>

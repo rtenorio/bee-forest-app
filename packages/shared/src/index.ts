@@ -8,6 +8,7 @@ export * from './types/inspection';
 export * from './types/production';
 export * from './types/feeding';
 export * from './types/harvest';
+export * from './types/batch';
 
 // Schemas
 export * from './schemas/auth.schema';
