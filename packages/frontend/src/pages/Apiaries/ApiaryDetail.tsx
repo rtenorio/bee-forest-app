@@ -19,7 +19,7 @@ export function ApiaryDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user)!;
-  const canManage = user.role === 'socio' || user.role === 'responsavel';
+  const canManage = user.role === 'socio' || user.role === 'responsavel' || user.role === 'master_admin';
 
   const { data: apiary, isLoading } = useApiary(id!);
   const { data: hives = [] } = useHives(id);

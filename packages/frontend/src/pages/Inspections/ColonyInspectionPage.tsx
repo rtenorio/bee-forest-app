@@ -351,9 +351,14 @@ export function ColonyInspectionPage() {
 
   const apiary = hive ? apiaries.find((a) => a.local_id === hive.apiary_local_id) : null;
 
-  const lastInspection = inspections.length > 0
-    ? [...inspections].sort((a, b) => b.inspected_at.localeCompare(a.inspected_at))[0]
-    : null;
+  const sortedInspections = [...inspections].sort((a, b) => b.inspected_at.localeCompare(a.inspected_at));
+  const lastInspection = sortedInspections[0] ?? null;
+  const secondLastInspection = sortedInspections[1] ?? null;
+
+  // Block repeat if the last 2 inspections were both copies
+  const repeatBlocked =
+    !!lastInspection?.copied_from_previous &&
+    !!secondLastInspection?.copied_from_previous;
 
   const applyLastInspection = useCallback(() => {
     if (!lastInspection?.checklist) return;
@@ -480,6 +485,7 @@ export function ColonyInspectionPage() {
         photos: collectPhotos(),
         audio_notes: form.audio_notes,
         next_inspection_due: nextDueFromDays(form.checklist.next_inspection_days),
+        copied_from_previous: fromLastInspection,
       });
       navigate(hive_local_id ? `/hives/${hive_local_id}` : '/inspections');
     } finally {
@@ -682,33 +688,42 @@ export function ColonyInspectionPage() {
 
         {/* ── Repetir dados da última inspeção ────────────────────────────── */}
         {lastInspection && (
-          <div className={cn(
-            'flex items-center justify-between gap-3 px-4 py-3 rounded-xl border transition-colors',
-            fromLastInspection
-              ? 'border-amber-500/40 bg-amber-500/10'
-              : 'border-stone-700 bg-stone-900/60',
-          )}>
-            <div className="min-w-0">
-              <p className="text-xs font-medium text-stone-300">
-                {fromLastInspection ? '✓ Dados copiados da última inspeção' : 'Última inspeção disponível'}
-              </p>
-              <p className="text-xs text-stone-500 truncate">
-                {new Date(lastInspection.inspected_at).toLocaleDateString('pt-BR')} · {lastInspection.inspector_name}
+          repeatBlocked ? (
+            <div className="flex items-start gap-3 px-4 py-3 rounded-xl border border-amber-800/60 bg-amber-900/20">
+              <span className="text-amber-400 text-base shrink-0 mt-0.5">⚠️</span>
+              <p className="text-xs text-amber-300 leading-relaxed">
+                As duas últimas inspeções foram repetidas. Preencha esta inspeção manualmente para garantir uma avaliação real da caixa.
               </p>
             </div>
-            <button
-              type="button"
-              onClick={fromLastInspection ? () => setFromLastInspection(false) : applyLastInspection}
-              className={cn(
-                'shrink-0 text-xs font-medium px-3 py-1.5 rounded-lg border transition-all',
-                fromLastInspection
-                  ? 'border-amber-500/30 text-amber-400 hover:bg-amber-500/10'
-                  : 'border-stone-600 text-stone-300 hover:border-amber-500 hover:text-amber-400',
-              )}
-            >
-              {fromLastInspection ? 'Desfazer' : '↩ Repetir dados'}
-            </button>
-          </div>
+          ) : (
+            <div className={cn(
+              'flex items-center justify-between gap-3 px-4 py-3 rounded-xl border transition-colors',
+              fromLastInspection
+                ? 'border-amber-500/40 bg-amber-500/10'
+                : 'border-stone-700 bg-stone-900/60',
+            )}>
+              <div className="min-w-0">
+                <p className="text-xs font-medium text-stone-300">
+                  {fromLastInspection ? '✓ Dados copiados da última inspeção' : 'Última inspeção disponível'}
+                </p>
+                <p className="text-xs text-stone-500 truncate">
+                  {new Date(lastInspection.inspected_at).toLocaleDateString('pt-BR')} · {lastInspection.inspector_name}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={fromLastInspection ? () => setFromLastInspection(false) : applyLastInspection}
+                className={cn(
+                  'shrink-0 text-xs font-medium px-3 py-1.5 rounded-lg border transition-all',
+                  fromLastInspection
+                    ? 'border-amber-500/30 text-amber-400 hover:bg-amber-500/10'
+                    : 'border-stone-600 text-stone-300 hover:border-amber-500 hover:text-amber-400',
+                )}
+              >
+                {fromLastInspection ? 'Desfazer' : '↩ Repetir dados'}
+              </button>
+            </div>
+          )
         )}
 
         {/* ═══ SECTION 2: Condições Climáticas ══════════════════════════════ */}

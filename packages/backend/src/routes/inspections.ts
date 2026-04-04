@@ -103,7 +103,7 @@ router.post('/', validate(InspectionCreateSchema), async (req, res, next) => {
     const {
       hive_local_id, inspected_at, inspector_name, checklist,
       weight_kg, temperature_c, humidity_pct, precipitation_mm, sky_condition,
-      notes, photos, audio_notes, next_inspection_due,
+      notes, photos, audio_notes, next_inspection_due, copied_from_previous,
     } = req.body;
 
     const hive = await client.query(
@@ -114,8 +114,8 @@ router.post('/', validate(InspectionCreateSchema), async (req, res, next) => {
       `INSERT INTO inspections (
          local_id, hive_id, hive_local_id, inspected_at, inspector_name, checklist,
          weight_kg, temperature_c, humidity_pct, precipitation_mm, sky_condition,
-         notes, photos, audio_notes, next_inspection_due, tasks
-       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
+         notes, photos, audio_notes, next_inspection_due, tasks, copied_from_previous
+       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
        RETURNING *`,
       [
         local_id, hive.rows[0]?.server_id ?? null, hive_local_id,
@@ -123,6 +123,7 @@ router.post('/', validate(InspectionCreateSchema), async (req, res, next) => {
         weight_kg, temperature_c, humidity_pct, precipitation_mm, sky_condition,
         notes, photos, audio_notes ?? [], next_inspection_due,
         JSON.stringify(checklist.tasks ?? []),
+        copied_from_previous ?? false,
       ]
     );
 

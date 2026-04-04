@@ -101,6 +101,7 @@ export interface Inspection extends SyncMeta {
   photos: string[];
   audio_notes: string[];
   next_inspection_due: string | null;
+  copied_from_previous: boolean;
   created_at: string;
 }
 
