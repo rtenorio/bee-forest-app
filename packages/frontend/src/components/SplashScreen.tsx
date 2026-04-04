@@ -20,7 +20,7 @@ export function SplashScreen({ onDone }: Props) {
         position: 'fixed',
         inset: 0,
         zIndex: 9999,
-        background: '#1C1917',
+        background: '#0f1a14',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',

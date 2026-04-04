@@ -5,6 +5,7 @@ import { ApiaryDetail } from './pages/Apiaries/ApiaryDetail';
 import { HivesPage } from './pages/Hives/HivesPage';
 import { HiveDetail } from './pages/Hives/HiveDetail';
 import { PrintLabelsPage } from './pages/Hives/PrintLabelsPage';
+import { PrintLabelsFullPage } from './pages/Hives/PrintLabelsFullPage';
 import { InspectionsPage } from './pages/Inspections/InspectionsPage';
 import { ColonyInspectionPage } from './pages/Inspections/ColonyInspectionPage';
 import { ProductionsPage } from './pages/Productions/ProductionsPage';
@@ -58,6 +59,7 @@ export function App() {
         <Route path="inspections/new" element={<ColonyInspectionPage />} />
         <Route path="harvests/new" element={<HarvestWizard />} />
         <Route path="scan" element={<QRScanPage />} />
+        <Route path="print/labels" element={<PrintLabelsFullPage />} />
 
         <Route element={<AppShell />}>
           <Route index element={<RoleDashboard />} />

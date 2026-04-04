@@ -42,7 +42,7 @@ export default function LoginPage() {
           <img
             src="/logo-bee-forest.jpg"
             alt="Bee Forest"
-            style={{ maxWidth: '200px', mixBlendMode: 'multiply' }}
+            style={{ maxWidth: '180px', mixBlendMode: 'multiply' }}
             className="mx-auto mb-4"
           />
           <p className="text-amber-700 text-sm">Gestão de meliponários</p>

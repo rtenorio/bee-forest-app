@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { v4 as uuidv4 } from 'uuid';
-import { useCreateInspection } from '@/hooks/useInspections';
+import { useCreateInspection, useInspections } from '@/hooks/useInspections';
 import { useHive } from '@/hooks/useHives';
 import { useApiaries } from '@/hooks/useApiaries';
 import { useAuthStore } from '@/store/authStore';
@@ -341,13 +341,45 @@ export function ColonyInspectionPage() {
   const user = useAuthStore((s) => s.user);
   const { data: hive, isLoading: hiveLoading } = useHive(hive_local_id);
   const { data: apiaries = [] } = useApiaries();
+  const { data: inspections = [] } = useInspections(hive_local_id || undefined);
   const createInspection = useCreateInspection();
 
   const [form, setForm] = useState<FormState>(() => makeDefault(user?.name ?? ''));
   const [weatherLoading, setWeatherLoading] = useState(false);
   const [savingDraft, setSavingDraft] = useState(false);
+  const [fromLastInspection, setFromLastInspection] = useState(false);
 
   const apiary = hive ? apiaries.find((a) => a.local_id === hive.apiary_local_id) : null;
+
+  const lastInspection = inspections.length > 0
+    ? [...inspections].sort((a, b) => b.inspected_at.localeCompare(a.inspected_at))[0]
+    : null;
+
+  const applyLastInspection = useCallback(() => {
+    if (!lastInspection?.checklist) return;
+    const cl = lastInspection.checklist;
+    setForm((f) => ({
+      ...f,
+      checklist: {
+        ...f.checklist,
+        colony_strength: cl.colony_strength,
+        strength_observations: cl.strength_observations,
+        activity_level: cl.activity_level,
+        activity_observations: cl.activity_observations,
+        honey_stores: cl.honey_stores,
+        pollen_stores: cl.pollen_stores,
+        food_observations: cl.food_observations,
+        box_observations: cl.box_observations,
+        invaders: cl.invaders,
+        other_invader_text: cl.other_invader_text,
+        weakness_signs: cl.weakness_signs,
+        internal_changes: cl.internal_changes,
+        productive_potential: cl.productive_potential,
+        productive_observations: cl.productive_observations,
+      },
+    }));
+    setFromLastInspection(true);
+  }, [lastInspection]);
 
   // ── Update a checklist field ──────────────────────────────────────────────
 
@@ -647,6 +679,37 @@ export function ColonyInspectionPage() {
             )}
           </div>
         </div>
+
+        {/* ── Repetir dados da última inspeção ────────────────────────────── */}
+        {lastInspection && (
+          <div className={cn(
+            'flex items-center justify-between gap-3 px-4 py-3 rounded-xl border transition-colors',
+            fromLastInspection
+              ? 'border-amber-500/40 bg-amber-500/10'
+              : 'border-stone-700 bg-stone-900/60',
+          )}>
+            <div className="min-w-0">
+              <p className="text-xs font-medium text-stone-300">
+                {fromLastInspection ? '✓ Dados copiados da última inspeção' : 'Última inspeção disponível'}
+              </p>
+              <p className="text-xs text-stone-500 truncate">
+                {new Date(lastInspection.inspected_at).toLocaleDateString('pt-BR')} · {lastInspection.inspector_name}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={fromLastInspection ? () => setFromLastInspection(false) : applyLastInspection}
+              className={cn(
+                'shrink-0 text-xs font-medium px-3 py-1.5 rounded-lg border transition-all',
+                fromLastInspection
+                  ? 'border-amber-500/30 text-amber-400 hover:bg-amber-500/10'
+                  : 'border-stone-600 text-stone-300 hover:border-amber-500 hover:text-amber-400',
+              )}
+            >
+              {fromLastInspection ? 'Desfazer' : '↩ Repetir dados'}
+            </button>
+          </div>
+        )}
 
         {/* ═══ SECTION 2: Condições Climáticas ══════════════════════════════ */}
         <InspectionSection step={1} title="Condições Climáticas" subtitle="Dados automáticos — editáveis" icon="🌤️">

@@ -75,24 +75,6 @@ function QRLabel({ label }: { label: LabelData }) {
   );
 }
 
-// ─── Página de impressão (grupo de até 12 etiquetas) ─────────────────────────
-
-function PrintPage({ labels, isLast }: { labels: LabelData[]; isLast: boolean }) {
-  return (
-    <div
-      className="print-page"
-      style={{
-        pageBreakAfter: isLast ? 'auto' : 'always',
-        breakAfter: isLast ? 'auto' : 'page',
-      }}
-    >
-      {labels.map((l) => (
-        <QRLabel key={l.hive.local_id} label={l} />
-      ))}
-    </div>
-  );
-}
-
 // ─── Página principal ─────────────────────────────────────────────────────────
 
 export function PrintLabelsPage() {
@@ -148,7 +130,10 @@ export function PrintLabelsPage() {
   const selectedLabels = labels.filter((l) => selected.has(l.hive.local_id));
   const pages = chunk(selectedLabels, LABELS_PER_PAGE);
 
-  const handlePrint = () => window.print();
+  const handlePrint = useCallback(() => {
+    const ids = [...selected].join(',');
+    window.open(`/print/labels?ids=${ids}`, '_blank');
+  }, [selected]);
 
   const handleExportPNG = useCallback((label: LabelData) => {
     const a = document.createElement('a');
@@ -255,17 +240,6 @@ export function PrintLabelsPage() {
         </div>
       )}
 
-      {/* ── Área de impressão ──────────────────────────────────────────────
-           Oculta na tela via display:none.
-           O CSS global em index.css (@media print) revela com:
-             #print-area { display: block !important; visibility: visible !important; }
-             body * { visibility: hidden }  →  oculta sidebar/header/etc.
-           ─────────────────────────────────────────────────────────────── */}
-      <div id="print-area" style={{ display: 'none' }}>
-        {pages.map((page, i) => (
-          <PrintPage key={i} labels={page} isLast={i === pages.length - 1} />
-        ))}
-      </div>
     </div>
   );
 }
