@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useSpecies, useCreateSpecies, useDeleteSpecies } from '@/hooks/useSpecies';
 import { useUIStore } from '@/store/uiStore';
 import { useSyncStore } from '@/store/syncStore';
@@ -140,6 +141,18 @@ export function SettingsPage() {
 
       <ProfileSettings />
       <SyncSettings />
+
+      <Card>
+        <CardHeader><CardTitle>Notificações</CardTitle></CardHeader>
+        <p className="text-sm text-stone-400 mb-3">Configure alertas push e WhatsApp para eventos do meliponário.</p>
+        <Link
+          to="/settings/notifications"
+          className="inline-flex items-center gap-2 px-4 py-2 bg-stone-800 hover:bg-stone-700 text-stone-200 text-sm rounded-lg transition-colors"
+        >
+          🔔 Configurar notificações →
+        </Link>
+      </Card>
+
       <SpeciesManager />
 
       <Card>

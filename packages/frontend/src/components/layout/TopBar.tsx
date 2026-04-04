@@ -6,6 +6,7 @@ import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { useSync } from '@/hooks/useSync';
 import { cn } from '@/utils/cn';
 import { ROLE_LABELS } from '@bee-forest/shared';
+import { NotificationBell } from '@/components/notifications/NotificationBell';
 
 export function TopBar() {
   const navigate = useNavigate();
@@ -62,6 +63,9 @@ export function TopBar() {
           <span className={cn('w-2 h-2 rounded-full', isOnline ? 'bg-emerald-400' : 'bg-stone-500')} />
           <span className="hidden sm:inline">{isOnline ? 'Online' : 'Offline'}</span>
         </div>
+
+        {/* Notification bell */}
+        <NotificationBell />
 
         {/* User menu */}
         {user && (
