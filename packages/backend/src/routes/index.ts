@@ -14,6 +14,7 @@ import publicRouter from './public';
 import batchesRouter from './batches';
 import notificationsRouter from './notifications';
 import stockRouter from './stock';
+import partnersRouter from './partners';
 import { authenticate } from '../middleware/authenticate';
 
 const router = Router();
@@ -36,5 +37,6 @@ router.use('/qr', authenticate, qrRouter);
 router.use('/batches', authenticate, batchesRouter);
 router.use('/notifications', authenticate, notificationsRouter);
 router.use('/stock', authenticate, stockRouter);
+router.use('/partners', authenticate, partnersRouter);
 
 export default router;

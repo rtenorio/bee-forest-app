@@ -33,6 +33,10 @@ import { StockPage } from './pages/Stock/StockPage';
 import { StockApiaryPage } from './pages/Stock/StockApiaryPage';
 import { StockMovementsPage } from './pages/Stock/StockMovementsPage';
 import { StockAlertsPage } from './pages/Stock/StockAlertsPage';
+import { PartnersPage } from './pages/Partners/PartnersPage';
+import { PartnerDetail } from './pages/Partners/PartnerDetail';
+import { PartnerQualityPage } from './pages/Partners/PartnerQualityPage';
+import { PartnerFinancePage } from './pages/Partners/PartnerFinancePage';
 import { SocioDashboard } from './pages/Dashboard/SocioDashboard';
 import { ResponsavelDashboard } from './pages/Dashboard/ResponsavelDashboard';
 import { TratadorDashboard } from './pages/Dashboard/TratadorDashboard';
@@ -85,6 +89,10 @@ export function App() {
           <Route path="stock/movements" element={<StockMovementsPage />} />
           <Route path="stock/alerts" element={<StockAlertsPage />} />
           <Route path="stock/:apiaryId" element={<StockApiaryPage />} />
+          <Route path="partners" element={<PartnersPage />} />
+          <Route path="partners/quality" element={<PartnerQualityPage />} />
+          <Route path="partners/finance" element={<PartnerFinancePage />} />
+          <Route path="partners/:id" element={<PartnerDetail />} />
           <Route path="notifications" element={<NotificationsPage />} />
           <Route path="settings" element={<SettingsPage />} />
           <Route path="settings/notifications" element={<NotificationSettingsPage />} />

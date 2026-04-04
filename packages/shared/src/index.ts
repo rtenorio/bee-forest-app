@@ -10,6 +10,7 @@ export * from './types/feeding';
 export * from './types/harvest';
 export * from './types/batch';
 export * from './types/stock';
+export * from './types/partner';
 
 // Schemas
 export * from './schemas/auth.schema';
@@ -21,3 +22,4 @@ export * from './schemas/production.schema';
 export * from './schemas/feeding.schema';
 export * from './schemas/sync.schema';
 export * from './schemas/harvest.schema';
+export * from './schemas/partner.schema';
