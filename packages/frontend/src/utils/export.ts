@@ -1,4 +1,5 @@
 import type { Hive, Inspection, Production, Feeding } from '@bee-forest/shared';
+import { normalizeChecklistHealth } from './inspectionUtils';
 
 function toCSV(headers: string[], rows: string[][]): string {
   const escape = (v: string) => `"${v.replace(/"/g, '""')}"`;
@@ -23,14 +24,18 @@ export function exportHivesCSV(hives: Hive[]) {
 
 export function exportInspectionsCSV(inspections: Inspection[]) {
   const headers = ['Data', 'Inspetor', 'Força Pop.', 'Mel', 'Precisa Alimentação', 'Notas'];
-  const rows = inspections.map((i) => [
-    i.inspected_at.slice(0, 10),
-    i.inspector_name,
-    String(i.checklist.population_strength),
-    i.checklist.honey_stores,
-    i.checklist.needs_feeding ? 'Sim' : 'Não',
-    i.notes,
-  ]);
+  const rows = inspections.map((i) => {
+    const health = normalizeChecklistHealth(i.checklist);
+    const raw = i.checklist as unknown as Record<string, unknown>;
+    return [
+      i.inspected_at.slice(0, 10),
+      i.inspector_name,
+      String(health.strength),
+      (raw.honey_stores as string) ?? '',
+      health.needsFeeding ? 'Sim' : 'Não',
+      i.notes,
+    ];
+  });
   downloadFile(toCSV(headers, rows), 'inspecoes.csv', 'text/csv;charset=utf-8;');
 }
 

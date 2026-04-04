@@ -19,6 +19,7 @@ import { ProductionForm } from '../Productions/ProductionForm';
 import { FeedingForm } from '../Feedings/FeedingForm';
 import { formatDate, formatDateTime, daysSince } from '@/utils/dates';
 import { QRCodeDisplay } from '@/components/hive/QRCodeDisplay';
+import { normalizeChecklistHealth } from '@/utils/inspectionUtils';
 
 export function HiveDetail() {
   const { id } = useParams<{ id: string }>();
@@ -52,7 +53,7 @@ export function HiveDetail() {
 
   const strengthData = [...sortedInspections].reverse().map((i) => ({
     date: formatDate(i.inspected_at),
-    forca: i.checklist.population_strength,
+    forca: normalizeChecklistHealth(i.checklist).strength,
   }));
 
   const productionByType = productions.reduce<Record<string, number>>((acc, p) => {
@@ -190,8 +191,8 @@ export function HiveDetail() {
                       )}
                     </div>
                     <div className="flex gap-2 items-center">
-                      <span className="text-amber-400 font-bold" title={`Força: ${inspection.checklist.population_strength}`}>
-                        {'🐝'.repeat(inspection.checklist.population_strength)}
+                      <span className="text-amber-400 font-bold" title={`Força: ${normalizeChecklistHealth(inspection.checklist).strength}`}>
+                        {'🐝'.repeat(normalizeChecklistHealth(inspection.checklist).strength)}
                       </span>
                       {canManageHive && (
                         <Button variant="danger" size="sm" onClick={() => {

@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { normalizeChecklistHealth } from '@/utils/inspectionUtils';
 import { format, subMonths } from 'date-fns';
 import { useHives } from '@/hooks/useHives';
 import { useApiaries } from '@/hooks/useApiaries';
@@ -135,11 +136,9 @@ export function ReportsPage() {
 
   const inspectionSummary = useMemo(() => {
     if (filteredInspections.length === 0) return null;
-    const avgStrength = filteredInspections.reduce((s, i) => s + i.checklist.population_strength, 0) / filteredInspections.length;
-    const withAlerts = filteredInspections.filter(
-      (i) => i.checklist.pests_observed.length > 0 || i.checklist.diseases_observed.length > 0
-    ).length;
-    const needsFeeding = filteredInspections.filter((i) => i.checklist.needs_feeding).length;
+    const avgStrength = filteredInspections.reduce((s, i) => s + normalizeChecklistHealth(i.checklist).strength, 0) / filteredInspections.length;
+    const withAlerts = filteredInspections.filter((i) => normalizeChecklistHealth(i.checklist).hasAlerts).length;
+    const needsFeeding = filteredInspections.filter((i) => normalizeChecklistHealth(i.checklist).needsFeeding).length;
     return { avgStrength, withAlerts, needsFeeding, total: filteredInspections.length };
   }, [filteredInspections]);
 
@@ -173,22 +172,26 @@ export function ReportsPage() {
     const rows = filteredInspections.map((i) => {
       const hive = hives.find((h) => h.local_id === i.hive_local_id);
       const apiary = hive ? apiaries.find((a) => a.local_id === hive.apiary_local_id) : null;
-      const cl = i.checklist;
+      const health = normalizeChecklistHealth(i.checklist);
+      const raw = i.checklist as unknown as Record<string, unknown>;
+      const honeyStores = (raw.honey_stores as string) ?? '';
+      const pollenStores = (raw.pollen_stores as string) ?? '';
+      const temperament = (raw.temperament as string) ?? '';
       return [
         formatDateDisplay(i.inspected_at),
         hive?.code ?? i.hive_local_id,
         apiary?.name ?? '',
         i.inspector_name,
-        `${cl.population_strength} - ${STRENGTH_LABELS[cl.population_strength]}`,
-        QUEEN_LABELS[String(cl.queen_seen)] ?? '',
-        cl.brood_present ? 'Sim' : 'Não',
-        cl.temperament ? (TEMPERAMENT_LABELS[cl.temperament] ?? cl.temperament) : '',
-        LEVEL_LABELS[cl.honey_stores] ?? cl.honey_stores,
-        LEVEL_LABELS[cl.pollen_stores] ?? cl.pollen_stores,
-        cl.pests_observed.map((p) => PEST_LABELS[p] ?? p).join('; '),
-        cl.diseases_observed.map((d) => DISEASE_LABELS[d] ?? d).join('; '),
-        cl.needs_feeding ? 'Sim' : 'Não',
-        cl.needs_space_expansion ? 'Sim' : 'Não',
+        `${health.strength} - ${STRENGTH_LABELS[health.strength] ?? ''}`,
+        QUEEN_LABELS[String(raw.queen_seen)] ?? '',
+        raw.brood_present ? 'Sim' : 'Não',
+        temperament ? (TEMPERAMENT_LABELS[temperament] ?? temperament) : '',
+        LEVEL_LABELS[honeyStores] ?? honeyStores,
+        LEVEL_LABELS[pollenStores] ?? pollenStores,
+        health.allInvaders.map((p) => PEST_LABELS[p] ?? p).join('; '),
+        health.diseasesObserved.map((d) => DISEASE_LABELS[d] ?? d).join('; '),
+        health.needsFeeding ? 'Sim' : 'Não',
+        health.needsExpansion ? 'Sim' : 'Não',
         i.next_inspection_due ? formatDateDisplay(i.next_inspection_due) : '',
         i.notes,
       ];
@@ -389,48 +392,48 @@ export function ReportsPage() {
                       {filteredInspections.slice(0, 200).map((i) => {
                         const hive = hives.find((h) => h.local_id === i.hive_local_id);
                         const apiary = hive ? apiaries.find((a) => a.local_id === hive.apiary_local_id) : null;
-                        const cl = i.checklist;
-                        const hasAlerts = cl.pests_observed.length > 0 || cl.diseases_observed.length > 0;
+                        const health = normalizeChecklistHealth(i.checklist);
+                        const raw = i.checklist as unknown as Record<string, unknown>;
                         return (
                           <tr key={i.local_id} className={cn(
                             'border-b border-stone-800/60 hover:bg-stone-800/30 transition-colors',
-                            hasAlerts && 'bg-red-900/5'
+                            health.hasAlerts && 'bg-red-900/5'
                           )}>
                             <td className="px-4 py-3 text-stone-300 whitespace-nowrap">{formatDateDisplay(i.inspected_at)}</td>
                             <td className="px-4 py-3 font-medium text-amber-400 whitespace-nowrap">{hive?.code ?? '—'}</td>
                             <td className="px-4 py-3 text-stone-400 whitespace-nowrap">{apiary?.name ?? '—'}</td>
                             <td className="px-4 py-3 text-stone-400 whitespace-nowrap">{i.inspector_name || '—'}</td>
                             <td className="px-4 py-3 text-stone-300 whitespace-nowrap">
-                              {'🐝'.repeat(cl.population_strength)}
+                              {'🐝'.repeat(health.strength)}
                             </td>
                             <td className="px-4 py-3 text-stone-300 whitespace-nowrap">
-                              {QUEEN_LABELS[String(cl.queen_seen)] ?? '?'}
+                              {QUEEN_LABELS[String(raw.queen_seen)] ?? '?'}
                             </td>
                             <td className="px-4 py-3 text-stone-400 whitespace-nowrap">
-                              {LEVEL_LABELS[cl.honey_stores]}
+                              {LEVEL_LABELS[(raw.honey_stores as string) ?? ''] ?? '—'}
                             </td>
                             <td className="px-4 py-3">
-                              {cl.pests_observed.length > 0 ? (
+                              {health.allInvaders.length > 0 ? (
                                 <span className="text-red-400 text-xs">
-                                  {cl.pests_observed.map((p) => PEST_LABELS[p] ?? p).join(', ')}
+                                  {health.allInvaders.map((p) => PEST_LABELS[p] ?? p).join(', ')}
                                 </span>
                               ) : (
                                 <span className="text-emerald-500 text-xs">Nenhuma</span>
                               )}
                             </td>
                             <td className="px-4 py-3">
-                              {cl.diseases_observed.length > 0 ? (
+                              {health.diseasesObserved.length > 0 ? (
                                 <span className="text-red-400 text-xs">
-                                  {cl.diseases_observed.map((d) => DISEASE_LABELS[d] ?? d).join(', ')}
+                                  {health.diseasesObserved.map((d) => DISEASE_LABELS[d] ?? d).join(', ')}
                                 </span>
                               ) : (
                                 <span className="text-emerald-500 text-xs">Nenhuma</span>
                               )}
                             </td>
                             <td className="px-4 py-3 text-xs space-x-1 whitespace-nowrap">
-                              {cl.needs_feeding && <span className="text-orange-400">🌺 Alimentar</span>}
-                              {cl.needs_space_expansion && <span className="text-blue-400">📦 Expandir</span>}
-                              {!cl.needs_feeding && !cl.needs_space_expansion && (
+                              {health.needsFeeding && <span className="text-orange-400">🌺 Alimentar</span>}
+                              {health.needsExpansion && <span className="text-blue-400">📦 Expandir</span>}
+                              {!health.needsFeeding && !health.needsExpansion && (
                                 <span className="text-stone-600">—</span>
                               )}
                             </td>
