@@ -1,5 +1,95 @@
 @import "tailwindcss";
 
+/* ─── Impressão ──────────────────────────────────────────────────────────────
+   Regras globais de @media print colocadas aqui (no CSS carregado no <head>)
+   para garantir máxima prioridade e suporte em todos os browsers.
+   A técnica visibility:hidden/visible permite mostrar apenas #print-area
+   mesmo estando profundamente aninhado na árvore do DOM.
+   ─────────────────────────────────────────────────────────────────────────── */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 0;
+  }
+
+  /* Fundo branco — elimina dark mode do body */
+  html, body {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  /* Força renderização de cores de fundo em todos os elementos */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Oculta TUDO: sidebar, header, bottom nav, banners, botões */
+  body * {
+    visibility: hidden !important;
+  }
+
+  /* Revela apenas a área de impressão e seus filhos */
+  #print-area,
+  #print-area * {
+    visibility: visible !important;
+  }
+
+  /* Posiciona no topo da folha, largura total — sobrescreve display:none inline */
+  #print-area {
+    display: block !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    background: #ffffff !important;
+  }
+
+  /* Página A4: grid 3 colunas × 4 linhas */
+  .print-page {
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    grid-auto-rows: auto !important;
+    align-items: stretch !important;
+    gap: 5mm !important;
+    padding: 10mm !important;
+    width: 210mm !important;
+    min-height: 297mm !important;
+    box-sizing: border-box !important;
+    background: #ffffff !important;
+    page-break-after: always !important;
+    break-after: page !important;
+  }
+
+  .print-page:last-child {
+    page-break-after: auto !important;
+    break-after: auto !important;
+  }
+
+  /* Etiqueta: preenche célula do grid, nunca é cortada */
+  .print-page .qr-label {
+    width: auto !important;
+    height: auto !important;
+    flex-shrink: unset !important;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+    background: #ffffff !important;
+    border: 1.5px solid #f59e0b !important;
+    border-radius: 4px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    padding: 3mm !important;
+  }
+
+  .print-page .qr-label img {
+    width: 85% !important;
+    height: auto !important;
+  }
+}
+
 @layer base {
   :root {
     --color-brand-50: #fffbeb;
