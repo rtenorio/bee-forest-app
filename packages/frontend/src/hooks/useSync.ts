@@ -15,6 +15,7 @@ import { stockRepo } from '@/db/repositories/stock.repository';
 import type { SyncResult, EntityType } from '@bee-forest/shared';
 
 const CLIENT_ID_KEY = 'bee-forest-client-id';
+const INITIAL_PULL_KEY = 'bee-forest-initial-pull-done';
 
 // Items that fail this many times get purged from the queue to prevent infinite loops
 const MAX_ATTEMPTS = 5;
@@ -68,12 +69,22 @@ export function useSync() {
         items = items.filter((i) => i.attempts < MAX_ATTEMPTS);
       }
 
+      // Check IDB state once for both the early-exit decision and lastSyncAt override
+      const existingApiaries = await apiaryRepo.getAll();
+      const idbEmpty = existingApiaries.length === 0;
+
       if (items.length === 0) {
-        setIsSyncing(false);
-        return;
+        const initialPullDone = !!localStorage.getItem(INITIAL_PULL_KEY);
+        if (!idbEmpty && initialPullDone) {
+          // Nothing to push and IDB already has data — nothing to do
+          setIsSyncing(false);
+          return;
+        }
+        // IDB is empty or initial pull hasn't run yet — proceed to pull all data
       }
 
-      const lastSyncAt = localStorage.getItem('bee-forest-last-sync');
+      // Force last_sync_at = null when IDB is empty so the server returns ALL records
+      const lastSyncAt = idbEmpty ? null : localStorage.getItem('bee-forest-last-sync');
       const payload = { client_id: getClientId(), items, last_sync_at: lastSyncAt };
 
       const { token } = (await import('@/store/authStore')).useAuthStore.getState();
@@ -123,6 +134,7 @@ export function useSync() {
       const now = new Date().toISOString();
       setLastSyncAt(now);
       localStorage.setItem('bee-forest-last-sync', now);
+      localStorage.setItem(INITIAL_PULL_KEY, '1');
 
       // Invalidate all queries to refresh UI
       queryClient.invalidateQueries();
