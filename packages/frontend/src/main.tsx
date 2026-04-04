@@ -1,4 +1,4 @@
-import { StrictMode } from 'react';
+import { StrictMode, useState, useCallback } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -6,6 +6,7 @@ import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import './index.css';
 import { App } from './App';
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
+import { SplashScreen } from './components/SplashScreen';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -21,6 +22,17 @@ const queryClient = new QueryClient({
   },
 });
 
+function Root() {
+  const [splashDone, setSplashDone] = useState(false);
+  const handleSplashDone = useCallback(() => setSplashDone(true), []);
+  return (
+    <>
+      {!splashDone && <SplashScreen onDone={handleSplashDone} />}
+      <App />
+    </>
+  );
+}
+
 const root = document.getElementById('root')!;
 
 createRoot(root).render(
@@ -28,7 +40,7 @@ createRoot(root).render(
     <ErrorBoundary>
       <BrowserRouter>
         <QueryClientProvider client={queryClient}>
-          <App />
+          <Root />
           {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
         </QueryClientProvider>
       </BrowserRouter>

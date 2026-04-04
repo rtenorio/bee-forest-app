@@ -39,9 +39,13 @@ export default function LoginPage() {
     <div className="min-h-screen bg-amber-50 flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <div className="text-6xl mb-3">🐝</div>
-          <h1 className="text-2xl font-bold text-amber-900">Bee Forest App</h1>
-          <p className="text-amber-700 text-sm mt-1">Gestão de meliponários</p>
+          <img
+            src="/logo-bee-forest.jpg"
+            alt="Bee Forest"
+            style={{ maxWidth: '200px', mixBlendMode: 'multiply' }}
+            className="mx-auto mb-4"
+          />
+          <p className="text-amber-700 text-sm">Gestão de meliponários</p>
         </div>
 
         <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-md p-6 space-y-4">

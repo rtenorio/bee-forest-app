@@ -20,6 +20,7 @@ import { FeedingForm } from '../Feedings/FeedingForm';
 import { formatDate, formatDateTime, daysSince } from '@/utils/dates';
 import { QRCodeDisplay } from '@/components/hive/QRCodeDisplay';
 import { normalizeChecklistHealth } from '@/utils/inspectionUtils';
+import { exportHivePdf } from '@/utils/exportPdf';
 
 export function HiveDetail() {
   const { id } = useParams<{ id: string }>();
@@ -102,6 +103,35 @@ export function HiveDetail() {
               🫙 Colheita
             </Button>
           )}
+          <Button variant="secondary" size="sm" onClick={() => {
+            const apiaryName = hive.apiary_local_id;
+            exportHivePdf({
+              hiveCode: hive.code,
+              apiaryName,
+              hiveData: [
+                { label: 'Código', value: hive.code },
+                { label: 'Status', value: hive.status },
+                { label: 'Modelo', value: hive.box_type ?? '—' },
+                { label: 'Instalação', value: hive.installation_date ? formatDate(hive.installation_date) : '—' },
+                { label: 'Espécie', value: species?.name ?? '—' },
+                { label: 'Notas', value: hive.notes ?? '—' },
+              ],
+              inspections: sortedInspections.map((i) => ({
+                date: formatDate(i.inspected_at),
+                inspector: i.inspector_name,
+                health: String(normalizeChecklistHealth(i.checklist).strength),
+                notes: i.notes ?? '',
+              })),
+              productions: productions.map((p) => ({
+                date: formatDate(p.harvested_at),
+                product: PRODUCT_LABELS[p.product_type] ?? p.product_type,
+                quantity: `${p.quantity_g}g`,
+                notes: p.notes ?? '',
+              })),
+            });
+          }}>
+            📄 PDF
+          </Button>
           {canManageHive && (
             <>
               <Button variant="ghost" size="sm" onClick={() => setEditHive(true)}>Editar</Button>

@@ -80,9 +80,8 @@ export function Sidebar({ mobile = false }: { mobile?: boolean }) {
             sidebarOpen ? 'translate-x-0' : '-translate-x-full'
           )}
         >
-          <div className="h-14 flex items-center px-4 border-b border-stone-800 gap-2">
-            <span className="text-2xl">🐝</span>
-            <span className="font-bold text-amber-400 text-lg">Bee Forest</span>
+          <div className="h-14 flex items-center px-4 border-b border-stone-800">
+            <img src="/logo-bee-forest.jpg" alt="Bee Forest" style={{ width: '140px', mixBlendMode: 'multiply', filter: 'brightness(1.5) contrast(0.9)' }} />
           </div>
           <nav className="flex-1 px-3 py-4 flex flex-col gap-1 overflow-y-auto">
             <NavItems onItemClick={() => setSidebarOpen(false)} />
@@ -97,9 +96,8 @@ export function Sidebar({ mobile = false }: { mobile?: boolean }) {
 
   return (
     <aside className="hidden lg:flex w-60 flex-col bg-stone-900 border-r border-stone-800 h-screen sticky top-0">
-      <div className="h-14 flex items-center px-4 border-b border-stone-800 gap-2">
-        <span className="text-2xl">🐝</span>
-        <span className="font-bold text-amber-400 text-lg">Bee Forest</span>
+      <div className="h-14 flex items-center px-4 border-b border-stone-800">
+        <img src="/logo-bee-forest.jpg" alt="Bee Forest" style={{ width: '140px', mixBlendMode: 'multiply', filter: 'brightness(1.5) contrast(0.9)' }} />
       </div>
       <nav className="flex-1 px-3 py-4 flex flex-col gap-1 overflow-y-auto">
         <NavItems />

@@ -23,6 +23,7 @@ import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Spinner } from '@/components/ui/Spinner';
 import type { BatchStatus, DehumidificationSession, MaturationSession } from '@bee-forest/shared';
+import { exportBatchPdf } from '@/utils/exportPdf';
 
 // ── Config ────────────────────────────────────────────────────────────────────
 
@@ -467,9 +468,35 @@ export function BatchDetail() {
             </p>
           </div>
         </div>
-        {canManage && status !== 'rejected' && status !== 'sold' && (
-          <Button variant="danger" size="sm" onClick={() => setActiveModal('reject')}>Reprovar</Button>
-        )}
+        <div className="flex gap-2">
+          <Button variant="secondary" size="sm" onClick={() => {
+            exportBatchPdf({
+              batchCode: batch.code,
+              apiaryName: batch.apiary_name ?? '—',
+              batchData: [
+                { label: 'Código', value: batch.code },
+                { label: 'Status', value: cfg.label },
+                { label: 'Tipo', value: batch.honey_type === 'maturado' ? 'Mel Maturado' : 'Mel Vivo' },
+                { label: 'Data colheita', value: new Date(batch.harvest_date).toLocaleDateString('pt-BR') },
+                { label: 'Volume inicial', value: batch.initial_volume_ml ? `${batch.initial_volume_ml} ml` : '—' },
+                { label: 'Umidade inicial', value: batch.initial_moisture ? `${batch.initial_moisture}%` : '—' },
+                { label: 'Brix', value: batch.initial_brix ? `${batch.initial_brix}°` : '—' },
+                { label: 'Meliponário', value: batch.apiary_name ?? '—' },
+              ],
+              movements: (batch.audit_logs ?? []).map((l) => ({
+                date: new Date(l.created_at).toLocaleDateString('pt-BR'),
+                action: l.action,
+                details: l.metadata ? JSON.stringify(l.metadata) : '—',
+                responsible: l.actor_name ?? '—',
+              })),
+            });
+          }}>
+            📄 PDF
+          </Button>
+          {canManage && status !== 'rejected' && status !== 'sold' && (
+            <Button variant="danger" size="sm" onClick={() => setActiveModal('reject')}>Reprovar</Button>
+          )}
+        </div>
       </div>
 
       {/* Alert banners */}

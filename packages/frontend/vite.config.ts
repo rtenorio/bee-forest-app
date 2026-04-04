@@ -14,10 +14,10 @@ export default defineConfig({
       srcDir: 'src',
       filename: 'sw.ts',
       injectManifest: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,jpg,jpeg,woff2}'],
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
       },
-      includeAssets: ['icons/*.png', 'icons/*.svg', 'robots.txt'],
+      includeAssets: ['icons/*.png', 'icons/*.svg', 'robots.txt', 'logo-bee-forest.jpg'],
       manifest: {
         name: 'Bee Forest - Meliponário',
         short_name: 'BeeForest',

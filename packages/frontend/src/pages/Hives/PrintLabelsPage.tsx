@@ -50,12 +50,11 @@ function QRLabel({ label }: { label: LabelData }) {
         flexShrink: 0,
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-        <span style={{ fontSize: '13px' }}>🐝</span>
-        <span style={{ fontSize: '10px', fontWeight: 700, color: '#b45309', letterSpacing: '0.05em' }}>
-          Bee Forest
-        </span>
-      </div>
+      <img
+        src="/logo-bee-forest.jpg"
+        alt="Bee Forest"
+        style={{ height: '20px', objectFit: 'contain', mixBlendMode: 'multiply' }}
+      />
       <img
         src={label.dataUrl}
         alt={`QR ${code}`}
