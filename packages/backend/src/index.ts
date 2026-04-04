@@ -11,8 +11,8 @@ async function start() {
     await pool.query('SELECT 1');
     console.log('Database connected');
 
-    app.listen(config.port, () => {
-      console.log(`Bee Forest API running on http://localhost:${config.port}`);
+    app.listen(config.port, '0.0.0.0', () => {
+      console.log(`Bee Forest API running on http://0.0.0.0:${config.port}`);
       console.log(`Environment: ${config.nodeEnv}`);
       startNotificationJob();
     });
