@@ -16,7 +16,9 @@ const items: Item[] = [
 
 export function BottomNav() {
   const role = useAuthStore((s) => s.user?.role);
-  const visible = items.filter((item) => !item.roles || (role && item.roles.includes(role)));
+  const visible = items.filter((item) =>
+    !item.roles || (role && (item.roles.includes(role) || role === 'master_admin'))
+  );
 
   return (
     <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-stone-900 border-t border-stone-800 pb-safe">

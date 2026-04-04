@@ -17,6 +17,7 @@ const navItems: NavItem[] = [
   { to: '/feedings', label: 'Alimentações', icon: '🌺', end: false, roles: ['socio', 'responsavel'] },
   { to: '/harvests', label: 'Colheitas', icon: '🫙', end: false, roles: ['socio', 'responsavel'] },
   { to: '/reports', label: 'Relatórios', icon: '📊', end: false, roles: ['socio', 'responsavel'] },
+  { to: '/users', label: 'Usuários', icon: '👥', end: false, roles: ['master_admin', 'socio', 'responsavel'] },
   { to: '/settings', label: 'Configurações', icon: '⚙️', end: false },
 ];
 
@@ -43,7 +44,9 @@ function NavItem({ to, label, icon, end, onClick }: NavItem & { onClick?: () => 
 
 function NavItems({ onItemClick }: { onItemClick?: () => void }) {
   const role = useAuthStore((s) => s.user?.role);
-  const visible = navItems.filter((item) => !item.roles || (role && item.roles.includes(role)));
+  const visible = navItems.filter((item) =>
+    !item.roles || (role && (item.roles.includes(role) || role === 'master_admin'))
+  );
   return (
     <>
       {visible.map((item) => (

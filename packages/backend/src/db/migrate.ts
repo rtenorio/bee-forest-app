@@ -3,7 +3,7 @@ import path from 'path';
 import bcrypt from 'bcryptjs';
 import { pool } from './connection';
 
-const MIGRATIONS = ['0000_init.sql', '0001_auth.sql', '0002_inspection_v2.sql', '0003_qr_codes.sql', '0004_harvests.sql', '0005_inspection_v3.sql', '0006_harvest_volumes.sql'];
+const MIGRATIONS = ['0000_init.sql', '0001_auth.sql', '0002_inspection_v2.sql', '0003_qr_codes.sql', '0004_harvests.sql', '0005_inspection_v3.sql', '0006_harvest_volumes.sql', '0007_user_management.sql'];
 
 async function migrate() {
   const client = await pool.connect();
@@ -38,6 +38,7 @@ async function migrate() {
 
     await client.query(`
       INSERT INTO users (name, email, password_hash, role) VALUES
+        ('Master Admin',       'master@beeforest.com',       $1, 'master_admin'),
         ('Sócio Admin',        'socio@beeforest.com',        $1, 'socio'),
         ('Responsável Demo',   'responsavel@beeforest.com',  $1, 'responsavel'),
         ('Tratador Demo',      'tratador@beeforest.com',     $1, 'tratador')
@@ -45,6 +46,7 @@ async function migrate() {
     `, [hash]);
 
     console.log('\nUsuários padrão criados (senha: BeeForest@2024):');
+    console.log('  master@beeforest.com       → Master Admin');
     console.log('  socio@beeforest.com        → Sócio');
     console.log('  responsavel@beeforest.com  → Responsável');
     console.log('  tratador@beeforest.com     → Tratador');

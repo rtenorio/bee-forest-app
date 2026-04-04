@@ -19,6 +19,8 @@ import ProtectedRoute from './components/auth/ProtectedRoute';
 import { QRScanPage } from './pages/QRScan/QRScanPage';
 import { HiveLandingPage } from './pages/HiveLanding/HiveLandingPage';
 import { TracePage } from './pages/Trace/TracePage';
+import { UsersPage } from './pages/Users/UsersPage';
+import { UserDetail } from './pages/Users/UserDetail';
 import { SocioDashboard } from './pages/Dashboard/SocioDashboard';
 import { ResponsavelDashboard } from './pages/Dashboard/ResponsavelDashboard';
 import { TratadorDashboard } from './pages/Dashboard/TratadorDashboard';
@@ -28,7 +30,7 @@ function RoleDashboard() {
   const role = useAuthStore((s) => s.user?.role);
   if (role === 'responsavel') return <ResponsavelDashboard />;
   if (role === 'tratador') return <TratadorDashboard />;
-  return <SocioDashboard />;
+  return <SocioDashboard />; // socio + master_admin
 }
 
 export function App() {
@@ -59,6 +61,8 @@ export function App() {
           <Route path="feedings" element={<FeedingsPage />} />
           <Route path="harvests" element={<HarvestsPage />} />
           <Route path="harvests/:id" element={<HarvestDetail />} />
+          <Route path="users" element={<UsersPage />} />
+          <Route path="users/:id" element={<UserDetail />} />
           <Route path="settings" element={<SettingsPage />} />
         </Route>
       </Route>
