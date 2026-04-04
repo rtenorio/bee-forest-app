@@ -5,6 +5,7 @@ import { useUIStore } from '@/store/uiStore';
 import { useSyncStore } from '@/store/syncStore';
 import { useSync } from '@/hooks/useSync';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
+import { useQueryClient } from '@tanstack/react-query';
 import { Card, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
@@ -13,6 +14,15 @@ import { Badge } from '@/components/ui/Badge';
 import { Modal } from '@/components/ui/Modal';
 import { formatDateTime } from '@/utils/dates';
 import { SpeciesCreateSchema } from '@bee-forest/shared';
+import { apiaryRepo } from '@/db/repositories/apiary.repository';
+import { hiveRepo } from '@/db/repositories/hive.repository';
+import { speciesRepo } from '@/db/repositories/species.repository';
+import { inspectionRepo } from '@/db/repositories/inspection.repository';
+import { productionRepo } from '@/db/repositories/production.repository';
+import { feedingRepo } from '@/db/repositories/feeding.repository';
+import { harvestRepo } from '@/db/repositories/harvest.repository';
+import { batchRepo } from '@/db/repositories/batch.repository';
+import { stockRepo } from '@/db/repositories/stock.repository';
 
 function SpeciesManager() {
   const { data: speciesList = [] } = useSpecies();
@@ -72,10 +82,26 @@ function SpeciesManager() {
   );
 }
 
+async function clearAllLocalDirty() {
+  await Promise.all([
+    apiaryRepo.clearAllDirty(),
+    hiveRepo.clearAllDirty(),
+    speciesRepo.clearAllDirty(),
+    inspectionRepo.clearAllDirty(),
+    productionRepo.clearAllDirty(),
+    feedingRepo.clearAllDirty(),
+    harvestRepo.clearAllDirty(),
+    batchRepo.clearAllDirty(),
+    stockRepo.clearAllDirty(),
+  ]);
+}
+
 function SyncSettings() {
   const { isSyncing, pendingCount, lastSyncAt, lastError } = useSyncStore();
   const { triggerSync } = useSync();
   const isOnline = useOnlineStatus();
+  const qc = useQueryClient();
+  const [clearing, setClearing] = useState(false);
 
   return (
     <Card>
@@ -109,6 +135,22 @@ function SyncSettings() {
           className="w-full"
         >
           Sincronizar Agora
+        </Button>
+        <Button
+          variant="secondary"
+          loading={clearing}
+          className="w-full"
+          onClick={async () => {
+            setClearing(true);
+            try {
+              await clearAllLocalDirty();
+              qc.invalidateQueries();
+            } finally {
+              setClearing(false);
+            }
+          }}
+        >
+          Limpar badges "Não sincronizado"
         </Button>
       </div>
     </Card>

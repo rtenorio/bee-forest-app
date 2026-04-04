@@ -1,6 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { useApiaries, useDeleteApiary, useToggleApiaryStatus } from '@/hooks/useApiaries';
+import { apiaryRepo } from '@/db/repositories/apiary.repository';
 import { useHives } from '@/hooks/useHives';
 import { useAuthStore } from '@/store/authStore';
 import { Card } from '@/components/ui/Card';
@@ -17,11 +19,26 @@ export function ApiariesPage() {
   const user = useAuthStore((s) => s.user)!;
   const canManage = user.role === 'socio' || user.role === 'responsavel';
 
+  const qc = useQueryClient();
   const { data: apiaries = [], isLoading } = useApiaries();
   const { data: hives = [] } = useHives();
   const deleteApiary = useDeleteApiary();
   const toggleStatus = useToggleApiaryStatus();
   const [showForm, setShowForm] = useState(false);
+
+  // DEBUG: log is_dirty and force-clear stale dirty flags on mount
+  useEffect(() => {
+    apiaryRepo.clearAllDirty().then(() => {
+      console.log('[ApiariesPage] clearAllDirty() concluído');
+      qc.invalidateQueries({ queryKey: ['apiaries'] });
+    });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (apiaries.length > 0) {
+      console.log('[ApiariesPage] is_dirty por meliponário:', apiaries.map((a) => ({ name: a.name, is_dirty: a.is_dirty })));
+    }
+  }, [apiaries]);
   const [editing, setEditing] = useState<Apiary | null>(null);
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('active');
 

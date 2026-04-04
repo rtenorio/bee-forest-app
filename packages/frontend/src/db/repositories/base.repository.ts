@@ -99,6 +99,26 @@ export abstract class BaseRepository<T extends SyncMeta> {
     await db.put(this.storeName, { ...existing, is_dirty: false, synced_at: new Date().toISOString() });
   }
 
+  async clearAllDirty(): Promise<void> {
+    const db = await this.getDb();
+    // @ts-expect-error dynamic store
+    const all = await db.getAll(this.storeName) as T[];
+    const dirty = all.filter((r) => r.is_dirty);
+    if (dirty.length === 0) return;
+
+    // Only clear records that have no pending sync queue item
+    const queue = await db.getAll('sync_queue');
+    const queuedIds = new Set(queue.map((q) => q.entity_local_id));
+    const stale = dirty.filter((r) => !queuedIds.has(r.local_id));
+    const now = new Date().toISOString();
+    await Promise.all(
+      stale.map((r) =>
+        // @ts-expect-error dynamic store
+        db.put(this.storeName, { ...r, is_dirty: false, synced_at: now })
+      )
+    );
+  }
+
   private async enqueueSync(operation: 'CREATE' | 'UPDATE' | 'DELETE', entity: T): Promise<void> {
     const db = await this.getDb();
     const queueItem: SyncQueueItem = {
