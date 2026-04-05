@@ -21,6 +21,7 @@ import { formatDate, formatDateTime, daysSince } from '@/utils/dates';
 import { QRCodeDisplay } from '@/components/hive/QRCodeDisplay';
 import { normalizeChecklistHealth } from '@/utils/inspectionUtils';
 import { exportHivePdf } from '@/utils/exportPdf';
+import { HiveInstructions } from './HiveInstructions';
 
 export function HiveDetail() {
   const { id } = useParams<{ id: string }>();
@@ -188,6 +189,11 @@ export function HiveDetail() {
 
       {/* QR Code */}
       <QRCodeDisplay hiveLocalId={hive.local_id} qrCodeText={hive.qr_code} />
+
+      {/* Instruções pendentes — visível para tratador */}
+      {user.role === 'tratador' && (
+        <HiveInstructions hiveLocalId={hive.local_id} apiaryLocalId={hive.apiary_local_id} />
+      )}
 
       {/* Tabs */}
       <div className="border-b border-stone-800">
