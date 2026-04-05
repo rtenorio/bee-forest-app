@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import { useHive, useDeleteHive } from '@/hooks/useHives';
 import { useInspections, useDeleteInspection } from '@/hooks/useInspections';
+import { useInstructions } from '@/hooks/useInstructions';
 import { useProductions } from '@/hooks/useProductions';
 import { useFeedings } from '@/hooks/useFeedings';
 import { useSpecies } from '@/hooks/useSpecies';
@@ -45,12 +46,21 @@ export function HiveDetail() {
   const { data: speciesList = [] } = useSpecies();
   const deleteHive = useDeleteHive();
   const deleteInspection = useDeleteInspection();
+  const { data: hiveInstructionsPanel = [] } = useInstructions({ hive_local_id: id!, status: 'pending' });
+  const { data: apiaryInstructionsPanel = [] } = useInstructions({ apiary_local_id: hive?.apiary_local_id, status: 'pending' });
 
   if (isLoading) return <div className="flex justify-center py-16"><Spinner /></div>;
   if (!hive) return <div className="text-stone-400 text-center py-16">Caixa não encontrada</div>;
 
   const species = speciesList.find((s) => s.local_id === hive.species_local_id);
   const sortedInspections = [...inspections].sort((a, b) => b.inspected_at.localeCompare(a.inspected_at));
+
+  const apiaryLevelPanel = apiaryInstructionsPanel.filter((i) => !i.hive_local_id);
+  const allPendingPanel = [
+    ...hiveInstructionsPanel,
+    ...apiaryLevelPanel.filter((a) => !hiveInstructionsPanel.find((h) => h.local_id === a.local_id)),
+  ];
+  const pendingCount = allPendingPanel.length;
   const days = sortedInspections.length > 0 ? daysSince(sortedInspections[0].inspected_at) : null;
 
   const strengthData = [...sortedInspections].reverse().map((i) => ({
@@ -146,6 +156,30 @@ export function HiveDetail() {
         </div>
       </div>
 
+      {/* Instructions alert panel — tratador only */}
+      {user.role === 'tratador' && (
+        pendingCount > 0 ? (
+          <div className="flex items-center justify-between gap-3 flex-wrap rounded-2xl px-4 py-4 bg-amber-900/30 border border-amber-600/50">
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">⚠️</span>
+              <p className="text-base font-semibold text-amber-300">
+                {pendingCount} orientação{pendingCount !== 1 ? 'ões' : ''} pendente{pendingCount !== 1 ? 's' : ''}
+              </p>
+            </div>
+            <button
+              onClick={() => document.getElementById('hive-instructions')?.scrollIntoView({ behavior: 'smooth' })}
+              className="px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 active:bg-amber-700 text-white text-sm font-bold transition-colors"
+            >
+              Ver orientações
+            </button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-3 rounded-2xl px-4 py-3 bg-emerald-900/20 border border-emerald-800/40">
+            <p className="text-sm text-emerald-400">Nenhuma orientação pendente ✅</p>
+          </div>
+        )
+      )}
+
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
@@ -191,9 +225,11 @@ export function HiveDetail() {
       <QRCodeDisplay hiveLocalId={hive.local_id} qrCodeText={hive.qr_code} />
 
       {/* Instruções pendentes — visível para tratador */}
-      {user.role === 'tratador' && (
-        <HiveInstructions hiveLocalId={hive.local_id} apiaryLocalId={hive.apiary_local_id} />
-      )}
+      <div id="hive-instructions">
+        {user.role === 'tratador' && (
+          <HiveInstructions hiveLocalId={hive.local_id} apiaryLocalId={hive.apiary_local_id} />
+        )}
+      </div>
 
       {/* Tabs */}
       <div className="border-b border-stone-800">
