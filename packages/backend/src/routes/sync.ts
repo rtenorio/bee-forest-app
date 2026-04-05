@@ -21,7 +21,7 @@ const TABLE_MAP: Record<string, string> = {
 // Retorna os hive_local_ids acessíveis para o usuário atual
 async function resolveAccessibleHiveIds(req: Request): Promise<string[] | null> {
   const role = req.user!.role;
-  if (role === 'socio') return null;
+  if (role === 'socio' || role === 'master_admin') return null;
   if (role === 'tratador') return req.user!.hive_local_ids;
   if (role === 'responsavel') {
     const ids = req.user!.apiary_local_ids;
