@@ -54,7 +54,7 @@ export function useInitialLoad() {
       console.log('[InitialLoad] IDB vazio — buscando todos os dados do servidor...');
 
       try {
-        const res = await fetch('/api/sync/pull?since=1970-01-01T00:00:00.000Z', {
+        const res = await fetch(`${import.meta.env.VITE_API_URL ?? ''}/api/sync/pull?since=1970-01-01T00:00:00.000Z`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok) {

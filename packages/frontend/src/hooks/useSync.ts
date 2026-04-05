@@ -88,7 +88,7 @@ export function useSync() {
       const payload = { client_id: getClientId(), items, last_sync_at: lastSyncAt };
 
       const { token } = (await import('@/store/authStore')).useAuthStore.getState();
-      const response = await fetch('/api/sync', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL ?? ''}/api/sync`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
