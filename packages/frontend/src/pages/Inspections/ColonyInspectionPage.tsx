@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { v4 as uuidv4 } from 'uuid';
 import { useCreateInspection, useInspections } from '@/hooks/useInspections';
+import { useInstructions, useUpdateInstructionStatus } from '@/hooks/useInstructions';
 import { useHive } from '@/hooks/useHives';
 import { useApiaries } from '@/hooks/useApiaries';
 import { useAuthStore } from '@/store/authStore';
@@ -17,7 +18,7 @@ import { UploadCard } from '@/components/inspection/UploadCard';
 import { InspectionSummaryCard, computeScore } from '@/components/inspection/InspectionSummaryCard';
 import { cn } from '@/utils/cn';
 import { todayISO } from '@/utils/dates';
-import type { InspectionChecklist, InspectionTask, SkyCondition } from '@bee-forest/shared';
+import type { InspectionChecklist, InspectionTask, SkyCondition, Instruction } from '@bee-forest/shared';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -351,6 +352,16 @@ export function ColonyInspectionPage() {
 
   const apiary = hive ? apiaries.find((a) => a.local_id === hive.apiary_local_id) : null;
 
+  // Orientações pendentes
+  const { data: hiveInstructionsData = [] } = useInstructions({ hive_local_id: hive_local_id || undefined, status: 'pending' });
+  const { data: apiaryInstructionsData = [] } = useInstructions({ apiary_local_id: hive?.apiary_local_id || undefined, status: 'pending' });
+  const apiaryLevelInst = apiaryInstructionsData.filter((i: Instruction) => !i.hive_local_id);
+  const allPendingInst: Instruction[] = [
+    ...hiveInstructionsData,
+    ...apiaryLevelInst.filter((a: Instruction) => !hiveInstructionsData.find((h) => h.local_id === a.local_id)),
+  ];
+  const markDoneInstruction = useUpdateInstructionStatus();
+
   const sortedInspections = [...inspections].sort((a, b) => b.inspected_at.localeCompare(a.inspected_at));
   const lastInspection = sortedInspections[0] ?? null;
   const secondLastInspection = sortedInspections[1] ?? null;
@@ -395,7 +406,7 @@ export function ColonyInspectionPage() {
   // ── Auto-fetch weather on mount ───────────────────────────────────────────
 
   useEffect(() => {
-    if (!isOnline || !apiary?.latitude || !apiary?.longitude) return;
+    if (apiary == null || apiary.latitude == null || apiary.longitude == null) return;
     setWeatherLoading(true);
     const { latitude: lat, longitude: lon } = apiary;
     fetch(
@@ -1062,8 +1073,43 @@ export function ColonyInspectionPage() {
           </div>
         </InspectionSection>
 
-        {/* ═══ SECTION 14: Conclusão ════════════════════════════════════════ */}
-        <InspectionSection step={isInternal ? 13 : 12} title="Conclusão" icon="🎯" defaultOpen>
+        {/* ═══ SECTION: Orientações ═════════════════════════════════════════ */}
+        <InspectionSection step={isInternal ? 13 : 12} title="Orientações" icon="💬" subtitle="Orientações pendentes do responsável técnico">
+          {allPendingInst.length === 0 ? (
+            <div className="rounded-xl bg-stone-800 border border-stone-700 px-4 py-5 text-center">
+              <p className="text-stone-400 text-sm">Nenhuma orientação pendente para esta caixa ✅</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {allPendingInst.map((inst) => (
+                <div key={inst.local_id} className="rounded-2xl bg-stone-800 border border-amber-700/40 overflow-hidden">
+                  <div className="p-4 space-y-2">
+                    {inst.text_content && (
+                      <p className="text-base text-stone-100 leading-relaxed">{inst.text_content}</p>
+                    )}
+                    {inst.audio_url && (
+                      <audio controls src={inst.audio_url} className="w-full" style={{ height: '48px' }} />
+                    )}
+                    <p className="text-xs text-stone-500">De: {inst.author_name}</p>
+                  </div>
+                  <div className="px-4 pb-4">
+                    <button
+                      type="button"
+                      onClick={() => markDoneInstruction.mutate({ localId: inst.local_id, status: 'done' })}
+                      disabled={markDoneInstruction.isPending}
+                      className="w-full flex items-center justify-center gap-2 bg-emerald-700 hover:bg-emerald-600 disabled:opacity-50 text-white text-base font-semibold rounded-xl py-3 transition-colors"
+                    >
+                      ✅ Marcar como concluído
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </InspectionSection>
+
+        {/* ═══ SECTION: Conclusão ═══════════════════════════════════════════ */}
+        <InspectionSection step={isInternal ? 14 : 13} title="Conclusão" icon="🎯" defaultOpen>
           {/* Auto-score card */}
           <div>
             <FieldLabel>Análise automática</FieldLabel>
