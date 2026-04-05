@@ -85,7 +85,7 @@ export function Sidebar({ mobile = false }: { mobile?: boolean }) {
         >
           <div className="h-14 flex items-center px-4 border-b border-stone-800">
             <div className="flex items-center gap-2">
-              <img src="/bee-icon.png" alt="Bee Forest" style={{ width: '36px', height: '36px', objectFit: 'contain' }} />
+              <img src="/bee-icon.png" alt="Bee Forest" style={{ height: '32px', objectFit: 'contain' }} />
               <span className="font-bold text-amber-400 text-base">Bee Forest</span>
             </div>
           </div>
@@ -104,7 +104,7 @@ export function Sidebar({ mobile = false }: { mobile?: boolean }) {
     <aside className="hidden lg:flex w-60 flex-col bg-stone-900 border-r border-stone-800 h-screen sticky top-0">
       <div className="h-14 flex items-center px-4 border-b border-stone-800">
         <div className="flex items-center gap-2">
-          <img src="/bee-icon.png" alt="Bee Forest" style={{ width: '36px', height: '36px', objectFit: 'contain' }} />
+          <img src="/bee-icon.png" alt="Bee Forest" style={{ height: '32px', objectFit: 'contain' }} />
           <span className="font-bold text-amber-400 text-base">Bee Forest</span>
         </div>
       </div>
