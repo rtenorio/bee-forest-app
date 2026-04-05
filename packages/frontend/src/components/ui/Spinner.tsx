@@ -22,7 +22,7 @@ export function Spinner({ size = 'md', className }: SpinnerProps) {
 export function LoadingScreen() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-stone-950">
-      <img src="/bee-icon.png" alt="Bee Forest" style={{ width: '48px', height: '48px', objectFit: 'contain' }} className="mb-4" />
+      <img src="/bee-icon.png" alt="Bee Forest" style={{ height: '72px', objectFit: 'contain', background: 'transparent' }} className="mb-4" />
       <Spinner size="lg" />
       <p className="mt-4 text-stone-400 text-sm">Carregando...</p>
     </div>
