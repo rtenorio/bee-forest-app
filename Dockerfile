@@ -1,4 +1,4 @@
-# ── Build stage — cache bust 2026-04-05 ──────────────────────────────────────
+# ── Build stage — cache bust 2026-04-05b ─────────────────────────────────────
 FROM node:22-alpine AS builder
 WORKDIR /app
 
@@ -10,7 +10,8 @@ COPY packages/frontend/package*.json ./packages/frontend/
 
 RUN npm ci --ignore-scripts
 
-# Copy backend source and compile (shared is now inlined in src/shared/)
+# Copy shared source (needed for import type resolution) and backend source, then compile
+COPY packages/shared ./packages/shared
 COPY packages/backend ./packages/backend
 
 RUN npm run build -w packages/backend
