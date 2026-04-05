@@ -2,15 +2,17 @@ import { NavLink } from 'react-router-dom';
 import { useUIStore } from '@/store/uiStore';
 import { useAuthStore } from '@/store/authStore';
 import { cn } from '@/utils/cn';
+import { usePendingInstructionsCount } from '@/hooks/useInstructions';
 import type { UserRole } from '@bee-forest/shared';
 
-type NavItem = { to: string; label: string; icon: string; end: boolean; roles?: UserRole[]; indent?: boolean };
+type NavItem = { to: string; label: string; icon: string; end: boolean; roles?: UserRole[]; indent?: boolean; badge?: boolean };
 
 const navItems: NavItem[] = [
   { to: '/', label: 'Dashboard', icon: '📊', end: true },
   { to: '/apiaries', label: 'Meliponários', icon: '🏡', end: false, roles: ['socio', 'responsavel'] },
   { to: '/hives', label: 'Caixas de abelha', icon: '🏠', end: false },
   { to: '/inspections', label: 'Inspeções', icon: '🔍', end: false },
+  { to: '/instructions', label: 'Instruções', icon: '💬', end: false, badge: true },
   { to: '/scan', label: 'Escanear QR', icon: '📷', end: false },
   { to: '/hives/print-labels', label: 'Etiquetas QR', icon: '🏷️', end: false, roles: ['socio', 'responsavel'] },
   { to: '/productions', label: 'Produções', icon: '🍯', end: false, roles: ['socio', 'responsavel'] },
@@ -29,7 +31,9 @@ const navItems: NavItem[] = [
   { to: '/settings', label: 'Configurações', icon: '⚙️', end: false },
 ];
 
-function NavItem({ to, label, icon, end, indent, onClick }: NavItem & { onClick?: () => void }) {
+function NavItemComponent({ to, label, icon, end, indent, badge, onClick }: NavItem & { onClick?: () => void }) {
+  const { data: pendingCount } = usePendingInstructionsCount();
+
   return (
     <NavLink
       to={to}
@@ -46,7 +50,12 @@ function NavItem({ to, label, icon, end, indent, onClick }: NavItem & { onClick?
       }
     >
       <span className={cn('text-center', indent ? 'text-base w-5' : 'text-lg w-6')}>{icon}</span>
-      <span className={indent ? 'text-xs' : ''}>{label}</span>
+      <span className={cn('flex-1', indent ? 'text-xs' : '')}>{label}</span>
+      {badge && pendingCount != null && pendingCount > 0 && (
+        <span className="ml-auto bg-amber-500 text-stone-950 text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+          {pendingCount > 9 ? '9+' : pendingCount}
+        </span>
+      )}
     </NavLink>
   );
 }
@@ -59,7 +68,7 @@ function NavItems({ onItemClick }: { onItemClick?: () => void }) {
   return (
     <>
       {visible.map((item) => (
-        <NavItem key={item.to} {...item} onClick={onItemClick} />
+        <NavItemComponent key={item.to} {...item} onClick={onItemClick} />
       ))}
     </>
   );

@@ -14,4 +14,9 @@ export const config = {
   twilioAccountSid: process.env.TWILIO_ACCOUNT_SID ?? '',
   twilioAuthToken: process.env.TWILIO_AUTH_TOKEN ?? '',
   twilioWhatsAppFrom: process.env.TWILIO_WHATSAPP_FROM ?? 'whatsapp:+14155238886',
+  r2AccountId: process.env.R2_ACCOUNT_ID ?? '',
+  r2AccessKey: process.env.R2_ACCESS_KEY ?? '',
+  r2SecretKey: process.env.R2_SECRET_KEY ?? '',
+  r2Bucket: process.env.R2_BUCKET ?? 'bee-forest-audio',
+  r2PublicUrl: process.env.R2_PUBLIC_URL ?? '',
 };

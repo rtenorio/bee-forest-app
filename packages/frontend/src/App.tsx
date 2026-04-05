@@ -37,6 +37,7 @@ import { PartnersPage } from './pages/Partners/PartnersPage';
 import { PartnerDetail } from './pages/Partners/PartnerDetail';
 import { PartnerQualityPage } from './pages/Partners/PartnerQualityPage';
 import { PartnerFinancePage } from './pages/Partners/PartnerFinancePage';
+import { InstructionsPage } from './pages/Instructions/InstructionsPage';
 import { SocioDashboard } from './pages/Dashboard/SocioDashboard';
 import { ResponsavelDashboard } from './pages/Dashboard/ResponsavelDashboard';
 import { TratadorDashboard } from './pages/Dashboard/TratadorDashboard';
@@ -93,6 +94,7 @@ export function App() {
           <Route path="partners/quality" element={<PartnerQualityPage />} />
           <Route path="partners/finance" element={<PartnerFinancePage />} />
           <Route path="partners/:id" element={<PartnerDetail />} />
+          <Route path="instructions" element={<InstructionsPage />} />
           <Route path="notifications" element={<NotificationsPage />} />
           <Route path="settings" element={<SettingsPage />} />
           <Route path="settings/notifications" element={<NotificationSettingsPage />} />

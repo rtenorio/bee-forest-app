@@ -7,7 +7,7 @@ import { z } from 'zod';
 
 // ── Types: Auth ───────────────────────────────────────────────────────────────
 
-export type UserRole = 'master_admin' | 'socio' | 'responsavel' | 'tratador';
+export type UserRole = 'master_admin' | 'socio' | 'orientador' | 'responsavel' | 'tratador';
 
 // ── Types: Sync ───────────────────────────────────────────────────────────────
 
@@ -40,7 +40,7 @@ export const LoginSchema = z.object({
   password: z.string().min(1, 'Senha obrigatória'),
 });
 
-export const RoleEnum = z.enum(['master_admin', 'socio', 'responsavel', 'tratador']);
+export const RoleEnum = z.enum(['master_admin', 'socio', 'orientador', 'responsavel', 'tratador']);
 
 export const CreateUserSchema = z.object({
   name: z.string().min(1, 'Nome obrigatório').max(150),
@@ -328,4 +328,24 @@ export const PayPaymentSchema = z.object({
   payment_method: z.string().optional().nullable(),
   receipt_url: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
+});
+
+// ── Schemas: Instructions ─────────────────────────────────────────────────────
+
+export const InstructionCreateSchema = z.object({
+  local_id: z.string().uuid(),
+  apiary_local_id: z.string().uuid(),
+  hive_local_id: z.string().uuid().optional().nullable(),
+  text_content: z.string().optional().nullable(),
+  audio_url: z.string().optional().nullable(),
+});
+
+export const InstructionStatusSchema = z.object({
+  status: z.enum(['pending', 'done']),
+});
+
+export const InstructionResponseCreateSchema = z.object({
+  local_id: z.string().uuid(),
+  text_content: z.string().optional().nullable(),
+  audio_url: z.string().optional().nullable(),
 });

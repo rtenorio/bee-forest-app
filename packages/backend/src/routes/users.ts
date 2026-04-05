@@ -10,19 +10,19 @@ const router = Router();
 // ─── Hierarquia ───────────────────────────────────────────────────────────────
 
 const ROLE_RANK: Record<string, number> = {
-  tratador: 1, responsavel: 2, socio: 3, master_admin: 4,
+  tratador: 1, responsavel: 2, orientador: 2, socio: 3, master_admin: 4,
 };
 
 function rolesVisibleTo(actorRole: string): string[] {
-  if (actorRole === 'master_admin') return ['master_admin', 'socio', 'responsavel', 'tratador'];
-  if (actorRole === 'socio') return ['responsavel', 'tratador'];
+  if (actorRole === 'master_admin') return ['master_admin', 'socio', 'orientador', 'responsavel', 'tratador'];
+  if (actorRole === 'socio') return ['orientador', 'responsavel', 'tratador'];
   if (actorRole === 'responsavel') return ['tratador'];
   return [];
 }
 
 function canCreate(actorRole: string, targetRole: string): boolean {
   if (actorRole === 'master_admin') return true;
-  if (actorRole === 'socio') return targetRole === 'responsavel';
+  if (actorRole === 'socio') return ['orientador', 'responsavel', 'tratador'].includes(targetRole);
   if (actorRole === 'responsavel') return targetRole === 'tratador';
   return false;
 }

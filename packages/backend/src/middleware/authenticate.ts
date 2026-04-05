@@ -36,7 +36,7 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
     let apiary_local_ids: string[] = [];
     let hive_local_ids: string[] = [];
 
-    if (user.role === 'responsavel') {
+    if (user.role === 'responsavel' || user.role === 'orientador') {
       const rows = await query<{ apiary_local_id: string }>(
         'SELECT apiary_local_id FROM user_apiary_assignments WHERE user_id = $1',
         [user.id]

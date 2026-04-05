@@ -15,6 +15,7 @@ import batchesRouter from './batches';
 import notificationsRouter from './notifications';
 import stockRouter from './stock';
 import partnersRouter from './partners';
+import instructionsRouter from './instructions';
 import { authenticate } from '../middleware/authenticate';
 
 const router = Router();
@@ -38,5 +39,6 @@ router.use('/batches', authenticate, batchesRouter);
 router.use('/notifications', authenticate, notificationsRouter);
 router.use('/stock', authenticate, stockRouter);
 router.use('/partners', authenticate, partnersRouter);
+router.use('/instructions', authenticate, instructionsRouter);
 
 export default router;
