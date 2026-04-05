@@ -1,4 +1,4 @@
-# ── Build stage ──────────────────────────────────────────────────────────────
+# ── Build stage — cache bust 2026-04-05 ──────────────────────────────────────
 FROM node:22-alpine AS builder
 WORKDIR /app
 
