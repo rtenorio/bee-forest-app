@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { v4 as uuidv4 } from 'uuid';
 import { useCreateInspection, useInspections } from '@/hooks/useInspections';
+import { useCreateDivision } from '@/hooks/useDivisions';
 import {
   useInstructions,
   useUpdateInstructionStatus,
@@ -403,6 +404,7 @@ export function ColonyInspectionPage() {
   const { data: apiaries = [] } = useApiaries();
   const { data: inspections = [] } = useInspections(hive_local_id || undefined);
   const createInspection = useCreateInspection();
+  const createDivision = useCreateDivision();
 
   const [form, setForm] = useState<FormState>(() => makeDefault(user?.name ?? ''));
   const [weatherLoading, setWeatherLoading] = useState(false);
@@ -596,6 +598,18 @@ export function ColonyInspectionPage() {
         next_inspection_due: nextDueFromDays(form.checklist.next_inspection_days),
         copied_from_previous: fromLastInspection,
       });
+
+      // Auto-create pending division if "divisao" chip was selected
+      if (checklist.management_actions.includes('divisao') && hive?.apiary_local_id) {
+        createDivision.mutate({
+          local_id: uuidv4(),
+          hive_origin_local_id: hive_local_id,
+          apiary_origin_local_id: hive.apiary_local_id,
+          identified_at: form.inspected_at.slice(0, 10),
+          identified_by: form.inspector_name || user?.name || '',
+        });
+      }
+
       navigate(hive_local_id ? `/hives/${hive_local_id}` : '/inspections');
     } finally {
       setSavingDraft(false);

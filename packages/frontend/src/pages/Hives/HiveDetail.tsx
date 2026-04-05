@@ -23,6 +23,7 @@ import { QRCodeDisplay } from '@/components/hive/QRCodeDisplay';
 import { normalizeChecklistHealth } from '@/utils/inspectionUtils';
 import { exportHivePdf } from '@/utils/exportPdf';
 import { HiveInstructions } from './HiveInstructions';
+import { useDivisions } from '@/hooks/useDivisions';
 
 export function HiveDetail() {
   const { id } = useParams<{ id: string }>();
@@ -31,8 +32,10 @@ export function HiveDetail() {
   const canManageHive = user.role === 'socio' || user.role === 'responsavel';
   const canSeeProduction = user.role === 'socio' || user.role === 'responsavel';
 
-  type Tab = 'Inspeções' | 'Produção' | 'Alimentação';
-  const TABS: Tab[] = canSeeProduction ? ['Inspeções', 'Produção', 'Alimentação'] : ['Inspeções'];
+  type Tab = 'Inspeções' | 'Produção' | 'Alimentação' | 'Divisões';
+  const TABS: Tab[] = canSeeProduction
+    ? ['Inspeções', 'Produção', 'Alimentação', 'Divisões']
+    : ['Inspeções', 'Divisões'];
 
   const [tab, setTab] = useState<Tab>('Inspeções');
   const [editHive, setEditHive] = useState(false);
@@ -43,6 +46,7 @@ export function HiveDetail() {
   const { data: inspections = [] } = useInspections(id);
   const { data: productions = [] } = useProductions(id);
   const { data: feedings = [] } = useFeedings(id);
+  const { data: divisions = [] } = useDivisions({ hive_local_id: id });
   const { data: speciesList = [] } = useSpecies();
   const deleteHive = useDeleteHive();
   const deleteInspection = useDeleteInspection();
@@ -386,6 +390,53 @@ export function HiveDetail() {
                     )}
                   </div>
                 </Card>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Tab: Divisões */}
+      {tab === 'Divisões' && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="font-semibold text-stone-200">Histórico de Divisões ({divisions.length})</h2>
+            <Button size="sm" onClick={() => navigate('/divisions')}>Ver todas</Button>
+          </div>
+          {divisions.length === 0 ? (
+            <p className="text-stone-500 text-center py-8">Nenhuma divisão registrada para esta caixa</p>
+          ) : (
+            <div className="space-y-2">
+              {divisions.map((d) => (
+                <button
+                  key={d.local_id}
+                  onClick={() => navigate(`/divisions/${d.local_id}`)}
+                  className="w-full text-left bg-stone-900 border border-stone-800 rounded-xl px-4 py-3 hover:bg-stone-800/60 transition-colors"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-medium text-stone-100">
+                        {d.status === 'realizada' && d.hive_new_code
+                          ? `→ ${d.hive_new_code}`
+                          : d.status === 'pendente'
+                          ? 'Divisão pendente'
+                          : 'Cancelada'}
+                      </p>
+                      <p className="text-xs text-stone-500">
+                        Identificada em {new Date(d.identified_at).toLocaleDateString('pt-BR')} por {d.identified_by}
+                      </p>
+                    </div>
+                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full border ${
+                      d.status === 'realizada'
+                        ? 'bg-emerald-900/40 text-emerald-400 border-emerald-700/40'
+                        : d.status === 'cancelada'
+                        ? 'bg-stone-800 text-stone-500 border-stone-700'
+                        : 'bg-amber-900/40 text-amber-400 border-amber-700/40'
+                    }`}>
+                      {d.status === 'realizada' ? '✅ Realizada' : d.status === 'cancelada' ? 'Cancelada' : '⏳ Pendente'}
+                    </span>
+                  </div>
+                </button>
               ))}
             </div>
           )}

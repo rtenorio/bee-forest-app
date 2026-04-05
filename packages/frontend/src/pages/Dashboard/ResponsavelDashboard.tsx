@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/Button';
 import { HiveCard } from '@/components/hive/HiveCard';
 import { daysSince } from '@/utils/dates';
 import { normalizeChecklistHealth } from '@/utils/inspectionUtils';
+import { usePendingDivisionsCount } from '@/hooks/useDivisions';
 
 // v2 pest keys + v3 invader keys
 const INVADER_LABELS: Record<string, string> = {
@@ -32,6 +33,7 @@ export function ResponsavelDashboard() {
   const { data: hives = [] } = useHives();
   const { data: inspections = [] } = useInspections();
   const { data: productions = [] } = useProductions();
+  const { data: pendingDivisions = 0 } = usePendingDivisionsCount();
 
   const myApiaries = useMemo(
     () => apiaries.filter((a) => user.apiary_local_ids.includes(a.local_id)),
@@ -159,6 +161,25 @@ export function ResponsavelDashboard() {
           </Card>
         ))}
       </div>
+
+      {/* Pending divisions alert */}
+      {pendingDivisions > 0 && (
+        <button
+          onClick={() => navigate('/divisions')}
+          className="w-full flex items-center justify-between bg-amber-900/20 border border-amber-700/40 rounded-xl px-4 py-3 hover:bg-amber-900/30 transition-colors"
+        >
+          <div className="flex items-center gap-3">
+            <span className="text-xl">✂️</span>
+            <div className="text-left">
+              <p className="text-sm font-semibold text-amber-300">
+                {pendingDivisions} divisão{pendingDivisions !== 1 ? 'ões' : ''} pendente{pendingDivisions !== 1 ? 's' : ''}
+              </p>
+              <p className="text-xs text-stone-500">Identificadas pelos tratadores, aguardando execução</p>
+            </div>
+          </div>
+          <span className="text-amber-400 text-sm">Ver →</span>
+        </button>
+      )}
 
       {/* Production last 30 days */}
       {productionSummary.count > 0 && (

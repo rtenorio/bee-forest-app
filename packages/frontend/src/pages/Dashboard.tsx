@@ -10,6 +10,7 @@ import { useHives } from '@/hooks/useHives';
 import { useInspections } from '@/hooks/useInspections';
 import { useProductions } from '@/hooks/useProductions';
 import { useStockAlerts } from '@/hooks/useStock';
+import { usePendingDivisionsCount } from '@/hooks/useDivisions';
 import { Card, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { HiveCard } from '@/components/hive/HiveCard';
@@ -28,6 +29,7 @@ export function Dashboard() {
   const { data: inspections = [] } = useInspections();
   const { data: productions = [] } = useProductions();
   const { data: stockAlerts = [] } = useStockAlerts();
+  const { data: pendingDivisions = 0 } = usePendingDivisionsCount();
 
   // ── Summary stats ─────────────────────────────────────────────────────────
   const stats = useMemo(() => ({
@@ -168,6 +170,25 @@ export function Dashboard() {
           </Card>
         ))}
       </div>
+
+      {/* Pending divisions alert */}
+      {pendingDivisions > 0 && (
+        <button
+          onClick={() => navigate('/divisions')}
+          className="w-full flex items-center justify-between bg-amber-900/20 border border-amber-700/40 rounded-xl px-4 py-3 hover:bg-amber-900/30 transition-colors"
+        >
+          <div className="flex items-center gap-3">
+            <span className="text-xl">✂️</span>
+            <div className="text-left">
+              <p className="text-sm font-semibold text-amber-300">
+                {pendingDivisions} divisão{pendingDivisions !== 1 ? 'ões' : ''} pendente{pendingDivisions !== 1 ? 's' : ''}
+              </p>
+              <p className="text-xs text-stone-500">Identificadas pelos tratadores, aguardando execução</p>
+            </div>
+          </div>
+          <span className="text-amber-400 text-sm">Ver →</span>
+        </button>
+      )}
 
       {/* Production totals (current year) */}
       {productionTotals.harvestCount > 0 && (

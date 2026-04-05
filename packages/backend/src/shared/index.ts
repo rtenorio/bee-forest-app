@@ -349,3 +349,23 @@ export const InstructionResponseCreateSchema = z.object({
   text_content: z.string().optional().nullable(),
   audio_url: z.string().optional().nullable(),
 });
+
+// ── Schemas: Divisions ────────────────────────────────────────────────────────
+
+export const DivisionCreateSchema = z.object({
+  local_id: z.string().uuid(),
+  hive_origin_local_id: z.string().uuid(),
+  apiary_origin_local_id: z.string().uuid(),
+  identified_at: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  identified_by: z.string().min(1).max(150),
+  notes: z.string().optional().nullable(),
+});
+
+export const DivisionUpdateSchema = z.object({
+  status: z.enum(['pendente', 'realizada', 'cancelada']).optional(),
+  hive_new_local_id: z.string().uuid().optional().nullable(),
+  apiary_destination_local_id: z.string().uuid().optional().nullable(),
+  divided_at: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable(),
+  divided_by: z.string().max(150).optional().nullable(),
+  notes: z.string().optional().nullable(),
+});
