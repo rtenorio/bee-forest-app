@@ -17,7 +17,7 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,ico,png,svg,jpg,jpeg,woff2}'],
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
       },
-      includeAssets: ['icons/*.png', 'icons/*.svg', 'robots.txt', 'logo-bee-forest.jpg'],
+      includeAssets: ['icons/*.png', 'icons/*.svg', 'robots.txt', 'logo-bee-forest.jpg', 'bee-icon.png'],
       manifest: {
         name: 'Bee Forest - Meliponário',
         short_name: 'BeeForest',
@@ -35,13 +35,19 @@ export default defineConfig({
             src: '/icons/icon-192.png',
             sizes: '192x192',
             type: 'image/png',
-            purpose: 'any maskable',
+            purpose: 'any',
           },
           {
             src: '/icons/icon-512.png',
             sizes: '512x512',
             type: 'image/png',
-            purpose: 'any maskable',
+            purpose: 'any',
+          },
+          {
+            src: '/icons/icon-512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable',
           },
         ],
         shortcuts: [
