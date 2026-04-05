@@ -266,7 +266,11 @@ function CreateInstructionForm({ onClose }: { onClose: () => void }) {
             className="w-full bg-stone-800 border border-stone-700 text-stone-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-500"
           >
             <option value="">Todo o meliponário</option>
-            {hives?.map((h) => (
+            {[...(hives ?? [])].sort((a, b) => {
+              const numA = parseInt(a.code.split('-')[1] ?? '0', 10);
+              const numB = parseInt(b.code.split('-')[1] ?? '0', 10);
+              return numA - numB;
+            }).map((h) => (
               <option key={h.local_id} value={h.local_id}>{h.code}</option>
             ))}
           </select>

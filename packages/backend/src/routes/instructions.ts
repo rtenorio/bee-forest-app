@@ -69,8 +69,10 @@ router.get('/', async (req, res, next) => {
       p++;
     }
 
-    // Tratador só vê instruções das suas caixas (ou meliponário-level)
-    if (user.role === 'tratador') {
+    // Tratador só vê instruções das suas caixas (ou meliponário-level).
+    // Exceção: quando está consultando uma caixa específica (p. ex. durante inspeção),
+    // o filtro de atribuição é dispensado — o controle de acesso pelo apiário já é suficiente.
+    if (user.role === 'tratador' && !hive_local_id) {
       const hiveIds = user.hive_local_ids;
       sql += ` AND (i.hive_local_id IS NULL OR i.hive_local_id = ANY($${p}::varchar[]))`;
       params.push(hiveIds);
