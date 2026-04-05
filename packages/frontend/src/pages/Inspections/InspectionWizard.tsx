@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, Component, type ReactNode } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { v4 as uuidv4 } from 'uuid';
 import { useCreateInspection } from '@/hooks/useInspections';
@@ -26,6 +26,35 @@ import { cn } from '@/utils/cn';
 import { nowISO, todayISO } from '@/utils/dates';
 import { InspectionCreateSchema } from '@bee-forest/shared';
 import type { InspectionChecklist, InspectionTask, SkyCondition } from '@bee-forest/shared';
+
+// ─── Step-level error boundary ────────────────────────────────────────────────
+
+class StepErrorBoundary extends Component<
+  { children: ReactNode; stepLabel: string },
+  { error: Error | null }
+> {
+  state = { error: null };
+  static getDerivedStateFromError(e: Error) { return { error: e }; }
+  componentDidCatch(e: Error) { console.error('[StepErrorBoundary]', e); }
+  render() {
+    if (this.state.error) {
+      return (
+        <div className="rounded-2xl bg-red-900/20 border border-red-700/50 px-4 py-6 text-center space-y-3">
+          <p className="text-red-400 font-semibold">Erro ao carregar etapa "{this.props.stepLabel}"</p>
+          <p className="text-stone-500 text-sm">{(this.state.error as Error).message}</p>
+          <button
+            type="button"
+            onClick={() => this.setState({ error: null })}
+            className="px-4 py-2 rounded-lg bg-red-700 hover:bg-red-600 text-white text-sm font-medium transition-colors"
+          >
+            Tentar novamente
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 // ─── Open-Meteo weather fetch ─────────────────────────────────────────────────
 
@@ -707,31 +736,40 @@ export function InspectionWizard() {
   const [submitting, setSubmitting] = useState(false);
   const [weatherLoading, setWeatherLoading] = useState(false);
   const [weatherFetched, setWeatherFetched] = useState(false);
+  const [weatherAttempted, setWeatherAttempted] = useState(false);
 
   const update = useCallback((patch: Partial<WizardData>) => setData((d) => ({ ...d, ...patch })), []);
 
   // Auto-fetch weather when entering step 1 (climate)
   useEffect(() => {
-    if (step !== 1 || weatherFetched || !data.hive_local_id) return;
+    if (step !== 1 || weatherFetched || weatherAttempted || !data.hive_local_id) return;
     const hive = hives.find((h) => h.local_id === data.hive_local_id);
     if (!hive) return;
     const apiary = apiaries.find((a) => a.local_id === hive.apiary_local_id);
-    if (!apiary?.latitude || !apiary?.longitude) return;
+    if (apiary == null || apiary.latitude == null || apiary.longitude == null) return;
 
+    let cancelled = false;
     setWeatherLoading(true);
-    fetchWeather(apiary.latitude, apiary.longitude).then((w) => {
-      setWeatherLoading(false);
-      if (w) {
-        update({
-          temperature_c: String(w.temperature_c),
-          humidity_pct: String(w.humidity_pct),
-          precipitation_mm: String(w.precipitation_mm),
-          sky_condition: w.sky_condition,
-        });
-        setWeatherFetched(true);
-      }
-    });
-  }, [step, weatherFetched, data.hive_local_id, hives, apiaries, update]);
+    setWeatherAttempted(true);
+    fetchWeather(apiary.latitude, apiary.longitude)
+      .then((w) => {
+        if (cancelled) return;
+        setWeatherLoading(false);
+        if (w) {
+          update({
+            temperature_c: String(w.temperature_c),
+            humidity_pct: String(w.humidity_pct),
+            precipitation_mm: String(w.precipitation_mm),
+            sky_condition: w.sky_condition,
+          });
+          setWeatherFetched(true);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setWeatherLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [step, weatherFetched, weatherAttempted, data.hive_local_id, hives, apiaries, update]);
 
   // Validation per step
   function validate(): boolean {
@@ -865,7 +903,7 @@ export function InspectionWizard() {
         label="Caixa *"
         options={hiveOptions}
         value={data.hive_local_id}
-        onChange={(e) => { update({ hive_local_id: e.target.value }); setWeatherFetched(false); }}
+        onChange={(e) => { update({ hive_local_id: e.target.value }); setWeatherFetched(false); setWeatherAttempted(false); }}
         error={errors.hive_local_id}
       />
       {currentApiary && (
@@ -1187,7 +1225,9 @@ export function InspectionWizard() {
     </div>,
 
     // ── Step 6: Orientações ──────────────────────────────────────────────────
-    <OrientacoesStep key="s6" hiveLocalId={data.hive_local_id} apiaryLocalId={currentHive?.apiary_local_id ?? ''} />,
+    <StepErrorBoundary key="s6" stepLabel="Orientações">
+      <OrientacoesStep hiveLocalId={data.hive_local_id} apiaryLocalId={currentHive?.apiary_local_id ?? ''} />
+    </StepErrorBoundary>,
 
     // ── Step 7: Tarefas e Ações ─────────────────────────────────────────────
     <div className="space-y-5" key="s7">
