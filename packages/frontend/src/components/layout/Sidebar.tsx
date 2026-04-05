@@ -84,8 +84,9 @@ export function Sidebar({ mobile = false }: { mobile?: boolean }) {
           )}
         >
           <div className="h-14 flex items-center px-4 border-b border-stone-800">
-            <div style={{ background: '#fff', borderRadius: '6px', padding: '2px 8px', display: 'inline-flex' }}>
-              <img src="/logo-bee-forest.jpg" alt="Bee Forest" style={{ width: '120px', height: '32px', objectFit: 'contain', display: 'block' }} />
+            <div className="flex items-center gap-2">
+              <img src="/bee-icon.png" alt="Bee Forest" style={{ width: '36px', height: '36px', objectFit: 'contain' }} />
+              <span className="font-bold text-amber-400 text-base">Bee Forest</span>
             </div>
           </div>
           <nav className="flex-1 px-3 py-4 flex flex-col gap-1 overflow-y-auto">
@@ -102,7 +103,10 @@ export function Sidebar({ mobile = false }: { mobile?: boolean }) {
   return (
     <aside className="hidden lg:flex w-60 flex-col bg-stone-900 border-r border-stone-800 h-screen sticky top-0">
       <div className="h-14 flex items-center px-4 border-b border-stone-800">
-        <img src="/logo-bee-forest.jpg" alt="Bee Forest" style={{ width: '140px', mixBlendMode: 'multiply', filter: 'brightness(1.5) contrast(0.9)' }} />
+        <div className="flex items-center gap-2">
+          <img src="/bee-icon.png" alt="Bee Forest" style={{ width: '36px', height: '36px', objectFit: 'contain' }} />
+          <span className="font-bold text-amber-400 text-base">Bee Forest</span>
+        </div>
       </div>
       <nav className="flex-1 px-3 py-4 flex flex-col gap-1 overflow-y-auto">
         <NavItems />

@@ -120,7 +120,7 @@ export function TracePage() {
       {/* Hero header */}
       <div className="bg-gradient-to-b from-amber-900/30 to-stone-950 border-b border-amber-900/30 px-4 py-8 text-center">
         <div className="flex items-center justify-center gap-2 mb-4">
-          <span className="text-3xl">🐝</span>
+          <img src="/bee-icon.png" alt="Bee Forest" style={{ width: '36px', height: '36px', objectFit: 'contain' }} />
           <span className="font-bold text-amber-400 text-2xl">Bee Forest</span>
         </div>
         <h1 className="text-2xl font-bold text-stone-100 mb-1">Rastreabilidade do Mel</h1>
@@ -288,7 +288,7 @@ export function TracePage() {
             Este QR Code garante a rastreabilidade completa do mel desde a caixa de abelha até você.
           </p>
           <div className="flex items-center justify-center gap-1.5">
-            <span className="text-lg">🐝</span>
+            <img src="/bee-icon.png" alt="Bee Forest" style={{ width: '20px', height: '20px', objectFit: 'contain' }} />
             <span className="text-xs text-stone-600">Bee Forest · Meliponicultura sustentável</span>
           </div>
           <Link to={`/h/${data.qr_code}`} className="text-xs text-stone-600 hover:text-amber-400 transition-colors">

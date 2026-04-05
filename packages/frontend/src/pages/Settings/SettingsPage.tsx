@@ -200,7 +200,7 @@ export function SettingsPage() {
       <Card>
         <CardHeader><CardTitle>Sobre o App</CardTitle></CardHeader>
         <div className="space-y-1 text-sm text-stone-400">
-          <p>🐝 Bee Forest - Sistema de Gestão de Meliponários</p>
+          <p className="flex items-center gap-1.5"><img src="/bee-icon.png" alt="" style={{ width: '16px', height: '16px', objectFit: 'contain' }} /> Bee Forest - Sistema de Gestão de Meliponários</p>
           <p>Versão 1.0.0</p>
           <p className="text-stone-600 text-xs mt-2">
             Funciona 100% offline. Dados sincronizados automaticamente quando online.

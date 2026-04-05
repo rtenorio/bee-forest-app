@@ -90,7 +90,7 @@ export function QRScanPage() {
       {/* Header */}
       <div className="text-center">
         <div className="flex items-center justify-center gap-2 mb-1">
-          <span className="text-3xl">🐝</span>
+          <img src="/bee-icon.png" alt="Bee Forest" style={{ width: '36px', height: '36px', objectFit: 'contain' }} />
           <span className="font-bold text-amber-400 text-xl">Bee Forest</span>
         </div>
         <h1 className="text-lg font-semibold text-stone-100">Escanear QR Code</h1>

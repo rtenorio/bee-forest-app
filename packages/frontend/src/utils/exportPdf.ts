@@ -36,7 +36,7 @@ async function addHeader(doc: jsPDF, title: string, subtitle?: string): Promise<
   } else {
     doc.setFontSize(16);
     doc.setTextColor(180, 83, 9);
-    doc.text('🐝 Bee Forest', 14, y + 6);
+    doc.text('Bee Forest', 14, y + 6);
     y += 14;
   }
 

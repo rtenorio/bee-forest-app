@@ -118,7 +118,7 @@ export function HiveLandingPage() {
     return (
       <div className="min-h-screen bg-stone-950 flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
-          <span className="text-4xl">🐝</span>
+          <img src="/bee-icon.png" alt="Bee Forest" style={{ width: '48px', height: '48px', objectFit: 'contain' }} />
           <div className="w-6 h-6 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" />
           <p className="text-stone-400 text-sm">Carregando...</p>
         </div>
@@ -157,7 +157,7 @@ export function HiveLandingPage() {
       {/* Header */}
       <div className="bg-stone-900 border-b border-stone-800 px-4 py-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="text-2xl">🐝</span>
+          <img src="/bee-icon.png" alt="Bee Forest" style={{ width: '28px', height: '28px', objectFit: 'contain' }} />
           <span className="font-bold text-amber-400 text-lg">Bee Forest</span>
         </div>
         {user ? (
