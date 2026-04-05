@@ -24,6 +24,9 @@ import { normalizeChecklistHealth } from '@/utils/inspectionUtils';
 import { exportHivePdf } from '@/utils/exportPdf';
 import { HiveInstructions } from './HiveInstructions';
 import { useDivisions } from '@/hooks/useDivisions';
+import { useTransfers, useCreateTransfer } from '@/hooks/useTransfers';
+import { useApiaries } from '@/hooks/useApiaries';
+import { v4 as uuidv4 } from 'uuid';
 
 export function HiveDetail() {
   const { id } = useParams<{ id: string }>();
@@ -32,21 +35,32 @@ export function HiveDetail() {
   const canManageHive = user.role === 'socio' || user.role === 'responsavel';
   const canSeeProduction = user.role === 'socio' || user.role === 'responsavel';
 
-  type Tab = 'Inspeções' | 'Produção' | 'Alimentação' | 'Divisões';
+  const canTransfer = ['master_admin', 'socio', 'responsavel'].includes(user.role);
+
+  type Tab = 'Inspeções' | 'Produção' | 'Alimentação' | 'Divisões' | 'Transferências';
   const TABS: Tab[] = canSeeProduction
-    ? ['Inspeções', 'Produção', 'Alimentação', 'Divisões']
-    : ['Inspeções', 'Divisões'];
+    ? ['Inspeções', 'Produção', 'Alimentação', 'Divisões', 'Transferências']
+    : ['Inspeções', 'Divisões', 'Transferências'];
 
   const [tab, setTab] = useState<Tab>('Inspeções');
   const [editHive, setEditHive] = useState(false);
   const [addProduction, setAddProduction] = useState(false);
   const [addFeeding, setAddFeeding] = useState(false);
+  const [transferOpen, setTransferOpen] = useState(false);
+  const [transferDestApiary, setTransferDestApiary] = useState('');
+  const [transferDate, setTransferDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [transferBy, setTransferBy] = useState(user.name);
+  const [transferReason, setTransferReason] = useState('');
+  const [transferError, setTransferError] = useState<string | null>(null);
 
   const { data: hive, isLoading } = useHive(id!);
   const { data: inspections = [] } = useInspections(id);
   const { data: productions = [] } = useProductions(id);
   const { data: feedings = [] } = useFeedings(id);
   const { data: divisions = [] } = useDivisions({ hive_local_id: id });
+  const { data: transfers = [] } = useTransfers({ hive_local_id: id });
+  const { data: apiaries = [] } = useApiaries();
+  const createTransfer = useCreateTransfer();
   const { data: speciesList = [] } = useSpecies();
   const deleteHive = useDeleteHive();
   const deleteInspection = useDeleteInspection();
@@ -88,6 +102,30 @@ export function HiveDetail() {
     sugar_syrup: '🍬 Xarope de açúcar', honey: '🍯 Mel', pollen_sub: '🌺 Substituto de pólen', other: '🌿 Outro',
   };
 
+  async function handleTransfer() {
+    setTransferError(null);
+    if (!transferDestApiary) { setTransferError('Selecione o meliponário de destino'); return; }
+    if (!hive.apiary_local_id) { setTransferError('Meliponário de origem não identificado'); return; }
+    if (transferDestApiary === hive.apiary_local_id) { setTransferError('Destino deve ser diferente da origem'); return; }
+    try {
+      await createTransfer.mutateAsync({
+        local_id: uuidv4(),
+        hive_local_id: hive.local_id,
+        apiary_origin_local_id: hive.apiary_local_id,
+        apiary_destination_local_id: transferDestApiary,
+        transferred_at: transferDate,
+        transferred_by: transferBy,
+        reason: transferReason || undefined,
+      });
+      setTransferOpen(false);
+      setTransferDestApiary('');
+      setTransferReason('');
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Erro ao transferir';
+      setTransferError(msg);
+    }
+  }
+
   return (
     <div className="space-y-6 max-w-4xl">
       {/* Header */}
@@ -104,6 +142,14 @@ export function HiveDetail() {
               <h1 className="text-2xl font-bold text-stone-100">{hive.code}</h1>
               <HiveStatusBadge status={hive.status} />
               {hive.is_dirty && <Badge variant="warning">Não sincronizado</Badge>}
+              {hive.apiary_origin_local_id && hive.apiary_origin_local_id !== hive.apiary_local_id && (() => {
+                const origin = apiaries.find((a) => a.local_id === hive.apiary_origin_local_id);
+                return origin ? (
+                  <span className="text-xs bg-sky-900/40 text-sky-300 border border-sky-700/40 px-2 py-0.5 rounded-full">
+                    Transferida de {origin.name}
+                  </span>
+                ) : null;
+              })()}
             </div>
             {species && <p className="text-stone-500 text-sm">{species.name} • {species.scientific_name}</p>}
           </div>
@@ -147,6 +193,11 @@ export function HiveDetail() {
           }}>
             📄 PDF
           </Button>
+          {canTransfer && (
+            <Button variant="secondary" size="sm" onClick={() => setTransferOpen(true)}>
+              🔀 Transferir
+            </Button>
+          )}
           {canManageHive && (
             <>
               <Button variant="ghost" size="sm" onClick={() => setEditHive(true)}>Editar</Button>
@@ -443,6 +494,49 @@ export function HiveDetail() {
         </div>
       )}
 
+      {/* Tab: Transferências */}
+      {tab === 'Transferências' && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="font-semibold text-stone-200">Histórico de Transferências ({transfers.length})</h2>
+            {canTransfer && (
+              <Button size="sm" onClick={() => setTransferOpen(true)}>🔀 Transferir</Button>
+            )}
+          </div>
+          {transfers.length === 0 ? (
+            <p className="text-stone-500 text-center py-8">Nenhuma transferência registrada para esta caixa</p>
+          ) : (
+            <div className="space-y-2">
+              {transfers.map((t) => (
+                <div
+                  key={t.local_id}
+                  className="bg-stone-900 border border-stone-800 rounded-xl px-4 py-3"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-medium text-stone-100">
+                        {t.apiary_origin_name ?? t.apiary_origin_local_id}
+                        <span className="text-stone-400 mx-2">→</span>
+                        {t.apiary_destination_name ?? t.apiary_destination_local_id}
+                      </p>
+                      <p className="text-xs text-stone-500 mt-0.5">
+                        {new Date(t.transferred_at).toLocaleDateString('pt-BR')} · por {t.transferred_by}
+                      </p>
+                      {t.reason && (
+                        <p className="text-xs text-stone-400 mt-1 italic">"{t.reason}"</p>
+                      )}
+                    </div>
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-sky-900/40 text-sky-300 border border-sky-700/40 whitespace-nowrap">
+                      Transferida
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Modals */}
       <Modal open={editHive} onClose={() => setEditHive(false)} title="Editar Caixa" size="lg">
         <HiveForm initial={hive} onSuccess={() => setEditHive(false)} onCancel={() => setEditHive(false)} />
@@ -454,6 +548,81 @@ export function HiveDetail() {
 
       <Modal open={addFeeding} onClose={() => setAddFeeding(false)} title="Registrar Alimentação">
         <FeedingForm defaultHiveId={id} onSuccess={() => setAddFeeding(false)} onCancel={() => setAddFeeding(false)} />
+      </Modal>
+
+      <Modal open={transferOpen} onClose={() => { setTransferOpen(false); setTransferError(null); }} title="Transferir Caixa">
+        <div className="space-y-4">
+          <div>
+            <p className="text-sm text-stone-400 mb-3">
+              Caixa <span className="text-stone-200 font-medium">{hive.code}</span> será movida para outro meliponário.
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-stone-300 mb-1">Meliponário de destino *</label>
+            <select
+              value={transferDestApiary}
+              onChange={(e) => setTransferDestApiary(e.target.value)}
+              className="w-full bg-stone-800 border border-stone-700 rounded-lg px-3 py-2 text-stone-100 text-sm focus:outline-none focus:border-amber-500"
+            >
+              <option value="">Selecione...</option>
+              {apiaries
+                .filter((a) => a.local_id !== hive.apiary_local_id)
+                .map((a) => (
+                  <option key={a.local_id} value={a.local_id}>{a.name}</option>
+                ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-stone-300 mb-1">Data da transferência *</label>
+            <input
+              type="date"
+              value={transferDate}
+              onChange={(e) => setTransferDate(e.target.value)}
+              className="w-full bg-stone-800 border border-stone-700 rounded-lg px-3 py-2 text-stone-100 text-sm focus:outline-none focus:border-amber-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-stone-300 mb-1">Transferido por *</label>
+            <input
+              type="text"
+              value={transferBy}
+              onChange={(e) => setTransferBy(e.target.value)}
+              placeholder="Nome do responsável"
+              className="w-full bg-stone-800 border border-stone-700 rounded-lg px-3 py-2 text-stone-100 text-sm placeholder-stone-600 focus:outline-none focus:border-amber-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-stone-300 mb-1">Motivo (opcional)</label>
+            <textarea
+              value={transferReason}
+              onChange={(e) => setTransferReason(e.target.value)}
+              rows={2}
+              placeholder="Ex: Florada nova, superlotação..."
+              className="w-full bg-stone-800 border border-stone-700 rounded-lg px-3 py-2 text-stone-100 text-sm placeholder-stone-600 focus:outline-none focus:border-amber-500 resize-none"
+            />
+          </div>
+
+          {transferError && (
+            <p className="text-sm text-red-400">{transferError}</p>
+          )}
+
+          <div className="flex gap-2 pt-1">
+            <Button
+              onClick={handleTransfer}
+              disabled={createTransfer.isPending}
+              className="flex-1"
+            >
+              {createTransfer.isPending ? 'Transferindo...' : 'Confirmar transferência'}
+            </Button>
+            <Button variant="ghost" onClick={() => { setTransferOpen(false); setTransferError(null); }}>
+              Cancelar
+            </Button>
+          </div>
+        </div>
       </Modal>
     </div>
   );

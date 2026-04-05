@@ -17,6 +17,7 @@ import stockRouter from './stock';
 import partnersRouter from './partners';
 import instructionsRouter from './instructions';
 import divisionsRouter from './divisions';
+import transfersRouter from './transfers';
 import { authenticate } from '../middleware/authenticate';
 
 const router = Router();
@@ -42,5 +43,6 @@ router.use('/stock', authenticate, stockRouter);
 router.use('/partners', authenticate, partnersRouter);
 router.use('/instructions', authenticate, instructionsRouter);
 router.use('/divisions', authenticate, divisionsRouter);
+router.use('/transfers', authenticate, transfersRouter);
 
 export default router;

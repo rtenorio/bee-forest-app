@@ -36,6 +36,12 @@ export function HiveCard({ hive, lastInspectedAt, speciesName }: HiveCardProps) 
         <HiveStatusBadge status={hive.status} />
       </div>
 
+      {hive.apiary_origin_local_id && hive.apiary_origin_local_id !== hive.apiary_local_id && (
+        <span className="inline-block text-xs bg-sky-900/40 text-sky-300 border border-sky-700/40 px-2 py-0.5 rounded-full mb-2">
+          Transferida
+        </span>
+      )}
+
       {hive.box_type && (
         <p className="text-xs text-stone-500 mb-2">Caixa: {hive.box_type}</p>
       )}

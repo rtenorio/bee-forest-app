@@ -13,6 +13,7 @@ export * from './types/stock';
 export * from './types/partner';
 export * from './types/instruction';
 export * from './types/division';
+export * from './types/transfer';
 
 // Schemas
 export * from './schemas/auth.schema';

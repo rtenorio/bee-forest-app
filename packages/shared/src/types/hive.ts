@@ -4,6 +4,7 @@ export type HiveStatus = 'active' | 'inactive' | 'dead' | 'transferred';
 
 export interface Hive extends SyncMeta {
   apiary_local_id: string;
+  apiary_origin_local_id: string | null;  // meliponário de origem (nunca muda)
   species_local_id: string | null;
   code: string;
   status: HiveStatus;

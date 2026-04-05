@@ -369,3 +369,15 @@ export const DivisionUpdateSchema = z.object({
   divided_by: z.string().max(150).optional().nullable(),
   notes: z.string().optional().nullable(),
 });
+
+// ── Schemas: Transfers ────────────────────────────────────────────────────────
+
+export const HiveTransferCreateSchema = z.object({
+  local_id: z.string().uuid(),
+  hive_local_id: z.string().uuid(),
+  apiary_origin_local_id: z.string().uuid(),
+  apiary_destination_local_id: z.string().uuid(),
+  transferred_at: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  transferred_by: z.string().min(1).max(150),
+  reason: z.string().optional().nullable(),
+});
