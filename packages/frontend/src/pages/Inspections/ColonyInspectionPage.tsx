@@ -1,8 +1,16 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { v4 as uuidv4 } from 'uuid';
 import { useCreateInspection, useInspections } from '@/hooks/useInspections';
-import { useInstructions, useUpdateInstructionStatus } from '@/hooks/useInstructions';
+import {
+  useInstructions,
+  useUpdateInstructionStatus,
+  useCreateInstruction,
+  useCreateInstructionResponse,
+  requestAudioUploadUrl,
+  uploadAudioToR2,
+} from '@/hooks/useInstructions';
+import { AudioRecorder } from '@/pages/Instructions/AudioRecorder';
 import { useHive } from '@/hooks/useHives';
 import { useApiaries } from '@/hooks/useApiaries';
 import { useAuthStore } from '@/store/authStore';
@@ -331,6 +339,56 @@ function TaskRow({
   );
 }
 
+// ─── Audio play button ────────────────────────────────────────────────────────
+
+function AudioPlayButton({ src }: { src: string }) {
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const [playing, setPlaying] = useState(false);
+
+  function toggle() {
+    const el = audioRef.current;
+    if (!el) return;
+    if (playing) {
+      el.pause();
+    } else {
+      el.play();
+    }
+  }
+
+  return (
+    <>
+      <audio
+        ref={audioRef}
+        src={src}
+        onPlay={() => setPlaying(true)}
+        onPause={() => setPlaying(false)}
+        onEnded={() => setPlaying(false)}
+      />
+      <button
+        type="button"
+        onClick={toggle}
+        className="flex items-center gap-2 bg-amber-700/40 hover:bg-amber-700/70 text-amber-300 text-sm font-medium rounded-xl px-4 py-2 transition-colors"
+      >
+        {playing ? (
+          <>
+            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/>
+            </svg>
+            Pausar
+          </>
+        ) : (
+          <>
+            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M8 5v14l11-7L8 5z"/>
+            </svg>
+            Ouvir orientação
+          </>
+        )}
+      </button>
+    </>
+  );
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export function ColonyInspectionPage() {
@@ -361,6 +419,45 @@ export function ColonyInspectionPage() {
     ...apiaryLevelInst.filter((a: Instruction) => !hiveInstructionsData.find((h) => h.local_id === a.local_id)),
   ];
   const markDoneInstruction = useUpdateInstructionStatus();
+  const createInstruction = useCreateInstruction();
+  const createResponse = useCreateInstructionResponse(allPendingInst[0]?.local_id ?? '');
+  const [msgOpen, setMsgOpen] = useState(false);
+  const [msgBlob, setMsgBlob] = useState<Blob | null>(null);
+  const [msgSent, setMsgSent] = useState(false);
+  const [msgSending, setMsgSending] = useState(false);
+
+  async function sendOrientacaoMessage() {
+    if (!msgBlob) return;
+    setMsgSending(true);
+    try {
+      const { uploadUrl, publicUrl } = await requestAudioUploadUrl(
+        `orientacao-response-${Date.now()}.webm`,
+        'audio/webm'
+      );
+      await uploadAudioToR2(uploadUrl, msgBlob);
+      if (allPendingInst.length > 0) {
+        await createResponse.mutateAsync({
+          local_id: uuidv4(),
+          text_content: null,
+          audio_url: publicUrl,
+        });
+      } else {
+        await createInstruction.mutateAsync({
+          local_id: uuidv4(),
+          apiary_local_id: hive?.apiary_local_id ?? '',
+          hive_local_id: hive_local_id || null,
+          text_content: null,
+          audio_url: publicUrl,
+        });
+      }
+      setMsgBlob(null);
+      setMsgOpen(false);
+      setMsgSent(true);
+      setTimeout(() => setMsgSent(false), 4000);
+    } finally {
+      setMsgSending(false);
+    }
+  }
 
   const sortedInspections = [...inspections].sort((a, b) => b.inspected_at.localeCompare(a.inspected_at));
   const lastInspection = sortedInspections[0] ?? null;
@@ -1075,37 +1172,83 @@ export function ColonyInspectionPage() {
 
         {/* ═══ SECTION: Orientações ═════════════════════════════════════════ */}
         <InspectionSection step={isInternal ? 13 : 12} title="Orientações" icon="💬" subtitle="Orientações pendentes do responsável técnico">
-          {allPendingInst.length === 0 ? (
-            <div className="rounded-xl bg-stone-800 border border-stone-700 px-4 py-5 text-center">
-              <p className="text-stone-400 text-sm">Nenhuma orientação pendente para esta caixa ✅</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {allPendingInst.map((inst) => (
-                <div key={inst.local_id} className="rounded-2xl bg-stone-800 border border-amber-700/40 overflow-hidden">
-                  <div className="p-4 space-y-2">
-                    {inst.text_content && (
-                      <p className="text-base text-stone-100 leading-relaxed">{inst.text_content}</p>
-                    )}
-                    {inst.audio_url && (
-                      <audio controls src={inst.audio_url} className="w-full" style={{ height: '48px' }} />
-                    )}
-                    <p className="text-xs text-stone-500">De: {inst.author_name}</p>
+          <div className="space-y-4">
+            {allPendingInst.length === 0 ? (
+              <div className="rounded-xl bg-stone-800 border border-stone-700 px-4 py-5 text-center">
+                <p className="text-stone-400 text-sm">Nenhuma orientação pendente para esta caixa ✅</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {allPendingInst.map((inst) => (
+                  <div key={inst.local_id} className="rounded-2xl bg-stone-800 border border-amber-700/40 overflow-hidden">
+                    <div className="p-4 space-y-3">
+                      {inst.text_content && (
+                        <p className="text-base text-stone-100 leading-relaxed">{inst.text_content}</p>
+                      )}
+                      {inst.audio_url && (
+                        <AudioPlayButton src={inst.audio_url} />
+                      )}
+                      <p className="text-xs text-stone-500">De: {inst.author_name}</p>
+                    </div>
+                    <div className="px-4 pb-4">
+                      <button
+                        type="button"
+                        onClick={() => markDoneInstruction.mutate({ localId: inst.local_id, status: 'done' })}
+                        disabled={markDoneInstruction.isPending}
+                        className="w-full flex items-center justify-center gap-2 bg-emerald-700 hover:bg-emerald-600 disabled:opacity-50 text-white text-lg font-semibold rounded-xl py-4 transition-colors"
+                      >
+                        ✅ Marcar como concluído
+                      </button>
+                    </div>
                   </div>
-                  <div className="px-4 pb-4">
-                    <button
-                      type="button"
-                      onClick={() => markDoneInstruction.mutate({ localId: inst.local_id, status: 'done' })}
-                      disabled={markDoneInstruction.isPending}
-                      className="w-full flex items-center justify-center gap-2 bg-emerald-700 hover:bg-emerald-600 disabled:opacity-50 text-white text-base font-semibold rounded-xl py-3 transition-colors"
-                    >
-                      ✅ Marcar como concluído
-                    </button>
-                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Enviar mensagem ao orientador */}
+            {msgSent ? (
+              <div className="rounded-xl bg-emerald-800/40 border border-emerald-600/40 px-4 py-4 text-center">
+                <p className="text-emerald-300 text-base font-semibold">Mensagem enviada ✅</p>
+              </div>
+            ) : !msgOpen ? (
+              <button
+                type="button"
+                onClick={() => setMsgOpen(true)}
+                className="w-full flex items-center justify-center gap-3 bg-amber-600 hover:bg-amber-500 active:bg-amber-700 text-white text-lg font-bold rounded-2xl py-4 transition-colors shadow-lg"
+              >
+                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12 14a3 3 0 003-3V5a3 3 0 00-6 0v6a3 3 0 003 3zm5-3a5 5 0 01-10 0H5a7 7 0 0014 0h-2z"/>
+                </svg>
+                Enviar mensagem ao orientador
+              </button>
+            ) : (
+              <div className="rounded-2xl bg-stone-800 border border-amber-700/40 p-4 space-y-3">
+                <p className="text-sm font-semibold text-amber-400">Gravar mensagem de voz</p>
+                <AudioRecorder
+                  recorded={msgBlob}
+                  onRecorded={setMsgBlob}
+                  onClear={() => setMsgBlob(null)}
+                />
+                <div className="flex gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => { setMsgOpen(false); setMsgBlob(null); }}
+                    className="flex-1 py-4 rounded-xl bg-stone-700 hover:bg-stone-600 text-stone-300 text-base font-medium transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={sendOrientacaoMessage}
+                    disabled={msgSending || !msgBlob}
+                    className="flex-[2] py-4 rounded-xl bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white text-base font-bold transition-colors"
+                  >
+                    {msgSending ? 'Enviando...' : 'Enviar'}
+                  </button>
                 </div>
-              ))}
-            </div>
-          )}
+              </div>
+            )}
+          </div>
         </InspectionSection>
 
         {/* ═══ SECTION: Conclusão ═══════════════════════════════════════════ */}
