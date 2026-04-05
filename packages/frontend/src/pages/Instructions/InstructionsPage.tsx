@@ -207,6 +207,7 @@ function CreateInstructionForm({ onClose }: { onClose: () => void }) {
   const [textContent, setTextContent] = useState('');
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const { data: hives } = useHives(selectedApiary || undefined);
   const createInstruction = useCreateInstruction();
 
@@ -215,6 +216,7 @@ function CreateInstructionForm({ onClose }: { onClose: () => void }) {
     if (!selectedApiary) return;
     if (!textContent.trim() && !audioBlob) return;
     setUploading(true);
+    setUploadError(null);
     try {
       let audioUrl: string | null = null;
       if (audioBlob) {
@@ -233,6 +235,8 @@ function CreateInstructionForm({ onClose }: { onClose: () => void }) {
         audio_url: audioUrl,
       });
       onClose();
+    } catch (err: unknown) {
+      setUploadError(err instanceof Error ? err.message : 'Erro ao enviar instrução');
     } finally {
       setUploading(false);
     }
@@ -297,8 +301,10 @@ function CreateInstructionForm({ onClose }: { onClose: () => void }) {
         />
       </div>
 
-      {createInstruction.error && (
-        <p className="text-xs text-red-400">{createInstruction.error.message}</p>
+      {(uploadError || createInstruction.error) && (
+        <p className="text-xs text-red-400">
+          {uploadError ?? createInstruction.error?.message}
+        </p>
       )}
 
       <div className="flex gap-2 justify-end">

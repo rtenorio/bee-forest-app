@@ -16,15 +16,28 @@ const router = Router();
 /**
  * Returns the apiary_local_ids accessible to the current user.
  * master_admin and socio see all (returns null = no filter).
+ *
+ * When contextHiveId is provided (tratador consulting a specific hive during
+ * an inspection), the apiary is resolved directly from that hive instead of
+ * from user_hive_assignments — this handles the case where the tratador has
+ * no formal hive assignments but is physically at the hive.
  */
-async function resolveAccessibleApiaryIds(req: any): Promise<string[] | null> {
+async function resolveAccessibleApiaryIds(req: any, contextHiveId?: string): Promise<string[] | null> {
   const role = req.user!.role;
   if (role === 'master_admin' || role === 'socio') return null;
   if (role === 'orientador' || role === 'responsavel') {
     return req.user!.apiary_local_ids;
   }
   if (role === 'tratador') {
-    // Tratador vê instruções das caixas atribuídas a ele — resolve os apiários dessas caixas
+    // Inspection context: resolve apiary from the specific hive being queried
+    if (contextHiveId) {
+      const hiveRow = await queryOne<{ apiary_local_id: string }>(
+        'SELECT apiary_local_id FROM hives WHERE local_id = $1 AND deleted_at IS NULL',
+        [contextHiveId]
+      );
+      return hiveRow ? [hiveRow.apiary_local_id] : [];
+    }
+    // General context: resolve accessible apiaries from assigned hives
     const hiveIds = req.user!.hive_local_ids;
     if (!hiveIds.length) return [];
     const rows = await query<{ apiary_local_id: string }>(
@@ -43,7 +56,7 @@ router.get('/', async (req, res, next) => {
     const user = req.user!;
     const { apiary_local_id, hive_local_id, status } = req.query as Record<string, string | undefined>;
 
-    const accessibleApiaryIds = await resolveAccessibleApiaryIds(req);
+    const accessibleApiaryIds = await resolveAccessibleApiaryIds(req, hive_local_id);
 
     let sql = `
       SELECT
