@@ -4,6 +4,15 @@ import { v4 as uuidv4 } from 'uuid';
 import { useCreateInspection } from '@/hooks/useInspections';
 import { useHives } from '@/hooks/useHives';
 import { useApiaries } from '@/hooks/useApiaries';
+import {
+  useInstructions,
+  useUpdateInstructionStatus,
+  useCreateInstruction,
+  useCreateInstructionResponse,
+  requestAudioUploadUrl,
+  uploadAudioToR2,
+} from '@/hooks/useInstructions';
+import type { Instruction } from '@bee-forest/shared';
 import { useAuthStore } from '@/store/authStore';
 import { useUIStore } from '@/store/uiStore';
 import { AudioRecorder } from '@/components/inspection/AudioRecorder';
@@ -142,8 +151,8 @@ function makeDefault(inspector: string, hiveId: string): WizardData {
     entrance_blocked: false, moisture_infiltration: false, needs_box_replacement: false,
     box_condition: null, weight_kg: '',
     tasks: [], next_inspection_due: '', notes: '',
-    stepPhotos: [[], [], [], [], [], [], []],
-    stepAudio:  [[], [], [], [], [], [], []],
+    stepPhotos: [[], [], [], [], [], [], [], []],
+    stepAudio:  [[], [], [], [], [], [], [], []],
   };
 }
 
@@ -398,6 +407,256 @@ function TaskCard({
   );
 }
 
+// ─── Orientações step components ─────────────────────────────────────────────
+
+function useBlobRecorder() {
+  const [recording, setRecording] = useState(false);
+  const [blob, setBlob] = useState<Blob | null>(null);
+  const mediaRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+
+  async function start() {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const mr = new MediaRecorder(stream);
+    chunksRef.current = [];
+    mr.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
+    mr.onstop = () => {
+      setBlob(new Blob(chunksRef.current, { type: 'audio/webm' }));
+      stream.getTracks().forEach((t) => t.stop());
+      setRecording(false);
+    };
+    mr.start();
+    mediaRef.current = mr;
+    setRecording(true);
+  }
+
+  function stop() { mediaRef.current?.stop(); }
+  function clear() { setBlob(null); }
+
+  return { recording, blob, start, stop, clear };
+}
+
+function BigRecordButton({
+  recording, blob, onStart, onStop, onClear,
+}: { recording: boolean; blob: Blob | null; onStart: () => void; onStop: () => void; onClear: () => void }) {
+  if (blob) {
+    return (
+      <div className="space-y-2">
+        <audio controls src={URL.createObjectURL(blob)} className="w-full" style={{ height: '48px' }} />
+        <button type="button" onClick={onClear}
+          className="w-full py-2 rounded-xl bg-stone-700 text-stone-400 text-sm transition-colors hover:bg-stone-600"
+        >
+          Regravar
+        </button>
+      </div>
+    );
+  }
+  return (
+    <button type="button" onClick={recording ? onStop : onStart}
+      className={cn(
+        'w-full flex items-center justify-center gap-3 rounded-2xl py-5 text-lg font-bold transition-colors',
+        recording
+          ? 'bg-red-600 hover:bg-red-700 text-white animate-pulse'
+          : 'bg-amber-600 hover:bg-amber-500 active:bg-amber-700 text-white'
+      )}
+    >
+      <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+        <path d="M12 14a3 3 0 003-3V5a3 3 0 00-6 0v6a3 3 0 003 3zm5-3a5 5 0 01-10 0H5a7 7 0 0014 0h-2z"/>
+      </svg>
+      {recording ? 'Parar gravação' : '🎙 Gravar áudio'}
+    </button>
+  );
+}
+
+function OrientacaoCard({ instruction }: { instruction: Instruction }) {
+  const [replyOpen, setReplyOpen] = useState(false);
+  const [replyText, setReplyText] = useState('');
+  const [uploading, setUploading] = useState(false);
+  const { recording, blob, start, stop, clear } = useBlobRecorder();
+  const markDone = useUpdateInstructionStatus();
+  const createResponse = useCreateInstructionResponse(instruction.local_id);
+
+  async function sendReply() {
+    if (!replyText.trim() && !blob) return;
+    setUploading(true);
+    try {
+      let audioUrl: string | null = null;
+      if (blob) {
+        const { uploadUrl, publicUrl } = await requestAudioUploadUrl(`reply-${Date.now()}.webm`, 'audio/webm');
+        await uploadAudioToR2(uploadUrl, blob);
+        audioUrl = publicUrl;
+      }
+      await createResponse.mutateAsync({ local_id: uuidv4(), text_content: replyText.trim() || null, audio_url: audioUrl });
+      await markDone.mutateAsync({ localId: instruction.local_id, status: 'done' });
+      setReplyOpen(false);
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  return (
+    <div className="bg-stone-800 border border-amber-600/50 rounded-2xl overflow-hidden">
+      <div className="p-4 space-y-3">
+        {instruction.text_content && (
+          <p className="text-lg text-stone-100 leading-relaxed">{instruction.text_content}</p>
+        )}
+        {instruction.audio_url && (
+          <div className="space-y-1">
+            <p className="text-xs text-stone-400 uppercase tracking-wide">Orientação em áudio</p>
+            <audio controls src={instruction.audio_url} className="w-full" style={{ height: '48px' }} />
+          </div>
+        )}
+        <p className="text-xs text-stone-500">De: {instruction.author_name}</p>
+      </div>
+
+      {!replyOpen ? (
+        <div className="px-4 pb-4 flex flex-col gap-2">
+          <button type="button" onClick={() => setReplyOpen(true)}
+            className="w-full flex items-center justify-center gap-3 bg-amber-600 hover:bg-amber-500 active:bg-amber-700 text-white text-lg font-bold rounded-2xl py-5 transition-colors"
+          >
+            <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M12 14a3 3 0 003-3V5a3 3 0 00-6 0v6a3 3 0 003 3zm5-3a5 5 0 01-10 0H5a7 7 0 0014 0h-2z"/>
+            </svg>
+            Gravar resposta
+          </button>
+          <button type="button"
+            onClick={() => markDone.mutate({ localId: instruction.local_id, status: 'done' })}
+            disabled={markDone.isPending}
+            className="w-full flex items-center justify-center gap-2 bg-emerald-700 hover:bg-emerald-600 disabled:opacity-50 text-white text-lg font-bold rounded-2xl py-4 transition-colors"
+          >
+            ✅ Marcar como concluído
+          </button>
+        </div>
+      ) : (
+        <div className="px-4 pb-4 space-y-3 border-t border-stone-700 pt-3">
+          <textarea rows={3} value={replyText} onChange={(e) => setReplyText(e.target.value)}
+            placeholder="Escreva uma resposta (opcional)..."
+            className="w-full bg-stone-900 border border-stone-600 text-stone-100 rounded-xl px-4 py-3 text-base focus:outline-none focus:border-amber-500 resize-none"
+          />
+          <BigRecordButton recording={recording} blob={blob} onStart={start} onStop={stop} onClear={clear} />
+          <div className="flex gap-2">
+            <button type="button" onClick={() => { setReplyOpen(false); setReplyText(''); clear(); }}
+              className="flex-1 py-4 rounded-xl bg-stone-700 hover:bg-stone-600 text-stone-300 text-base font-medium transition-colors"
+            >Cancelar</button>
+            <button type="button" onClick={sendReply}
+              disabled={uploading || (!replyText.trim() && !blob)}
+              className="flex-1 py-4 rounded-xl bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white text-base font-bold transition-colors"
+            >{uploading ? 'Enviando...' : 'Enviar'}</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function OrientacoesStep({ hiveLocalId, apiaryLocalId }: { hiveLocalId: string; apiaryLocalId: string }) {
+  const { data: hiveInstructions = [] } = useInstructions({ hive_local_id: hiveLocalId || undefined, status: 'pending' });
+  const { data: apiaryAll = [] } = useInstructions({ apiary_local_id: apiaryLocalId || undefined, status: 'pending' });
+  const apiaryLevel = apiaryAll.filter((i) => !i.hive_local_id);
+  const allInstructions: Instruction[] = [
+    ...hiveInstructions,
+    ...apiaryLevel.filter((a) => !hiveInstructions.find((h) => h.local_id === a.local_id)),
+  ];
+
+  const [msgOpen, setMsgOpen] = useState(false);
+  const [msgText, setMsgText] = useState('');
+  const [msgSent, setMsgSent] = useState(false);
+  const [msgSending, setMsgSending] = useState(false);
+  const { recording, blob: msgBlob, start, stop, clear } = useBlobRecorder();
+  const createInstruction = useCreateInstruction();
+
+  async function sendMessage() {
+    if (!msgText.trim() && !msgBlob) return;
+    setMsgSending(true);
+    try {
+      let audioUrl: string | null = null;
+      if (msgBlob) {
+        const { uploadUrl, publicUrl } = await requestAudioUploadUrl(`msg-${Date.now()}.webm`, 'audio/webm');
+        await uploadAudioToR2(uploadUrl, msgBlob);
+        audioUrl = publicUrl;
+      }
+      await createInstruction.mutateAsync({
+        local_id: uuidv4(),
+        apiary_local_id: apiaryLocalId,
+        hive_local_id: hiveLocalId || null,
+        text_content: msgText.trim() || null,
+        audio_url: audioUrl,
+      });
+      setMsgSent(true);
+      setMsgOpen(false);
+      setMsgText('');
+      clear();
+    } finally {
+      setMsgSending(false);
+    }
+  }
+
+  return (
+    <div className="space-y-5">
+      {/* BLOCO 1 — Orientações pendentes */}
+      <div className="space-y-3">
+        <h3 className="text-base font-semibold text-stone-200">
+          Orientações do técnico
+          {allInstructions.length > 0 && (
+            <span className="ml-2 bg-amber-500 text-stone-950 text-xs font-bold rounded-full px-2 py-0.5">
+              {allInstructions.length}
+            </span>
+          )}
+        </h3>
+
+        {allInstructions.length === 0 ? (
+          <div className="bg-stone-800 border border-stone-700 rounded-2xl px-4 py-6 text-center">
+            <p className="text-stone-400 text-base">Nenhuma orientação pendente para esta caixa</p>
+          </div>
+        ) : (
+          allInstructions.map((inst) => (
+            <OrientacaoCard key={inst.local_id} instruction={inst} />
+          ))
+        )}
+      </div>
+
+      {/* BLOCO 2 — Enviar mensagem ao orientador */}
+      <div className="border-t border-stone-700 pt-5 space-y-3">
+        <h3 className="text-base font-semibold text-stone-200">Enviar mensagem ao orientador</h3>
+
+        {msgSent && (
+          <div className="bg-emerald-900/30 border border-emerald-700/50 rounded-2xl px-4 py-3 text-center">
+            <p className="text-emerald-400 text-base font-medium">Mensagem enviada ao orientador ✅</p>
+          </div>
+        )}
+
+        {!msgOpen ? (
+          <button type="button" onClick={() => setMsgOpen(true)}
+            className="w-full flex items-center justify-center gap-3 bg-stone-700 hover:bg-stone-600 active:bg-stone-800 text-amber-400 text-lg font-bold rounded-2xl py-5 border border-stone-600 transition-colors"
+          >
+            <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M12 14a3 3 0 003-3V5a3 3 0 00-6 0v6a3 3 0 003 3zm5-3a5 5 0 01-10 0H5a7 7 0 0014 0h-2z"/>
+            </svg>
+            Enviar mensagem ao orientador
+          </button>
+        ) : (
+          <div className="bg-stone-800 border border-stone-700 rounded-2xl p-4 space-y-3">
+            <textarea rows={3} value={msgText} onChange={(e) => setMsgText(e.target.value)}
+              placeholder="Escreva sua dúvida ou observação (opcional)..."
+              className="w-full bg-stone-900 border border-stone-600 text-stone-100 rounded-xl px-4 py-3 text-base focus:outline-none focus:border-amber-500 resize-none"
+            />
+            <BigRecordButton recording={recording} blob={msgBlob} onStart={start} onStop={stop} onClear={clear} />
+            <div className="flex gap-2">
+              <button type="button" onClick={() => { setMsgOpen(false); setMsgText(''); clear(); }}
+                className="flex-1 py-4 rounded-xl bg-stone-700 hover:bg-stone-600 text-stone-300 text-base font-medium transition-colors"
+              >Cancelar</button>
+              <button type="button" onClick={sendMessage}
+                disabled={msgSending || (!msgText.trim() && !msgBlob)}
+                className="flex-1 py-4 rounded-xl bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white text-base font-bold transition-colors"
+              >{msgSending ? 'Enviando...' : 'Enviar mensagem'}</button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── Steps config ─────────────────────────────────────────────────────────────
 
 const STEPS = [
@@ -407,7 +666,8 @@ const STEPS = [
   { id: 4, label: 'Alimentação',    icon: '🌺', desc: 'Reservas e necessidades de suplementação' },
   { id: 5, label: 'Sanidade',       icon: '🔬', desc: 'Pragas, doenças e odores' },
   { id: 6, label: 'Caixa',          icon: '🏠', desc: 'Estado físico e estrutural da caixa' },
-  { id: 7, label: 'Tarefas',        icon: '✅', desc: 'Tarefas pendentes, notas e próxima visita' },
+  { id: 7, label: 'Orientações',    icon: '💬', desc: 'Orientações do técnico e mensagens' },
+  { id: 8, label: 'Tarefas',        icon: '✅', desc: 'Tarefas pendentes, notas e próxima visita' },
 ];
 
 const DISEASE_OPTIONS = [
@@ -926,8 +1186,11 @@ export function InspectionWizard() {
       <MediaSection stepIdx={5} data={data} update={update} />
     </div>,
 
-    // ── Step 6: Tarefas e Ações ─────────────────────────────────────────────
-    <div className="space-y-5" key="s6">
+    // ── Step 6: Orientações ──────────────────────────────────────────────────
+    <OrientacoesStep key="s6" hiveLocalId={data.hive_local_id} apiaryLocalId={currentHive?.apiary_local_id ?? ''} />,
+
+    // ── Step 7: Tarefas e Ações ─────────────────────────────────────────────
+    <div className="space-y-5" key="s7">
       {/* Predefined task selector */}
       <div>
         <SLabel>Adicionar tarefas à inspeção</SLabel>
