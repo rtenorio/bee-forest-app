@@ -109,7 +109,7 @@ export function StockPage() {
   const { data: summaries = [], isLoading: loadingSummary } = useStockSummary(filterApiary || undefined);
   const { data: alerts = [] } = useStockAlerts();
   const { data: apiaries = [] } = useApiaries();
-  const { data: equipItems = [] } = useEquipmentItems();
+  const { data: equipItems = [], isLoading: loadingEquip, isError: errorEquip } = useEquipmentItems();
   const { data: equipMovements = [] } = useEquipmentMovements({ limit: 100 });
   const { data: melgueiras = [] } = useMelgueiras();
   const adjustEquipment = useAdjustEquipment();
@@ -330,8 +330,11 @@ export function StockPage() {
                 </Card>
               ))}
 
-              {equipItems.length === 0 && (
+              {loadingEquip && (
                 <p className="text-stone-500 text-center py-8">Carregando...</p>
+              )}
+              {errorEquip && (
+                <p className="text-red-400 text-center py-8 text-sm">Erro ao carregar equipamentos. Tente recarregar a página.</p>
               )}
             </div>
           )}
