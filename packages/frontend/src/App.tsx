@@ -33,6 +33,7 @@ import { StockPage } from './pages/Stock/StockPage';
 import { StockApiaryPage } from './pages/Stock/StockApiaryPage';
 import { StockMovementsPage } from './pages/Stock/StockMovementsPage';
 import { StockAlertsPage } from './pages/Stock/StockAlertsPage';
+import { MelgueiraDetail } from './pages/Stock/MelgueiraDetail';
 import { PartnersPage } from './pages/Partners/PartnersPage';
 import { PartnerDetail } from './pages/Partners/PartnerDetail';
 import { PartnerQualityPage } from './pages/Partners/PartnerQualityPage';
@@ -91,6 +92,7 @@ export function App() {
           <Route path="stock" element={<StockPage />} />
           <Route path="stock/movements" element={<StockMovementsPage />} />
           <Route path="stock/alerts" element={<StockAlertsPage />} />
+          <Route path="stock/melgueiras/:id" element={<MelgueiraDetail />} />
           <Route path="stock/:apiaryId" element={<StockApiaryPage />} />
           <Route path="partners" element={<PartnersPage />} />
           <Route path="partners/quality" element={<PartnerQualityPage />} />

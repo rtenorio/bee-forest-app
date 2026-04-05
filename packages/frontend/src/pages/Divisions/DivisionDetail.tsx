@@ -6,6 +6,7 @@ import { useDivision, useUpdateDivision } from '@/hooks/useDivisions';
 import { useHives } from '@/hooks/useHives';
 import { useApiaries } from '@/hooks/useApiaries';
 import { useAuthStore } from '@/store/authStore';
+import { useAdjustEquipment } from '@/hooks/useEquipment';
 import { Spinner } from '@/components/ui/Spinner';
 import { Button } from '@/components/ui/Button';
 import { Card, CardHeader, CardTitle } from '@/components/ui/Card';
@@ -41,6 +42,8 @@ export function DivisionDetail() {
   const { data: hives = [] } = useHives();
   const { data: apiaries = [] } = useApiaries();
 
+  const adjustEquipment = useAdjustEquipment();
+
   const canExecute = ['master_admin', 'socio', 'responsavel', 'tratador'].includes(user.role);
   const canCancel  = ['master_admin', 'socio', 'responsavel'].includes(user.role);
 
@@ -51,10 +54,13 @@ export function DivisionDetail() {
   const [dividedBy, setDividedBy] = useState(user.name);
   const [notes, setNotes] = useState('');
   const [error, setError] = useState<string | null>(null);
+  type StockAction = 'none' | 'caixa_vazia' | 'modulos_avulsos';
+  const [stockAction, setStockAction] = useState<StockAction>('none');
 
   async function handleExecute(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    if (!division) return;
     if (!hiveNewId || !dividedAt || !dividedBy) {
       setError('Preencha caixa nova, data e responsável pela execução.');
       return;
@@ -71,6 +77,36 @@ export function DivisionDetail() {
           notes: notes || null,
         },
       });
+
+      // Deduct from equipment stock
+      if (stockAction === 'caixa_vazia') {
+        await adjustEquipment.mutateAsync({
+          type: 'caixa_vazia',
+          delta: -1,
+          movement_type: 'desmontagem',
+          reason: `Divisão da caixa ${division.hive_origin_code ?? ''}`,
+          performed_by: dividedBy,
+          hive_local_id: division.hive_origin_local_id,
+        });
+      } else if (stockAction === 'modulos_avulsos') {
+        await adjustEquipment.mutateAsync({
+          type: 'modulo_ninho',
+          delta: -1,
+          movement_type: 'saida',
+          reason: `Divisão da caixa ${division.hive_origin_code ?? ''}`,
+          performed_by: dividedBy,
+          hive_local_id: division.hive_origin_local_id,
+        });
+        await adjustEquipment.mutateAsync({
+          type: 'modulo_sobreninho',
+          delta: -1,
+          movement_type: 'saida',
+          reason: `Divisão da caixa ${division.hive_origin_code ?? ''}`,
+          performed_by: dividedBy,
+          hive_local_id: division.hive_origin_local_id,
+        });
+      }
+
       setExecOpen(false);
     } catch (err: unknown) {
       setError((err as Error).message ?? 'Erro ao atualizar');
@@ -235,6 +271,28 @@ export function DivisionDetail() {
                 onChange={(e) => setNotes(e.target.value)}
                 className="w-full bg-stone-800 border border-stone-700 text-stone-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-500 resize-none"
               />
+            </div>
+
+            {/* Stock deduction */}
+            <div className="border border-stone-700 rounded-xl p-3 space-y-2">
+              <p className="text-xs font-medium text-stone-400">Descontar do estoque de equipamentos?</p>
+              {([
+                { value: 'none',           label: 'Não registrar movimentação' },
+                { value: 'caixa_vazia',    label: 'Usar caixa vazia completa (−1 caixa)' },
+                { value: 'modulos_avulsos',label: 'Usar módulos avulsos (−1 ninho + −1 sobreninho)' },
+              ] as { value: StockAction; label: string }[]).map((opt) => (
+                <label key={opt.value} className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="stockAction"
+                    value={opt.value}
+                    checked={stockAction === opt.value}
+                    onChange={() => setStockAction(opt.value)}
+                    className="accent-amber-500"
+                  />
+                  <span className="text-sm text-stone-300">{opt.label}</span>
+                </label>
+              ))}
             </div>
 
             <div className="flex gap-2">

@@ -381,3 +381,42 @@ export const HiveTransferCreateSchema = z.object({
   transferred_by: z.string().min(1).max(150),
   reason: z.string().optional().nullable(),
 });
+
+// ── Schemas: Equipment ────────────────────────────────────────────────────────
+
+const EquipmentItemTypeEnum = z.enum(['modulo_ninho', 'modulo_sobreninho', 'caixa_vazia']);
+const EquipmentMovementTypeEnum = z.enum(['entrada', 'saida', 'instalacao', 'retirada', 'desmontagem']);
+
+export const EquipmentAdjustSchema = z.object({
+  type: EquipmentItemTypeEnum,
+  delta: z.number().int().refine((n) => n !== 0, { message: 'Delta não pode ser zero' }),
+  movement_type: EquipmentMovementTypeEnum,
+  reason: z.string().optional().nullable(),
+  performed_by: z.string().max(150).optional().nullable(),
+  hive_local_id: z.string().uuid().optional().nullable(),
+});
+
+export const MelgueiraCreateSchema = z.object({
+  local_id: z.string().uuid(),
+  code: z.string().min(1).max(50),
+  apiary_local_id: z.string().uuid().optional().nullable(),
+  notes: z.string().optional().nullable(),
+});
+
+export const MelgueiraUpdateSchema = z.object({
+  code: z.string().min(1).max(50).optional(),
+  status: z.enum(['disponivel', 'em_uso', 'manutencao']).optional(),
+  notes: z.string().optional().nullable(),
+  apiary_local_id: z.string().uuid().optional().nullable(),
+});
+
+export const MelgueiraInstallSchema = z.object({
+  hive_local_id: z.string().uuid(),
+  installed_at: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  performed_by: z.string().max(150).optional().nullable(),
+});
+
+export const MelgueiraRemoveSchema = z.object({
+  performed_by: z.string().max(150).optional().nullable(),
+  reason: z.string().optional().nullable(),
+});

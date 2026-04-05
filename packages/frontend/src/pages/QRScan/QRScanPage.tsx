@@ -2,6 +2,8 @@ import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { QRCodeScanner } from '@/components/qr/QRCodeScanner';
 import { useQRScan } from '@/hooks/useQRScan';
+import { apiFetch } from '@/api/client';
+import type { Melgueira } from '@bee-forest/shared';
 
 type ParsedQR =
   | { type: 'new'; codigo: string }
@@ -55,7 +57,18 @@ export function QRScanPage() {
       setStatus('Identificando caixa...');
 
       try {
-        if (parsed.type === 'new') {
+        if (parsed.type === 'new' && /^MLG-/i.test(parsed.codigo)) {
+          // Melgueira QR code
+          setStatus('Identificando melgueira...');
+          const rows = await apiFetch<Melgueira[]>(`/melgueiras?code=${encodeURIComponent(parsed.codigo)}`);
+          if (rows.length > 0) {
+            navigate(`/stock/melgueiras/${rows[0].local_id}`, { replace: true });
+          } else {
+            setError('Melgueira não encontrada. Verifique o código.');
+            setActive(true);
+            setStatus(null);
+          }
+        } else if (parsed.type === 'new') {
           navigate(`/h/${parsed.codigo}`, { replace: true });
         } else {
           await recordScan(parsed.hiveLocalId);

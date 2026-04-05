@@ -26,6 +26,7 @@ import { HiveInstructions } from './HiveInstructions';
 import { useDivisions } from '@/hooks/useDivisions';
 import { useTransfers, useCreateTransfer } from '@/hooks/useTransfers';
 import { useApiaries } from '@/hooks/useApiaries';
+import { useMelgueiras, useInstallMelgueira, useRemoveMelgueira } from '@/hooks/useMelgueiras';
 import { v4 as uuidv4 } from 'uuid';
 
 export function HiveDetail() {
@@ -37,10 +38,10 @@ export function HiveDetail() {
 
   const canTransfer = ['master_admin', 'socio', 'responsavel'].includes(user.role);
 
-  type Tab = 'Inspeções' | 'Produção' | 'Alimentação' | 'Divisões' | 'Transferências';
+  type Tab = 'Inspeções' | 'Produção' | 'Alimentação' | 'Divisões' | 'Transferências' | 'Melgueiras';
   const TABS: Tab[] = canSeeProduction
-    ? ['Inspeções', 'Produção', 'Alimentação', 'Divisões', 'Transferências']
-    : ['Inspeções', 'Divisões', 'Transferências'];
+    ? ['Inspeções', 'Produção', 'Alimentação', 'Divisões', 'Transferências', 'Melgueiras']
+    : ['Inspeções', 'Divisões', 'Transferências', 'Melgueiras'];
 
   const [tab, setTab] = useState<Tab>('Inspeções');
   const [editHive, setEditHive] = useState(false);
@@ -57,10 +58,19 @@ export function HiveDetail() {
   const { data: inspections = [] } = useInspections(id);
   const { data: productions = [] } = useProductions(id);
   const { data: feedings = [] } = useFeedings(id);
+  const [installMelgOpen, setInstallMelgOpen] = useState(false);
+  const [installMelgId, setInstallMelgId]     = useState('');
+  const [installMelgDate, setInstallMelgDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [installMelgBy, setInstallMelgBy]     = useState(user.name);
+
   const { data: divisions = [] } = useDivisions({ hive_local_id: id });
   const { data: transfers = [] } = useTransfers({ hive_local_id: id });
   const { data: apiaries = [] } = useApiaries();
-  const createTransfer = useCreateTransfer();
+  const { data: hiveMelgueiras = [] } = useMelgueiras({ hive_local_id: id });
+  const { data: availableMelgueiras = [] } = useMelgueiras({ status: 'disponivel' });
+  const createTransfer    = useCreateTransfer();
+  const installMelgueira  = useInstallMelgueira();
+  const removeMelgueira   = useRemoveMelgueira();
   const { data: speciesList = [] } = useSpecies();
   const deleteHive = useDeleteHive();
   const deleteInspection = useDeleteInspection();
@@ -494,6 +504,52 @@ export function HiveDetail() {
         </div>
       )}
 
+      {/* Tab: Melgueiras */}
+      {tab === 'Melgueiras' && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="font-semibold text-stone-200">Melgueiras instaladas ({hiveMelgueiras.length})</h2>
+            {canTransfer && availableMelgueiras.length > 0 && (
+              <Button size="sm" onClick={() => { setInstallMelgId(''); setInstallMelgOpen(true); }}>
+                + Instalar melgueira
+              </Button>
+            )}
+          </div>
+          {hiveMelgueiras.length === 0 ? (
+            <p className="text-stone-500 text-center py-8">Nenhuma melgueira instalada nesta caixa</p>
+          ) : (
+            <div className="space-y-2">
+              {hiveMelgueiras.map((m) => (
+                <div key={m.local_id} className="bg-stone-900 border border-stone-800 rounded-xl px-4 py-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <button
+                        onClick={() => navigate(`/stock/melgueiras/${m.local_id}`)}
+                        className="font-medium text-amber-400 hover:text-amber-300 text-sm underline underline-offset-2"
+                      >
+                        {m.code}
+                      </button>
+                      {m.installed_at && (
+                        <p className="text-xs text-stone-500 mt-0.5">
+                          Instalada em {new Date(m.installed_at).toLocaleDateString('pt-BR')}
+                        </p>
+                      )}
+                    </div>
+                    {canTransfer && (
+                      <Button size="sm" variant="secondary" onClick={() =>
+                        removeMelgueira.mutate({ localId: m.local_id, performed_by: user.name })
+                      }>
+                        Retirar
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Tab: Transferências */}
       {tab === 'Transferências' && (
         <div className="space-y-3">
@@ -548,6 +604,50 @@ export function HiveDetail() {
 
       <Modal open={addFeeding} onClose={() => setAddFeeding(false)} title="Registrar Alimentação">
         <FeedingForm defaultHiveId={id} onSuccess={() => setAddFeeding(false)} onCancel={() => setAddFeeding(false)} />
+      </Modal>
+
+      <Modal open={installMelgOpen} onClose={() => setInstallMelgOpen(false)} title="Instalar Melgueira">
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-stone-300 mb-1">Melgueira *</label>
+            <select value={installMelgId} onChange={(e) => setInstallMelgId(e.target.value)}
+              className="w-full bg-stone-800 border border-stone-700 rounded-lg px-3 py-2 text-stone-100 text-sm focus:outline-none focus:border-amber-500">
+              <option value="">Selecione...</option>
+              {availableMelgueiras.map((m) => (
+                <option key={m.local_id} value={m.local_id}>{m.code}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-stone-300 mb-1">Data de instalação</label>
+            <input type="date" value={installMelgDate} onChange={(e) => setInstallMelgDate(e.target.value)}
+              className="w-full bg-stone-800 border border-stone-700 rounded-lg px-3 py-2 text-stone-100 text-sm focus:outline-none focus:border-amber-500" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-stone-300 mb-1">Instalado por</label>
+            <input type="text" value={installMelgBy} onChange={(e) => setInstallMelgBy(e.target.value)}
+              className="w-full bg-stone-800 border border-stone-700 rounded-lg px-3 py-2 text-stone-100 text-sm focus:outline-none focus:border-amber-500" />
+          </div>
+          <div className="flex gap-2">
+            <Button
+              onClick={async () => {
+                if (!installMelgId) return;
+                await installMelgueira.mutateAsync({
+                  localId: installMelgId,
+                  hive_local_id: hive.local_id,
+                  installed_at: installMelgDate,
+                  performed_by: installMelgBy,
+                });
+                setInstallMelgOpen(false);
+              }}
+              disabled={!installMelgId || installMelgueira.isPending}
+              className="flex-1"
+            >
+              {installMelgueira.isPending ? 'Instalando...' : 'Confirmar instalação'}
+            </Button>
+            <Button variant="ghost" onClick={() => setInstallMelgOpen(false)}>Cancelar</Button>
+          </div>
+        </div>
       </Modal>
 
       <Modal open={transferOpen} onClose={() => { setTransferOpen(false); setTransferError(null); }} title="Transferir Caixa">

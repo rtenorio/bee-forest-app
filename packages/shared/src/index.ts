@@ -14,6 +14,7 @@ export * from './types/partner';
 export * from './types/instruction';
 export * from './types/division';
 export * from './types/transfer';
+export * from './types/equipment';
 
 // Schemas
 export * from './schemas/auth.schema';

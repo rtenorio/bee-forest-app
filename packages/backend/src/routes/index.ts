@@ -18,6 +18,8 @@ import partnersRouter from './partners';
 import instructionsRouter from './instructions';
 import divisionsRouter from './divisions';
 import transfersRouter from './transfers';
+import equipmentRouter from './equipment';
+import melgueirasRouter from './melgueiras';
 import { authenticate } from '../middleware/authenticate';
 
 const router = Router();
@@ -44,5 +46,7 @@ router.use('/partners', authenticate, partnersRouter);
 router.use('/instructions', authenticate, instructionsRouter);
 router.use('/divisions', authenticate, divisionsRouter);
 router.use('/transfers', authenticate, transfersRouter);
+router.use('/equipment', authenticate, equipmentRouter);
+router.use('/melgueiras', authenticate, melgueirasRouter);
 
 export default router;
