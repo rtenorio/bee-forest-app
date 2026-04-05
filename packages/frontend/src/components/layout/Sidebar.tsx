@@ -12,7 +12,7 @@ const navItems: NavItem[] = [
   { to: '/apiaries', label: 'Meliponários', icon: '🏡', end: false, roles: ['socio', 'responsavel'] },
   { to: '/hives', label: 'Caixas de abelha', icon: '🏠', end: false },
   { to: '/inspections', label: 'Inspeções', icon: '🔍', end: false },
-  { to: '/instructions', label: 'Instruções', icon: '💬', end: false, badge: true },
+  { to: '/instructions', label: 'Orientações', icon: '💬', end: false, badge: true },
   { to: '/scan', label: 'Escanear QR', icon: '📷', end: false },
   { to: '/hives/print-labels', label: 'Etiquetas QR', icon: '🏷️', end: false, roles: ['socio', 'responsavel'] },
   { to: '/productions', label: 'Produções', icon: '🍯', end: false, roles: ['socio', 'responsavel'] },

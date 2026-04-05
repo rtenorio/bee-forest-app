@@ -214,6 +214,7 @@ const MANAGEMENT_CHIPS = [
   { value: 'troca_caixa', label: 'Troca de caixa' },
   { value: 'ajuste_vedacao', label: 'Ajuste de vedação' },
   { value: 'reorganizacao_interna', label: 'Reorganização interna' },
+  { value: 'divisao', label: 'Divisão' },
   { value: 'isolamento_colonia', label: 'Isolamento da colônia' },
   { value: 'uniao_colonia', label: 'União com outra colônia' },
   { value: 'encaminhada_avaliacao', label: 'Encaminhada para avaliação técnica' },
@@ -1081,7 +1082,7 @@ export function ColonyInspectionPage() {
             <ChipGroup options={MANAGEMENT_CHIPS} value={form.checklist.management_actions} onChange={(v) => setCL('management_actions', v)} color="sky" />
           </div>
           <div>
-            <FieldLabel>Descrição do manejo</FieldLabel>
+            <FieldLabel>Observações necessárias</FieldLabel>
             <Textarea
               value={form.checklist.management_description}
               onChange={(e) => setCL('management_description', e.target.value)}

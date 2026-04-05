@@ -103,7 +103,7 @@ function InstructionCard({
               <p className="text-sm text-stone-200 line-clamp-2">{instruction.text_content}</p>
             )}
             {instruction.audio_url && !instruction.text_content && (
-              <p className="text-sm text-amber-400 italic">Instrução em áudio</p>
+              <p className="text-sm text-amber-400 italic">Orientação em áudio</p>
             )}
           </div>
           <div className="flex flex-col items-end gap-1 shrink-0">
@@ -244,7 +244,7 @@ function CreateInstructionForm({ onClose }: { onClose: () => void }) {
 
   return (
     <form onSubmit={handleSubmit} className="bg-stone-900 border border-stone-800 rounded-xl p-4 space-y-4">
-      <h3 className="text-sm font-semibold text-stone-200">Nova instrução</h3>
+      <h3 className="text-sm font-semibold text-stone-200">Nova orientação</h3>
 
       <div>
         <label className="text-xs text-stone-400 block mb-1">Meliponário *</label>
@@ -352,7 +352,7 @@ export function InstructionsPage() {
     <div className="max-w-2xl mx-auto px-4 py-6 space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-stone-100">Instruções</h1>
+          <h1 className="text-xl font-bold text-stone-100">Orientações</h1>
           <p className="text-sm text-stone-400 mt-0.5">
             {isTratador ? 'Orientações recebidas' : 'Orientações enviadas aos tratadores'}
           </p>
@@ -362,7 +362,7 @@ export function InstructionsPage() {
             onClick={() => setShowCreate(true)}
             className="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white text-sm font-medium rounded-lg transition-colors"
           >
-            + Nova instrução
+            + Nova orientação
           </button>
         )}
       </div>
@@ -413,7 +413,7 @@ export function InstructionsPage() {
               isAuthor={instruction.author_id === user?.id}
               onMarkDone={() => markDone.mutate({ localId: instruction.local_id, status: 'done' })}
               onDelete={() => {
-                if (confirm('Excluir esta instrução?')) deleteInstruction.mutate(instruction.local_id);
+                if (confirm('Excluir esta orientação?')) deleteInstruction.mutate(instruction.local_id);
               }}
             />
           ))}
