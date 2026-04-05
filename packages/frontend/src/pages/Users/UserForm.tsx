@@ -16,6 +16,7 @@ interface Props {
 const ROLE_BADGE: Record<UserRole, string> = {
   master_admin: 'text-violet-300',
   socio:        'text-amber-300',
+  orientador:   'text-teal-300',
   responsavel:  'text-blue-300',
   tratador:     'text-emerald-300',
 };
@@ -73,7 +74,7 @@ export function UserForm({ initial, onSuccess, onCancel }: Props) {
             email: email.trim().toLowerCase(),
             phone: phone.trim() || undefined,
             observations: observations.trim(),
-            apiary_local_ids: role === 'responsavel' ? selectedApiaryIds : undefined,
+            apiary_local_ids: (role === 'responsavel' || role === 'orientador') ? selectedApiaryIds : undefined,
             hive_local_ids: role === 'tratador' ? selectedHiveIds : undefined,
           },
         });
@@ -85,7 +86,7 @@ export function UserForm({ initial, onSuccess, onCancel }: Props) {
           phone: phone.trim() || undefined,
           role,
           observations: observations.trim() || undefined,
-          apiary_local_ids: role === 'responsavel' ? selectedApiaryIds : [],
+          apiary_local_ids: (role === 'responsavel' || role === 'orientador') ? selectedApiaryIds : [],
           hive_local_ids: role === 'tratador' ? selectedHiveIds : [],
         };
         const result = await createUser.mutateAsync(payload);
@@ -202,8 +203,8 @@ export function UserForm({ initial, onSuccess, onCancel }: Props) {
         )}
       </div>
 
-      {/* Meliponários (Responsável) */}
-      {(isEdit ? initial?.role === 'responsavel' : role === 'responsavel') && apiaries.length > 0 && (
+      {/* Meliponários (Responsável / Orientador Técnico) */}
+      {(isEdit ? (initial?.role === 'responsavel' || initial?.role === 'orientador') : (role === 'responsavel' || role === 'orientador')) && apiaries.length > 0 && (
         <div>
           <label className="text-xs text-stone-400 block mb-2">Meliponários vinculados</label>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-40 overflow-y-auto">

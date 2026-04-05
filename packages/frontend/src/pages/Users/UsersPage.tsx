@@ -18,6 +18,7 @@ import { ROLE_LABELS, creatableRoles } from '@bee-forest/shared';
 const ROLE_BADGE: Record<UserRole, string> = {
   master_admin: 'bg-violet-900/40 text-violet-300 border border-violet-700/50',
   socio:        'bg-amber-900/40 text-amber-300 border border-amber-700/50',
+  orientador:   'bg-teal-900/40 text-teal-300 border border-teal-700/50',
   responsavel:  'bg-blue-900/40 text-blue-300 border border-blue-700/50',
   tratador:     'bg-emerald-900/40 text-emerald-300 border border-emerald-700/50',
 };
@@ -36,6 +37,7 @@ const FILTER_ROLES: Array<{ value: string; label: string }> = [
   { value: '', label: 'Todos os perfis' },
   { value: 'master_admin', label: 'Master Admin' },
   { value: 'socio', label: 'Sócio' },
+  { value: 'orientador', label: 'Orientador Técnico' },
   { value: 'responsavel', label: 'Responsável' },
   { value: 'tratador', label: 'Tratador' },
 ];

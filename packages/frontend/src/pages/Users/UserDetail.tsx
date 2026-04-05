@@ -20,6 +20,7 @@ import type { UserRole } from '@bee-forest/shared';
 const ROLE_BADGE_CLS: Record<UserRole, string> = {
   master_admin: 'bg-violet-900/40 text-violet-300 border-violet-700/50',
   socio:        'bg-amber-900/40 text-amber-300 border-amber-700/50',
+  orientador:   'bg-teal-900/40 text-teal-300 border-teal-700/50',
   responsavel:  'bg-blue-900/40 text-blue-300 border-blue-700/50',
   tratador:     'bg-emerald-900/40 text-emerald-300 border-emerald-700/50',
 };
@@ -183,19 +184,19 @@ export function UserDetail() {
       </Card>
 
       {/* Vínculos */}
-      {(user.role === 'responsavel' || user.role === 'tratador') && (
+      {(user.role === 'responsavel' || user.role === 'orientador' || user.role === 'tratador') && (
         <Card>
           <CardHeader>
             <CardTitle>
-              {user.role === 'responsavel' ? 'Meliponários Vinculados' : 'Caixas de abelha Vinculadas'}
+              {user.role === 'tratador' ? 'Caixas de abelha Vinculadas' : 'Meliponários Vinculados'}
             </CardTitle>
           </CardHeader>
           <div className="mt-3">
-            {(user.role === 'responsavel' ? apiaryNames : user.hive_local_ids).length === 0 ? (
+            {(user.role === 'tratador' ? user.hive_local_ids : apiaryNames).length === 0 ? (
               <p className="text-stone-500 text-sm">Nenhum vínculo configurado.</p>
             ) : (
               <div className="flex flex-wrap gap-2">
-                {(user.role === 'responsavel' ? apiaryNames : user.hive_local_ids).map((item, i) => (
+                {(user.role === 'tratador' ? user.hive_local_ids : apiaryNames).map((item, i) => (
                   <span key={i} className="text-xs bg-stone-800 text-stone-300 px-2 py-1 rounded-lg">
                     {item}
                   </span>

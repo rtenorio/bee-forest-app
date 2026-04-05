@@ -17,7 +17,7 @@ export interface LoginResponse {
 export const ROLE_LABELS: Record<UserRole, string> = {
   master_admin: 'Master Admin',
   socio: 'Sócio',
-  orientador: 'Orientador',
+  orientador: 'Orientador Técnico',
   responsavel: 'Responsável',
   tratador: 'Tratador',
 };
@@ -35,7 +35,7 @@ export const ROLE_RANK: Record<UserRole, number> = {
 export function creatableRoles(actorRole: UserRole): UserRole[] {
   if (actorRole === 'master_admin') return ['master_admin', 'socio', 'orientador', 'responsavel', 'tratador'];
   if (actorRole === 'socio') return ['orientador', 'responsavel', 'tratador'];
-  if (actorRole === 'responsavel') return ['tratador'];
+  if (actorRole === 'responsavel') return ['orientador', 'tratador'];
   return [];
 }
 
