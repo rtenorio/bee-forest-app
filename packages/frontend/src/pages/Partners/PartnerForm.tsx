@@ -94,8 +94,9 @@ export function PartnerForm({ initial, onSuccess, onCancel }: Props) {
             />
           </div>
           <div>
-            <label className="text-xs text-stone-400 block mb-1">CPF / CNPJ</label>
+            <label className="text-xs text-stone-400 block mb-1">CPF / CNPJ *</label>
             <input
+              required
               value={form.document ?? ''}
               onChange={(e) => set('document', e.target.value)}
               className="w-full bg-stone-800 border border-stone-700 text-stone-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-500"
@@ -119,8 +120,9 @@ export function PartnerForm({ initial, onSuccess, onCancel }: Props) {
             />
           </div>
           <div>
-            <label className="text-xs text-stone-400 block mb-1">WhatsApp</label>
+            <label className="text-xs text-stone-400 block mb-1">WhatsApp *</label>
             <input
+              required
               value={form.whatsapp ?? ''}
               onChange={(e) => set('whatsapp', e.target.value)}
               className="w-full bg-stone-800 border border-stone-700 text-stone-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-500"

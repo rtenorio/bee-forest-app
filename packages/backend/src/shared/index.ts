@@ -257,13 +257,13 @@ export const SyncPayloadSchema = z.object({
 
 export const PartnerCreateSchema = z.object({
   full_name: z.string().min(2),
-  document: z.string().optional().nullable(),
+  document: z.string().min(1),
   address: z.string().optional().nullable(),
   city: z.string().optional().nullable(),
   state: z.string().max(2).optional().nullable(),
   phone: z.string().optional().nullable(),
-  whatsapp: z.string().optional().nullable(),
-  email: z.string().email().optional().nullable(),
+  whatsapp: z.string().min(1),
+  email: z.string().optional().nullable(),
   bank_name: z.string().optional().nullable(),
   bank_agency: z.string().optional().nullable(),
   bank_account: z.string().optional().nullable(),
