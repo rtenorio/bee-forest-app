@@ -93,10 +93,12 @@ export function Sidebar({ mobile = false }: { mobile?: boolean }) {
             sidebarOpen ? 'translate-x-0' : '-translate-x-full'
           )}
         >
-          <div className="h-14 flex items-center px-4 border-b border-stone-800">
-            <div className="flex items-center gap-2">
-              <img src="/bee-icon.png" alt="Bee Forest" style={{ height: '52px', objectFit: 'contain' }} />
-              <span className="font-bold text-amber-400 text-base">Bee Forest</span>
+          <div className="border-b border-stone-800 pt-safe">
+            <div className="h-14 flex items-center px-4">
+              <div className="flex items-center gap-2">
+                <img src="/bee-icon.png" alt="Bee Forest" style={{ height: '52px', objectFit: 'contain' }} />
+                <span className="font-bold text-amber-400 text-base">Bee Forest</span>
+              </div>
             </div>
           </div>
           <nav className="flex-1 px-3 py-4 flex flex-col gap-1 overflow-y-auto">

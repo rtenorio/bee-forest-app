@@ -90,6 +90,15 @@
   }
 }
 
+/* Safe-area padding utilities for notch/Dynamic Island/home indicator */
+@utility pt-safe {
+  padding-top: env(safe-area-inset-top);
+}
+
+@utility pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
 @layer base {
   :root {
     --color-brand-50: #fffbeb;
