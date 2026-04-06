@@ -184,6 +184,8 @@ export function HarvestWizard() {
     return active.filter((h) => user.hive_local_ids?.includes(h.local_id) ?? false);
   }, [hives, user]);
 
+  console.log('[HarvestWizard] hives:', hives.length, 'accessibleHives:', accessibleHives.length, 'user.role:', user.role);
+
   const accessibleApiaries = useMemo(() => {
     const ids = new Set(accessibleHives.map((h) => h.apiary_local_id));
     return apiaries.filter((a) => ids.has(a.local_id));
