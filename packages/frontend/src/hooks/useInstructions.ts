@@ -95,11 +95,11 @@ export async function requestAudioUploadUrl(filename: string, contentType: strin
   });
 }
 
-export async function uploadAudioToR2(uploadUrl: string, blob: Blob): Promise<void> {
+export async function uploadAudioToR2(uploadUrl: string, blob: Blob, mimeType?: string): Promise<void> {
   const res = await fetch(uploadUrl, {
     method: 'PUT',
     body: blob,
-    headers: { 'Content-Type': blob.type },
+    headers: { 'Content-Type': mimeType || blob.type || 'audio/webm' },
   });
   if (!res.ok) {
     const text = await res.text();

@@ -30,11 +30,13 @@ function InstructionItem({ instruction, hiveLocalId }: { instruction: Instructio
     try {
       let audioUrl: string | null = null;
       if (audioBlob) {
+        const mimeType = audioBlob.type || 'audio/webm';
+        const ext = mimeType.includes('mp4') ? 'mp4' : mimeType.includes('ogg') ? 'ogg' : 'webm';
         const { uploadUrl, publicUrl } = await requestAudioUploadUrl(
-          `response-${Date.now()}.webm`,
-          'audio/webm'
+          `response-${Date.now()}.${ext}`,
+          mimeType
         );
-        await uploadAudioToR2(uploadUrl, audioBlob);
+        await uploadAudioToR2(uploadUrl, audioBlob, mimeType);
         audioUrl = publicUrl;
       }
       await createResponse.mutateAsync({
