@@ -101,5 +101,8 @@ export async function uploadAudioToR2(uploadUrl: string, blob: Blob): Promise<vo
     body: blob,
     headers: { 'Content-Type': blob.type },
   });
-  if (!res.ok) throw new Error('Falha ao fazer upload do áudio');
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Upload falhou: HTTP ${res.status} — ${text}`);
+  }
 }
