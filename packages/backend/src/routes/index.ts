@@ -21,6 +21,7 @@ import transfersRouter from './transfers';
 import equipmentRouter from './equipment';
 import melgueirasRouter from './melgueiras';
 import { authenticate } from '../middleware/authenticate';
+import { pool } from '../db/connection';
 
 const router = Router();
 
@@ -29,7 +30,6 @@ router.use('/auth', authRouter);
 router.use('/public', publicRouter);
 
 // TEMP: rodar migration secondary_role — remover após uso
-import { pool } from '../db/connection';
 router.get('/admin/run-migration', async (_req, res) => {
   try {
     await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS secondary_role VARCHAR(50) DEFAULT NULL');
