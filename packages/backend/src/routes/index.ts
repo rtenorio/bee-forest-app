@@ -29,11 +29,13 @@ const router = Router();
 router.use('/auth', authRouter);
 router.use('/public', publicRouter);
 
-// TEMP: rodar migration secondary_role — remover após uso
+// TEMP: resetar triggers duplicados e reexecutar migrations — remover após uso
 router.get('/admin/run-migration', async (_req, res) => {
   try {
-    await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS secondary_role VARCHAR(50) DEFAULT NULL');
-    res.json({ ok: true, message: 'Migration secondary_role aplicada com sucesso.' });
+    await pool.query('DROP TRIGGER IF EXISTS hive_instructions_updated_at ON hive_instructions');
+    await pool.query('DROP TRIGGER IF EXISTS hive_divisions_updated_at ON hive_divisions');
+    await pool.query(`DELETE FROM schema_migrations WHERE filename IN ('0017_instructions.sql', '0018_divisions.sql')`);
+    res.json({ ok: true, message: 'Triggers removidos e migrations 0017/0018 resetadas com sucesso.' });
   } catch (err) {
     res.status(500).json({ ok: false, error: String(err) });
   }
