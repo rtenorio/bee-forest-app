@@ -23,6 +23,7 @@ CREATE INDEX IF NOT EXISTS hd_origin_idx   ON hive_divisions(hive_origin_local_i
 CREATE INDEX IF NOT EXISTS hd_apiary_idx   ON hive_divisions(apiary_origin_local_id);
 CREATE INDEX IF NOT EXISTS hd_status_idx   ON hive_divisions(status);
 
+DROP TRIGGER IF EXISTS hive_divisions_updated_at ON hive_divisions;
 CREATE TRIGGER hive_divisions_updated_at
   BEFORE UPDATE ON hive_divisions
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();
