@@ -201,10 +201,11 @@ export function HarvestWizard() {
   );
 
   const searchResults = useMemo(() => {
-    if (!data.hive_search.trim()) return [];
-    const q = data.hive_search.toLowerCase();
-    return accessibleHives
-      .filter((h) => h.code.toLowerCase().includes(q))
+    const q = data.hive_search.trim().toLowerCase();
+    const filtered = q
+      ? accessibleHives.filter((h) => h.code.toLowerCase().includes(q))
+      : accessibleHives;
+    return filtered
       .sort((a, b) => a.code.localeCompare(b.code, undefined, { numeric: true }))
       .slice(0, 10);
   }, [accessibleHives, data.hive_search]);
@@ -414,29 +415,27 @@ export function HarvestWizard() {
                 placeholder="ex: CME-001"
               />
               {errors.hive_local_ids && <p className="text-xs text-red-400 mt-1">{errors.hive_local_ids}</p>}
-              {searchResults.length > 0 && (
-                <div className="mt-2 space-y-1">
-                  {searchResults.map((h) => (
-                    <button
-                      key={h.local_id}
-                      type="button"
-                      onClick={() => toggleHive(h.local_id)}
-                      className="w-full flex items-center justify-between px-4 py-2.5 rounded-xl border border-stone-700 bg-stone-800/60 hover:border-amber-500/50 hover:bg-amber-500/10 transition-colors text-left"
-                    >
-                      <div>
-                        <p className="text-sm font-medium text-stone-100">{h.code}</p>
-                        <p className="text-xs text-stone-500">
-                          {apiaries.find((a) => a.local_id === h.apiary_local_id)?.name ?? ''}
-                        </p>
-                      </div>
-                      <span className="text-amber-400 text-xs">Selecionar →</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-              {data.hive_search.length > 1 && searchResults.length === 0 && (
-                <p className="text-stone-500 text-sm mt-2">Nenhuma caixa encontrada.</p>
-              )}
+              <div className="mt-2 space-y-1 max-h-72 overflow-y-auto">
+                {searchResults.map((h) => (
+                  <button
+                    key={h.local_id}
+                    type="button"
+                    onClick={() => toggleHive(h.local_id)}
+                    className="w-full flex items-center justify-between px-4 py-2.5 rounded-xl border border-stone-700 bg-stone-800/60 hover:border-amber-500/50 hover:bg-amber-500/10 transition-colors text-left"
+                  >
+                    <div>
+                      <p className="text-sm font-medium text-stone-100">{h.code}</p>
+                      <p className="text-xs text-stone-500">
+                        {apiaries.find((a) => a.local_id === h.apiary_local_id)?.name ?? ''}
+                      </p>
+                    </div>
+                    <span className="text-amber-400 text-xs">Selecionar →</span>
+                  </button>
+                ))}
+                {searchResults.length === 0 && (
+                  <p className="text-stone-500 text-sm py-4 text-center">Nenhuma caixa encontrada.</p>
+                )}
+              </div>
             </div>
           ) : (
             /* ── Selected hive + volume input ── */
