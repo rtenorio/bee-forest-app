@@ -12,7 +12,7 @@ import {
   uploadAudioToR2,
 } from '@/hooks/useInstructions';
 import { AudioRecorder } from '@/pages/Instructions/AudioRecorder';
-import { useHive } from '@/hooks/useHives';
+import { useHive, useHives } from '@/hooks/useHives';
 import { useApiaries } from '@/hooks/useApiaries';
 import { useAuthStore } from '@/store/authStore';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
@@ -401,11 +401,13 @@ export function ColonyInspectionPage() {
 
   const user = useAuthStore((s) => s.user);
   const { data: hive, isLoading: hiveLoading } = useHive(hive_local_id);
+  const { data: hives = [] } = useHives();
   const { data: apiaries = [] } = useApiaries();
   const { data: inspections = [] } = useInspections(hive_local_id || undefined);
   const createInspection = useCreateInspection();
   const createDivision = useCreateDivision();
 
+  const [selectedId, setSelectedId] = useState('');
   const [form, setForm] = useState<FormState>(() => makeDefault(user?.name ?? ''));
   const [weatherLoading, setWeatherLoading] = useState(false);
   const [savingDraft, setSavingDraft] = useState(false);
@@ -617,6 +619,56 @@ export function ColonyInspectionPage() {
   };
 
   // ─────────────────────────────────────────────────────────────────────────
+
+  if (!hive_local_id) {
+    const activeHives = hives.filter((h) => h.status === 'active');
+    return (
+      <div className="min-h-screen bg-stone-950">
+        <header className="sticky top-0 z-30 bg-stone-950/95 backdrop-blur-sm border-b border-stone-800">
+          <div className="max-w-3xl mx-auto px-4 py-4 flex items-center gap-4">
+            <button
+              type="button"
+              onClick={() => navigate(-1)}
+              className="w-9 h-9 flex items-center justify-center rounded-full border border-stone-700 text-stone-400 hover:text-stone-200 hover:border-stone-600 transition-colors flex-shrink-0"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+            <div className="flex-1 min-w-0">
+              <h1 className="text-lg font-bold text-stone-100 leading-tight">Inspeção da Colônia</h1>
+              <p className="text-xs text-stone-500">Selecione a caixa para iniciar</p>
+            </div>
+          </div>
+        </header>
+        <div className="max-w-3xl mx-auto px-4 py-6">
+          <div className="bg-stone-900 border border-stone-800 rounded-2xl px-6 py-5 space-y-4">
+            <div>
+              <p className="text-sm font-medium text-stone-300 mb-2">Caixa de abelha *</p>
+              <select
+                value={selectedId}
+                onChange={(e) => setSelectedId(e.target.value)}
+                className="w-full bg-stone-800 border border-stone-700 rounded-lg px-3 py-2 text-stone-100 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+              >
+                <option value="">Selecionar caixa...</option>
+                {activeHives.map((h) => (
+                  <option key={h.local_id} value={h.local_id}>{h.code}</option>
+                ))}
+              </select>
+            </div>
+            <button
+              type="button"
+              disabled={!selectedId}
+              onClick={() => navigate(`/inspections/new?hive=${selectedId}`, { replace: true })}
+              className="w-full py-3 rounded-xl bg-amber-600 hover:bg-amber-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold text-sm transition-colors"
+            >
+              Iniciar Inspeção
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (hiveLoading) {
     return (
