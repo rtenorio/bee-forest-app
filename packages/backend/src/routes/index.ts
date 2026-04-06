@@ -28,6 +28,17 @@ const router = Router();
 router.use('/auth', authRouter);
 router.use('/public', publicRouter);
 
+// TEMP: rodar migration secondary_role — remover após uso
+import { pool } from '../db/connection';
+router.get('/admin/run-migration', async (_req, res) => {
+  try {
+    await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS secondary_role VARCHAR(50) DEFAULT NULL');
+    res.json({ ok: true, message: 'Migration secondary_role aplicada com sucesso.' });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: String(err) });
+  }
+});
+
 // Protected routes
 router.use('/apiaries', authenticate, apiariesRouter);
 router.use('/hives', authenticate, hivesRouter);
