@@ -727,7 +727,11 @@ export function InspectionWizard() {
 
   const hiveOptions = [
     { value: '', label: 'Selecionar caixa...' },
-    ...accessibleHives.map((h) => ({ value: h.local_id, label: h.code })),
+    ...[...accessibleHives].sort((a, b) => {
+      const seqA = parseInt(/CME-(\d+)-/i.exec(a.code)?.[1] ?? '0', 10);
+      const seqB = parseInt(/CME-(\d+)-/i.exec(b.code)?.[1] ?? '0', 10);
+      return seqA - seqB;
+    }).map((h) => ({ value: h.local_id, label: h.code })),
   ];
 
   const [step, setStep] = useState(0);
@@ -886,6 +890,12 @@ export function InspectionWizard() {
   }
 
   if (hivesLoading) return <div className="flex justify-center py-16"><Spinner /></div>;
+  if (!hivesLoading && hives.length === 0) return (
+    <div className="flex flex-col items-center justify-center py-16 gap-3">
+      <p className="text-stone-400 text-sm text-center">Nenhuma caixa encontrada.<br/>Sincronize os dados e tente novamente.</p>
+      <button onClick={() => navigate(-1)} className="text-amber-400 text-sm underline">Voltar</button>
+    </div>
+  );
 
   const currentHive = hives.find((h) => h.local_id === data.hive_local_id);
   const currentApiary = currentHive
@@ -1350,8 +1360,8 @@ export function InspectionWizard() {
       </header>
 
       {/* Content */}
-      <main className="flex-1 px-4 py-6 max-w-2xl mx-auto w-full">
-        <div className="mb-6">
+      <main className="flex-1 h-0 overflow-y-auto px-4 py-4 max-w-2xl mx-auto w-full">
+        <div className="mb-4">
           <h2 className="text-xl font-bold text-stone-100">{stepInfo.icon} {stepInfo.label}</h2>
           <p className="text-stone-500 text-sm mt-0.5">{stepInfo.desc}</p>
         </div>
