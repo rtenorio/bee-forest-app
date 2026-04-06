@@ -21,25 +21,12 @@ import transfersRouter from './transfers';
 import equipmentRouter from './equipment';
 import melgueirasRouter from './melgueiras';
 import { authenticate } from '../middleware/authenticate';
-import { pool } from '../db/connection';
 
 const router = Router();
 
 // Public routes (sem autenticação)
 router.use('/auth', authRouter);
 router.use('/public', publicRouter);
-
-// TEMP: resetar triggers duplicados e reexecutar migrations — remover após uso
-router.get('/admin/run-migration', async (_req, res) => {
-  try {
-    await pool.query('DROP TRIGGER IF EXISTS hive_instructions_updated_at ON hive_instructions');
-    await pool.query('DROP TRIGGER IF EXISTS hive_divisions_updated_at ON hive_divisions');
-    await pool.query(`DELETE FROM schema_migrations WHERE filename IN ('0017_instructions.sql', '0018_divisions.sql')`);
-    res.json({ ok: true, message: 'Triggers removidos e migrations 0017/0018 resetadas com sucesso.' });
-  } catch (err) {
-    res.status(500).json({ ok: false, error: String(err) });
-  }
-});
 
 // Protected routes
 router.use('/apiaries', authenticate, apiariesRouter);
