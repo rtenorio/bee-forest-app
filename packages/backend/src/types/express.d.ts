@@ -8,6 +8,7 @@ declare global {
         name: string;
         email: string;
         role: UserRole;
+        secondary_role?: UserRole | null;
         apiary_local_ids: string[];
         hive_local_ids: string[];
       };

@@ -22,8 +22,8 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
     const payload = jwt.verify(token, config.jwtSecret) as unknown as JwtPayload;
 
     // Load user from DB to get fresh data + assignments
-    const users = await query<{ id: number; name: string; email: string; role: UserRole; active: boolean }>(
-      'SELECT id, name, email, role, active FROM users WHERE id = $1 AND deleted_at IS NULL',
+    const users = await query<{ id: number; name: string; email: string; role: UserRole; secondary_role: UserRole | null; active: boolean }>(
+      'SELECT id, name, email, role, secondary_role, active FROM users WHERE id = $1 AND deleted_at IS NULL',
       [payload.sub]
     );
 
@@ -50,6 +50,25 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
         [user.id]
       );
       hive_local_ids = rows.map((r) => r.hive_local_id);
+    }
+
+    // Carregar assignments do secondary_role e unir sem duplicatas
+    if (user.secondary_role === 'responsavel' || user.secondary_role === 'orientador') {
+      const rows = await query<{ apiary_local_id: string }>(
+        'SELECT apiary_local_id FROM user_apiary_assignments WHERE user_id = $1',
+        [user.id]
+      );
+      const extra = rows.map((r) => r.apiary_local_id);
+      apiary_local_ids = [...new Set([...apiary_local_ids, ...extra])];
+    }
+
+    if (user.secondary_role === 'tratador') {
+      const rows = await query<{ hive_local_id: string }>(
+        'SELECT hive_local_id FROM user_hive_assignments WHERE user_id = $1',
+        [user.id]
+      );
+      const extra = rows.map((r) => r.hive_local_id);
+      hive_local_ids = [...new Set([...hive_local_ids, ...extra])];
     }
 
     req.user = { ...user, apiary_local_ids, hive_local_ids };

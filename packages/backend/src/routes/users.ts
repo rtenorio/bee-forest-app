@@ -57,7 +57,7 @@ async function logAudit(
 
 async function fetchUserWithAssignments(userId: number) {
   const user = await queryOne<Record<string, unknown>>(
-    `SELECT u.id, u.name, u.email, u.phone, u.role, u.active,
+    `SELECT u.id, u.name, u.email, u.phone, u.role, u.secondary_role, u.active,
             u.observations, u.created_by, u.created_at,
             cb.name AS created_by_name
      FROM users u
@@ -94,7 +94,7 @@ router.get('/', async (req, res, next) => {
 
     const placeholders = visible.map((_, i) => `$${i + 1}`).join(', ');
     const users = await query<Record<string, unknown>>(
-      `SELECT u.id, u.name, u.email, u.phone, u.role, u.active,
+      `SELECT u.id, u.name, u.email, u.phone, u.role, u.secondary_role, u.active,
               u.observations, u.created_by, u.created_at,
               cb.name AS created_by_name,
               COALESCE(
@@ -122,7 +122,7 @@ router.post('/', validate(CreateUserSchema), async (req, res, next) => {
   const client = await pool.connect();
   try {
     const actorRole = req.user!.role;
-    const { name, email, phone, role, apiary_local_ids = [], hive_local_ids = [], observations = '' } = req.body;
+    const { name, email, phone, role, secondary_role = null, apiary_local_ids = [], hive_local_ids = [], observations = '' } = req.body;
 
     if (!canCreate(actorRole, role)) {
       res.status(403).json({ error: `Perfil ${actorRole} não pode criar usuários com perfil ${role}` });
@@ -141,10 +141,10 @@ router.post('/', validate(CreateUserSchema), async (req, res, next) => {
     await client.query('BEGIN');
 
     const result = await client.query(
-      `INSERT INTO users (name, email, phone, password_hash, role, observations, created_by)
-       VALUES ($1, $2, $3, $4, $5::user_role, $6, $7)
-       RETURNING id, name, email, phone, role, active, observations, created_by, created_at`,
-      [name, email.toLowerCase().trim(), phone ?? null, hash, role, observations, req.user!.id]
+      `INSERT INTO users (name, email, phone, password_hash, role, secondary_role, observations, created_by)
+       VALUES ($1, $2, $3, $4, $5::user_role, $6, $7, $8)
+       RETURNING id, name, email, phone, role, secondary_role, active, observations, created_by, created_at`,
+      [name, email.toLowerCase().trim(), phone ?? null, hash, role, secondary_role ?? null, observations, req.user!.id]
     );
     const newUser = result.rows[0];
     const userId = newUser.id as number;
@@ -206,7 +206,7 @@ router.put('/:id', validate(UpdateUserSchema), async (req, res, next) => {
   try {
     const actorRole = req.user!.role;
     const userId = parseInt(req.params.id as string, 10);
-    const { name, email, phone, observations, apiary_local_ids, hive_local_ids } = req.body;
+    const { name, email, phone, observations, secondary_role, apiary_local_ids, hive_local_ids } = req.body;
 
     const existing = await queryOne<{ role: string }>(
       'SELECT role FROM users WHERE id = $1 AND deleted_at IS NULL', [userId]
@@ -220,12 +220,13 @@ router.put('/:id', validate(UpdateUserSchema), async (req, res, next) => {
 
     await client.query(
       `UPDATE users SET
-         name         = COALESCE($1, name),
-         email        = COALESCE($2, email),
-         phone        = COALESCE($3, phone),
-         observations = COALESCE($4, observations)
-       WHERE id = $5`,
-      [name, email?.toLowerCase().trim() ?? null, phone ?? null, observations ?? null, userId]
+         name           = COALESCE($1, name),
+         email          = COALESCE($2, email),
+         phone          = COALESCE($3, phone),
+         observations   = COALESCE($4, observations),
+         secondary_role = CASE WHEN $5::text IS NOT NULL THEN $5 ELSE secondary_role END
+       WHERE id = $6`,
+      [name, email?.toLowerCase().trim() ?? null, phone ?? null, observations ?? null, secondary_role !== undefined ? (secondary_role || null) : null, userId]
     );
 
     if (apiary_local_ids !== undefined) {

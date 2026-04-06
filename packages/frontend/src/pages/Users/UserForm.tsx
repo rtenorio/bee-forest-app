@@ -30,6 +30,7 @@ export function UserForm({ initial, onSuccess, onCancel }: Props) {
   const [phone, setPhone] = useState(initial?.phone ?? '');
   const [role, setRole] = useState<UserRole>(initial?.role ?? creatableRoles(actorRole)[0]);
   const [observations, setObservations] = useState(initial?.observations ?? '');
+  const [secondaryRole, setSecondaryRole] = useState<string>(initial?.secondary_role ?? '');
   const [selectedApiaryIds, setSelectedApiaryIds] = useState<string[]>(initial?.apiary_local_ids ?? []);
   const [selectedHiveIds, setSelectedHiveIds] = useState<string[]>(initial?.hive_local_ids ?? []);
   const [generatedPassword, setGeneratedPassword] = useState<string | null>(null);
@@ -74,6 +75,7 @@ export function UserForm({ initial, onSuccess, onCancel }: Props) {
             email: email.trim().toLowerCase(),
             phone: phone.trim() || undefined,
             observations: observations.trim(),
+            secondary_role: secondaryRole || undefined,
             apiary_local_ids: (role === 'responsavel' || role === 'orientador') ? selectedApiaryIds : undefined,
             hive_local_ids: role === 'tratador' ? selectedHiveIds : undefined,
           },
@@ -85,6 +87,7 @@ export function UserForm({ initial, onSuccess, onCancel }: Props) {
           email: email.trim().toLowerCase(),
           phone: phone.trim() || undefined,
           role,
+          secondary_role: secondaryRole || undefined,
           observations: observations.trim() || undefined,
           apiary_local_ids: (role === 'responsavel' || role === 'orientador') ? selectedApiaryIds : [],
           hive_local_ids: role === 'tratador' ? selectedHiveIds : [],
@@ -201,6 +204,21 @@ export function UserForm({ initial, onSuccess, onCancel }: Props) {
             </div>
           </div>
         )}
+      </div>
+
+      {/* Perfil secundário */}
+      <div>
+        <label className="text-xs text-stone-400 block mb-1">Perfil secundário</label>
+        <select
+          value={secondaryRole}
+          onChange={(e) => setSecondaryRole(e.target.value)}
+          className="w-full bg-stone-800 border border-stone-700 text-stone-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-500"
+        >
+          <option value="">Nenhum</option>
+          {(['socio', 'orientador', 'responsavel', 'tratador'] as UserRole[]).map((r) => (
+            <option key={r} value={r}>{ROLE_LABELS[r]}</option>
+          ))}
+        </select>
       </div>
 
       {/* Meliponários (Responsável / Orientador Técnico) */}

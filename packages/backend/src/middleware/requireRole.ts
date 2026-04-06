@@ -13,7 +13,8 @@ export function requireRole(...roles: UserRole[]) {
     }
     // master_admin bypassa qualquer restrição de role
     if (req.user.role === 'master_admin') { next(); return; }
-    if (!roles.includes(req.user.role)) {
+    const secondary = req.user.secondary_role;
+    if (!roles.includes(req.user.role) && !(secondary && roles.includes(secondary))) {
       res.status(403).json({ error: 'Sem permissão para esta operação' });
       return;
     }
