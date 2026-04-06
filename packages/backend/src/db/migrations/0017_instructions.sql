@@ -23,6 +23,7 @@ CREATE INDEX IF NOT EXISTS hi_hive_idx    ON hive_instructions(hive_local_id);
 CREATE INDEX IF NOT EXISTS hi_author_idx  ON hive_instructions(author_id);
 CREATE INDEX IF NOT EXISTS hi_status_idx  ON hive_instructions(status);
 
+DROP TRIGGER IF EXISTS hive_instructions_updated_at ON hive_instructions;
 CREATE TRIGGER hive_instructions_updated_at
   BEFORE UPDATE ON hive_instructions
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();
