@@ -87,7 +87,7 @@ function HarvestCard({
           {harvest.total_volume_ml !== null && (
             <span className="text-xs text-amber-400 font-medium">
               🫙 {harvest.total_volume_ml >= 1000
-                ? `${(harvest.total_volume_ml / 1000).toFixed(2)} L`
+                ? `${(Number(harvest.total_volume_ml) / 1000).toFixed(2)} L`
                 : `${harvest.total_volume_ml.toLocaleString('pt-BR')} mL`}
             </span>
           )}
@@ -211,12 +211,12 @@ export function HarvestsPage() {
           </Card>
           <Card className="text-center">
             <p className="text-xl font-bold text-amber-300">
-              {totalVolume >= 1000 ? `${(totalVolume / 1000).toFixed(2)} L` : `${totalVolume.toFixed(0)} mL`}
+              {Number(totalVolume) >= 1000 ? `${(Number(totalVolume) / 1000).toFixed(2)} L` : `${Number(totalVolume).toFixed(0)} mL`}
             </p>
             <p className="text-xs text-stone-500">Volume total</p>
           </Card>
           <Card className="text-center">
-            <p className="text-xl font-bold text-amber-200">{totalWeight.toFixed(2)} kg</p>
+            <p className="text-xl font-bold text-amber-200">{Number(totalWeight).toFixed(2)} kg</p>
             <p className="text-xs text-stone-500">Peso total</p>
           </Card>
           {maturacaoCount > 0 && (

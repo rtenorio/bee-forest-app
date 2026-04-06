@@ -154,7 +154,7 @@ export function HarvestDetail() {
                 <p className="text-xs text-stone-500">Volume total</p>
                 <p className="text-xl font-bold text-amber-400">
                   {harvest.total_volume_ml >= 1000
-                    ? `${(harvest.total_volume_ml / 1000).toFixed(2)} L`
+                    ? `${(Number(harvest.total_volume_ml) / 1000).toFixed(2)} L`
                     : `${harvest.total_volume_ml.toLocaleString('pt-BR')} mL`}
                 </p>
               </div>
