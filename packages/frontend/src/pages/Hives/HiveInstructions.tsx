@@ -45,6 +45,9 @@ function InstructionItem({ instruction, hiveLocalId }: { instruction: Instructio
       setReplyText('');
       setAudioBlob(null);
       setOpen(false);
+    } catch (err) {
+      console.error('Erro no upload:', err);
+      alert('Erro: ' + (err instanceof Error ? err.message : String(err)));
     } finally {
       setUploading(false);
     }
