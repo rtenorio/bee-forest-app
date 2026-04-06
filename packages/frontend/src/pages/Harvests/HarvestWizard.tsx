@@ -179,9 +179,9 @@ export function HarvestWizard() {
 
   const accessibleHives = useMemo(() => {
     const active = hives.filter((h) => h.status === 'active');
-    if (user.role === 'socio') return active;
+    if (user.role === 'master_admin' || user.role === 'socio' || user.role === 'orientador') return active;
     if (user.role === 'responsavel') return active.filter((h) => user.apiary_local_ids.includes(h.apiary_local_id));
-    return active.filter((h) => user.hive_local_ids.includes(h.local_id));
+    return active.filter((h) => user.hive_local_ids?.includes(h.local_id) ?? false);
   }, [hives, user]);
 
   const accessibleApiaries = useMemo(() => {
