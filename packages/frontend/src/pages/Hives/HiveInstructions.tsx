@@ -47,7 +47,7 @@ function InstructionItem({ instruction, hiveLocalId }: { instruction: Instructio
       setOpen(false);
     } catch (err) {
       console.error('Erro no upload:', err);
-      alert('Erro: ' + (err instanceof Error ? err.message : String(err)));
+      alert('Erro detalhado: ' + JSON.stringify(err, Object.getOwnPropertyNames(err)));
     } finally {
       setUploading(false);
     }
