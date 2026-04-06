@@ -8,15 +8,6 @@ const R2_BUCKET      = process.env.R2_BUCKET_NAME      ?? 'bee-forest-audio';
 const R2_ENDPOINT    = process.env.R2_ENDPOINT         ?? `https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com`;
 const R2_PUBLIC_URL  = process.env.R2_PUBLIC_URL       ?? ''; // ex: https://pub-xxx.r2.dev
 
-console.log('[R2 CONFIG]', {
-  account: R2_ACCOUNT_ID ? R2_ACCOUNT_ID.substring(0, 8) + '...' : 'VAZIO',
-  bucket: R2_BUCKET,
-  endpoint: R2_ENDPOINT,
-  publicUrl: R2_PUBLIC_URL ? 'OK' : 'VAZIO',
-  hasKey: !!R2_ACCESS_KEY,
-  hasSecret: !!R2_SECRET_KEY,
-});
-
 export const r2 = new S3Client({
   region: 'auto',
   endpoint: R2_ENDPOINT,
