@@ -13,19 +13,46 @@ import { todayISO, nowISO } from '@/utils/dates';
 import type { InspectionChecklist } from '@bee-forest/shared';
 
 const DEFAULT_CHECKLIST: InspectionChecklist = {
-  population_strength: 3,
-  brood_present: true,
-  queen_seen: null,
-  honey_stores: 'adequate',
-  pollen_stores: 'adequate',
-  pests_observed: [],
-  diseases_observed: [],
-  propolis_quality: null,
-  temperament: null,
-  box_condition: null,
-  interventions: [],
-  needs_feeding: false,
-  needs_space_expansion: false,
+  inspection_type: null,
+  time_of_day: null,
+  precipitation_observed: false,
+  weather_feel: [],
+  perceived_bloom: null,
+  weather_notes: '',
+  activity_level: null,
+  activity_observations: [],
+  entry_notes: '',
+  colony_strength: null,
+  strength_observations: [],
+  honey_stores: null,
+  pollen_stores: null,
+  food_observations: [],
+  food_notes: '',
+  brood_status: null,
+  brood_observations: [],
+  brood_notes: '',
+  box_observations: [],
+  box_notes: '',
+  invaders: [],
+  other_invader_text: '',
+  weakness_signs: [],
+  internal_changes: [],
+  odor_description: '',
+  sanitary_severity: null,
+  productive_potential: null,
+  productive_observations: [],
+  productive_notes: '',
+  management_actions: [],
+  management_description: '',
+  materials_used: '',
+  tasks: [],
+  overall_status: null,
+  recommendation: null,
+  next_inspection_days: null,
+  final_summary: '',
+  generate_alert: false,
+  notify_technician: false,
+  mark_priority: false,
 };
 
 const WEATHER_OPTIONS = [
@@ -58,7 +85,7 @@ export function InspectionForm({ defaultHiveId, onSuccess, onCancel }: Props) {
     inspector_name: inspectorName,
     weight_kg: '',
     temperature_c: '',
-    weather: '',
+    sky_condition: '',
     notes: '',
     next_inspection_due: '',
   });
@@ -78,7 +105,7 @@ export function InspectionForm({ defaultHiveId, onSuccess, onCancel }: Props) {
       checklist,
       weight_kg: form.weight_kg ? parseFloat(form.weight_kg) : null,
       temperature_c: form.temperature_c ? parseFloat(form.temperature_c) : null,
-      weather: form.weather || null,
+      sky_condition: form.sky_condition || null,
       notes: form.notes,
       photos: [],
       next_inspection_due: form.next_inspection_due || null,
@@ -131,8 +158,8 @@ export function InspectionForm({ defaultHiveId, onSuccess, onCancel }: Props) {
         <Select
           label="Clima"
           options={WEATHER_OPTIONS}
-          value={form.weather}
-          onChange={(e) => set('weather', e.target.value)}
+          value={form.sky_condition}
+          onChange={(e) => set('sky_condition', e.target.value)}
         />
       </div>
 

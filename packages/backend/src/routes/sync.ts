@@ -70,6 +70,19 @@ router.post('/', validate(SyncPayloadSchema), async (req, res, next) => {
         Object.entries(payload).filter(([k]) => !CLIENT_ONLY.has(k))
       );
 
+      // Inspection-specific: resolve server FK and populate denormalized tasks column
+      if (table === 'inspections') {
+        if (dbPayload['hive_local_id']) {
+          const hiveRes = await client.query(
+            'SELECT server_id FROM hives WHERE local_id = $1',
+            [dbPayload['hive_local_id']]
+          );
+          if (hiveRes.rows[0]) dbPayload['hive_id'] = hiveRes.rows[0].server_id;
+        }
+        const checklist = dbPayload['checklist'] as Record<string, unknown> | undefined;
+        dbPayload['tasks'] = JSON.stringify((checklist?.['tasks'] as unknown[]) ?? []);
+      }
+
       if (existing.rows.length === 0) {
         // honey_batches require a server-generated code — create one if missing
         if (table === 'honey_batches' && !dbPayload['code']) {
@@ -108,6 +121,20 @@ router.post('/', validate(SyncPayloadSchema), async (req, res, next) => {
         } else {
           const serverRecord = await client.query(`SELECT * FROM ${table} WHERE local_id = $1`, [item.entity_local_id]);
           conflicts.push({ local_id: item.entity_local_id, server_record: serverRecord.rows[0], conflict_type: 'UPDATE_UPDATE' });
+        }
+      }
+
+      // Sync tabela normalizada inspection_tasks
+      if (table === 'inspections') {
+        const checklist = (payload as Record<string, unknown>)['checklist'] as Record<string, unknown> | undefined;
+        const tasks = ((checklist?.['tasks'] as Array<Record<string, unknown>>) ?? []);
+        await client.query('DELETE FROM inspection_tasks WHERE inspection_local_id = $1', [item.entity_local_id]);
+        for (const t of tasks) {
+          await client.query(
+            `INSERT INTO inspection_tasks (inspection_local_id, task_label, custom_text, due_date, assignee_name, priority)
+             VALUES ($1,$2,$3,$4,$5,$6)`,
+            [item.entity_local_id, t['label'], t['custom_text'] ?? '', t['due_date'] ?? null, t['assignee_name'] ?? '', t['priority'] ?? 'normal']
+          );
         }
       }
     }
