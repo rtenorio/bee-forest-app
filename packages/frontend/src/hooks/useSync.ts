@@ -17,8 +17,14 @@ import type { SyncResult, EntityType } from '@bee-forest/shared';
 const CLIENT_ID_KEY = 'bee-forest-client-id';
 const INITIAL_PULL_KEY = 'bee-forest-initial-pull-done';
 
-// Items that fail this many times get purged from the queue to prevent infinite loops
-const MAX_ATTEMPTS = 5;
+// Items that fail this many times trigger the purge/alert logic
+const MAX_ATTEMPTS = 10;
+
+// Types that can be silently discarded after MAX_ATTEMPTS failures
+const PURGEABLE_TYPES = new Set(['qr_scan', 'feeding', 'production']);
+
+// Types that must never be purged — alert the user and wait for manual retry
+const CRITICAL_TYPES = new Set(['inspection', 'harvest', 'division', 'transfer']);
 
 function getClientId(): string {
   let id = localStorage.getItem(CLIENT_ID_KEY);
@@ -44,7 +50,7 @@ const repoMap = {
 export function useSync() {
   const isOnline = useOnlineStatus();
   const queryClient = useQueryClient();
-  const { isSyncing, setIsSyncing, setPendingCount, setLastSyncAt, setConflicts, setLastError } = useSyncStore();
+  const { isSyncing, setIsSyncing, setPendingCount, setLastSyncAt, setConflicts, setLastError, setFailedCriticalItems } = useSyncStore();
   const syncIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const refreshPendingCount = useCallback(async () => {
@@ -61,13 +67,23 @@ export function useSync() {
     try {
       let items = await syncQueueRepo.getAll();
 
-      // Purge items that have exceeded the max retry threshold
-      const stuckItems = items.filter((i) => i.attempts >= MAX_ATTEMPTS);
-      if (stuckItems.length > 0) {
-        console.warn(`[Sync] Removing ${stuckItems.length} stuck item(s) after ${MAX_ATTEMPTS}+ failed attempts`);
-        await syncQueueRepo.removeMany(stuckItems.map((i) => i.id));
-        items = items.filter((i) => i.attempts < MAX_ATTEMPTS);
+      // Separate stuck items by criticality
+      const stuckPurgeable = items.filter((i) => i.attempts >= MAX_ATTEMPTS && PURGEABLE_TYPES.has(i.entity_type));
+      const stuckCritical  = items.filter((i) => i.attempts >= MAX_ATTEMPTS && CRITICAL_TYPES.has(i.entity_type));
+
+      // Purge non-critical stuck items silently
+      if (stuckPurgeable.length > 0) {
+        console.warn(`[Sync] Removing ${stuckPurgeable.length} stuck non-critical item(s) after ${MAX_ATTEMPTS}+ failed attempts`);
+        await syncQueueRepo.removeMany(stuckPurgeable.map((i) => i.id));
       }
+
+      // Critical stuck items: keep in queue, surface to the user
+      setFailedCriticalItems(
+        stuckCritical.map((i) => ({ id: i.id, entity_type: i.entity_type, entity_local_id: i.entity_local_id }))
+      );
+
+      // Skip all stuck items in this sync cycle
+      items = items.filter((i) => i.attempts < MAX_ATTEMPTS);
 
       // Check IDB state once for both the early-exit decision and lastSyncAt override
       const existingApiaries = await apiaryRepo.getAll();
@@ -171,5 +187,17 @@ export function useSync() {
     refreshPendingCount();
   }, [refreshPendingCount]);
 
-  return { triggerSync, refreshPendingCount };
+  const retryFailed = useCallback(async () => {
+    const allItems = await syncQueueRepo.getAll();
+    const criticalStuckIds = allItems
+      .filter((i) => i.attempts >= MAX_ATTEMPTS && CRITICAL_TYPES.has(i.entity_type))
+      .map((i) => i.id);
+    if (criticalStuckIds.length > 0) {
+      await syncQueueRepo.resetAttempts(criticalStuckIds);
+    }
+    setFailedCriticalItems([]);
+    await triggerSync();
+  }, [triggerSync, setFailedCriticalItems]);
+
+  return { triggerSync, refreshPendingCount, retryFailed };
 }

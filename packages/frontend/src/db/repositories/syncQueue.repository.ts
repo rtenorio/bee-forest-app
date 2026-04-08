@@ -35,6 +35,18 @@ export const syncQueueRepo = {
     });
   },
 
+  async resetAttempts(ids: string[]): Promise<void> {
+    const db = await getDb();
+    const tx = db.transaction('sync_queue', 'readwrite');
+    await Promise.all(
+      ids.map(async (id) => {
+        const item = await tx.store.get(id);
+        if (item) await tx.store.put({ ...item, attempts: 0, last_error: null });
+      })
+    );
+    await tx.done;
+  },
+
   async clear(): Promise<void> {
     const db = await getDb();
     await db.clear('sync_queue');

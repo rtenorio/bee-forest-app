@@ -60,10 +60,51 @@ function SyncBanner() {
   return null;
 }
 
+const ENTITY_LABELS: Record<string, string> = {
+  inspection: 'inspeção',
+  harvest: 'colheita',
+  division: 'divisão',
+  transfer: 'transferência',
+};
+
+function pluralize(label: string, count: number): string {
+  if (count === 1) return `1 ${label}`;
+  const plural = label === 'inspeção' ? 'inspeções' : `${label}s`;
+  return `${count} ${plural}`;
+}
+
+function SyncFailedBanner({ onRetry }: { onRetry: () => void }) {
+  const { failedCriticalItems } = useSyncStore();
+
+  if (failedCriticalItems.length === 0) return null;
+
+  const counts = failedCriticalItems.reduce<Record<string, number>>((acc, item) => {
+    acc[item.entity_type] = (acc[item.entity_type] ?? 0) + 1;
+    return acc;
+  }, {});
+
+  const summary = Object.entries(counts)
+    .map(([type, count]) => pluralize(ENTITY_LABELS[type] ?? type, count))
+    .join(', ');
+
+  return (
+    <div className="bg-red-950 border-b border-red-700 text-red-200 px-4 py-2.5 text-sm flex items-center justify-between gap-3">
+      <span className="flex items-center gap-2">
+        <span>🔴</span>
+        <span>{summary} não {failedCriticalItems.length === 1 ? 'pôde ser sincronizada' : 'puderam ser sincronizadas'}.</span>
+      </span>
+      <button
+        onClick={onRetry}
+        className="shrink-0 underline font-semibold text-red-100 hover:text-white"
+      >
+        Tentar novamente
+      </button>
+    </div>
+  );
+}
+
 export function AppShell() {
-  // Initialize sync
-  useSync();
-  // Restore IDB from server when empty (fresh install / cache cleared)
+  const { retryFailed } = useSync();
   useInitialLoad();
 
   return (
@@ -75,6 +116,7 @@ export function AppShell() {
         <TopBar />
         <UpdateBanner />
         <SyncBanner />
+        <SyncFailedBanner onRetry={retryFailed} />
 
         <main className="flex-1 overflow-y-auto pb-[calc(4rem+env(safe-area-inset-bottom))] lg:pb-0">
           <div className="max-w-7xl mx-auto px-4 py-6">
