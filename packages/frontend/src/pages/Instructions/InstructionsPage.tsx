@@ -20,6 +20,44 @@ import { ptBR } from 'date-fns/locale';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
+type PriorityOption = 'urgent' | '7' | '15' | 'custom';
+
+function calcDueDate(days: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+function PriorityBadge({ priorityDays }: { priorityDays: number | null | undefined }) {
+  if (priorityDays === undefined) return null;
+  if (priorityDays === null) {
+    return (
+      <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-red-900/40 text-red-400 border border-red-700/40">
+        🔴 Urgente
+      </span>
+    );
+  }
+  if (priorityDays <= 7) {
+    return (
+      <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-orange-900/40 text-orange-400 border border-orange-700/40">
+        🟠 {priorityDays}d
+      </span>
+    );
+  }
+  if (priorityDays <= 15) {
+    return (
+      <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-yellow-900/40 text-yellow-400 border border-yellow-700/40">
+        🟡 {priorityDays}d
+      </span>
+    );
+  }
+  return (
+    <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-blue-900/40 text-blue-400 border border-blue-700/40">
+      🔵 {priorityDays}d
+    </span>
+  );
+}
+
 function StatusBadge({ status }: { status: string }) {
   return (
     <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
@@ -90,6 +128,7 @@ function InstructionCard({
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap mb-1">
               <StatusBadge status={instruction.status} />
+              <PriorityBadge priorityDays={instruction.priority_days} />
               <span className="text-xs text-stone-500">
                 {instruction.hive_local_id ? 'Por caixa' : 'Por meliponário'}
               </span>
@@ -110,6 +149,11 @@ function InstructionCard({
             <span className="text-xs text-stone-500">
               {format(new Date(instruction.created_at), "d MMM, HH:mm", { locale: ptBR })}
             </span>
+            {instruction.due_date && (
+              <span className="text-xs text-orange-400">
+                Prazo: {format(new Date(instruction.due_date + 'T12:00:00'), "d MMM", { locale: ptBR })}
+              </span>
+            )}
             <span className="text-xs text-stone-600">{instruction.author_name}</span>
           </div>
         </div>
@@ -208,6 +252,8 @@ function CreateInstructionForm({ onClose }: { onClose: () => void }) {
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [priority, setPriority] = useState<PriorityOption>('urgent');
+  const [customDays, setCustomDays] = useState('');
   const { data: hives } = useHives(selectedApiary || undefined);
   const createInstruction = useCreateInstruction();
 
@@ -227,12 +273,23 @@ function CreateInstructionForm({ onClose }: { onClose: () => void }) {
         await uploadAudioToR2(uploadUrl, audioBlob);
         audioUrl = publicUrl;
       }
+      let priority_days: number | null = null;
+      let due_date: string | null = null;
+      if (priority === '7') { priority_days = 7; due_date = calcDueDate(7); }
+      else if (priority === '15') { priority_days = 15; due_date = calcDueDate(15); }
+      else if (priority === 'custom') {
+        const d = parseInt(customDays, 10);
+        if (d > 0) { priority_days = d; due_date = calcDueDate(d); }
+      }
+
       await createInstruction.mutateAsync({
         local_id: uuidv4(),
         apiary_local_id: selectedApiary,
         hive_local_id: selectedHive || null,
         text_content: textContent.trim() || null,
         audio_url: audioUrl,
+        priority_days,
+        due_date,
       });
       onClose();
     } catch (err: unknown) {
@@ -280,6 +337,41 @@ function CreateInstructionForm({ onClose }: { onClose: () => void }) {
           </select>
         </div>
       )}
+
+      <div>
+        <label className="text-xs text-stone-400 block mb-2">Prioridade</label>
+        <div className="grid grid-cols-2 gap-2">
+          {([
+            { value: 'urgent', label: '🔴 Urgente' },
+            { value: '7',      label: '🟠 7 dias' },
+            { value: '15',     label: '🟡 15 dias' },
+            { value: 'custom', label: '🔵 Personalizado' },
+          ] as { value: PriorityOption; label: string }[]).map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => setPriority(opt.value)}
+              className={`px-3 py-2 rounded-lg text-sm border transition-colors ${
+                priority === opt.value
+                  ? 'bg-amber-600 border-amber-500 text-white font-medium'
+                  : 'bg-stone-800 border-stone-700 text-stone-300 hover:bg-stone-700'
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+        {priority === 'custom' && (
+          <input
+            type="number"
+            min="1"
+            value={customDays}
+            onChange={(e) => setCustomDays(e.target.value)}
+            placeholder="Número de dias"
+            className="mt-2 w-full bg-stone-800 border border-stone-700 text-stone-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-500"
+          />
+        )}
+      </div>
 
       <div>
         <label className="text-xs text-stone-400 block mb-1">Texto (opcional se houver áudio)</label>

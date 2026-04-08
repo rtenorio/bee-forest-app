@@ -338,6 +338,8 @@ export const InstructionCreateSchema = z.object({
   hive_local_id: z.string().uuid().optional().nullable(),
   text_content: z.string().optional().nullable(),
   audio_url: z.string().optional().nullable(),
+  priority_days: z.number().int().positive().optional().nullable(),
+  due_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable(),
 });
 
 export const InstructionStatusSchema = z.object({

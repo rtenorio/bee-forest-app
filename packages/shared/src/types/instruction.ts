@@ -11,6 +11,8 @@ export interface Instruction {
   text_content: string | null;
   audio_url: string | null;
   status: InstructionStatus;
+  priority_days: number | null;
+  due_date: string | null;
   response_count: number;
   created_at: string;
   updated_at: string;
@@ -33,6 +35,8 @@ export interface InstructionCreate {
   hive_local_id?: string | null;
   text_content?: string | null;
   audio_url?: string | null;
+  priority_days?: number | null;
+  due_date?: string | null;
 }
 
 export interface InstructionResponseCreate {

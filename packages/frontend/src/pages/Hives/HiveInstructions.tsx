@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import {
   useInstructions,
   useUpdateInstructionStatus,
@@ -9,6 +11,39 @@ import {
 } from '@/hooks/useInstructions';
 import { AudioRecorder } from '@/pages/Instructions/AudioRecorder';
 import type { Instruction } from '@bee-forest/shared';
+
+function PriorityBadge({ priorityDays, dueDate }: { priorityDays: number | null | undefined; dueDate?: string | null }) {
+  if (priorityDays === undefined) return null;
+  if (priorityDays === null) {
+    return (
+      <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-red-900/50 text-red-300 border border-red-700/50">
+        🔴 Urgente
+      </span>
+    );
+  }
+  const dueDateLabel = dueDate
+    ? ` · Prazo: ${format(new Date(dueDate + 'T12:00:00'), "d MMM", { locale: ptBR })}`
+    : '';
+  if (priorityDays <= 7) {
+    return (
+      <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-orange-900/50 text-orange-300 border border-orange-700/50">
+        🟠 {priorityDays} dias{dueDateLabel}
+      </span>
+    );
+  }
+  if (priorityDays <= 15) {
+    return (
+      <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-yellow-900/50 text-yellow-300 border border-yellow-700/50">
+        🟡 {priorityDays} dias{dueDateLabel}
+      </span>
+    );
+  }
+  return (
+    <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-blue-900/50 text-blue-300 border border-blue-700/50">
+      🔵 {priorityDays} dias{dueDateLabel}
+    </span>
+  );
+}
 
 interface Props {
   hiveLocalId: string;
@@ -59,6 +94,7 @@ function InstructionItem({ instruction, hiveLocalId }: { instruction: Instructio
     <div className="bg-stone-800 border border-amber-700/40 rounded-2xl overflow-hidden">
       {/* Conteúdo da instrução */}
       <div className="p-4 space-y-3">
+        <PriorityBadge priorityDays={instruction.priority_days} dueDate={instruction.due_date} />
         {instruction.text_content && (
           <p className="text-base text-stone-100 leading-relaxed">{instruction.text_content}</p>
         )}

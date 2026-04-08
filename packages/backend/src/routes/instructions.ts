@@ -110,7 +110,7 @@ router.get('/', async (req, res, next) => {
       p++;
     }
 
-    sql += ' ORDER BY i.created_at DESC';
+    sql += ' ORDER BY (i.priority_days IS NULL) DESC, i.due_date ASC NULLS LAST, i.created_at DESC';
 
     const rows = await query(sql, params);
     res.json(rows);
@@ -129,14 +129,14 @@ router.post('/', validate(InstructionCreateSchema), async (req, res, next) => {
       return;
     }
 
-    const { local_id, apiary_local_id, hive_local_id, text_content, audio_url } = req.body;
+    const { local_id, apiary_local_id, hive_local_id, text_content, audio_url, priority_days, due_date } = req.body;
 
     const row = await queryOne<{ id: number; local_id: string; status: string; created_at: string }>(
       `INSERT INTO hive_instructions
-         (local_id, apiary_local_id, hive_local_id, author_id, text_content, audio_url)
-       VALUES ($1, $2, $3, $4, $5, $6)
+         (local_id, apiary_local_id, hive_local_id, author_id, text_content, audio_url, priority_days, due_date)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
        RETURNING *`,
-      [local_id, apiary_local_id, hive_local_id ?? null, user.id, text_content ?? null, audio_url ?? null]
+      [local_id, apiary_local_id, hive_local_id ?? null, user.id, text_content ?? null, audio_url ?? null, priority_days ?? null, due_date ?? null]
     );
 
     res.status(201).json(row);
