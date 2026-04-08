@@ -64,6 +64,7 @@ export function HiveDetail() {
   const [installMelgBy, setInstallMelgBy]     = useState(user.name);
 
   const { data: divisions = [] } = useDivisions({ hive_local_id: id });
+  const { data: originDivisions = [] } = useDivisions({ hive_new_local_id: id });
   const { data: transfers = [] } = useTransfers({ hive_local_id: id });
   const { data: apiaries = [] } = useApiaries();
   const { data: hiveMelgueiras = [] } = useMelgueiras({ hive_local_id: id });
@@ -460,6 +461,63 @@ export function HiveDetail() {
       {/* Tab: Divisões */}
       {tab === 'Divisões' && (
         <div className="space-y-3">
+
+          {/* Genealogia */}
+          {(originDivisions.length > 0 || divisions.some((d) => d.status === 'realizada' && d.hive_new_code)) && (
+            <Card>
+              <CardHeader><CardTitle>🌳 Genealogia</CardTitle></CardHeader>
+              <div className="mt-3 space-y-3">
+
+                {/* Caixa mãe */}
+                {originDivisions[0] && (
+                  <div>
+                    <p className="text-xs text-stone-500 mb-1">Origem (caixa mãe)</p>
+                    <button
+                      onClick={() => navigate(`/hives/${originDivisions[0].hive_origin_local_id}`)}
+                      className="flex items-center gap-2 text-sm text-amber-400 hover:text-amber-300 transition-colors"
+                    >
+                      <span className="text-stone-500">←</span>
+                      <span className="font-medium">{originDivisions[0].hive_origin_code ?? originDivisions[0].hive_origin_local_id}</span>
+                      {originDivisions[0].apiary_origin_name && (
+                        <span className="text-xs text-stone-500">({originDivisions[0].apiary_origin_name})</span>
+                      )}
+                      <span className="text-xs text-stone-600">
+                        · divisão em {new Date(originDivisions[0].identified_at).toLocaleDateString('pt-BR')}
+                      </span>
+                    </button>
+                  </div>
+                )}
+
+                {/* Caixas filhas */}
+                {divisions.some((d) => d.status === 'realizada' && d.hive_new_code) && (
+                  <div>
+                    <p className="text-xs text-stone-500 mb-1">Filhas geradas</p>
+                    <div className="space-y-1">
+                      {divisions
+                        .filter((d) => d.status === 'realizada' && d.hive_new_local_id)
+                        .map((d) => (
+                          <button
+                            key={d.local_id}
+                            onClick={() => navigate(`/hives/${d.hive_new_local_id}`)}
+                            className="flex items-center gap-2 text-sm text-emerald-400 hover:text-emerald-300 transition-colors"
+                          >
+                            <span className="text-stone-500">→</span>
+                            <span className="font-medium">{d.hive_new_code ?? d.hive_new_local_id}</span>
+                            {d.apiary_destination_name && d.apiary_destination_name !== hive?.apiary_local_id && (
+                              <span className="text-xs text-stone-500">({d.apiary_destination_name})</span>
+                            )}
+                            <span className="text-xs text-stone-600">
+                              · {d.divided_at ? new Date(d.divided_at).toLocaleDateString('pt-BR') : new Date(d.identified_at).toLocaleDateString('pt-BR')}
+                            </span>
+                          </button>
+                        ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </Card>
+          )}
+
           <div className="flex items-center justify-between">
             <h2 className="font-semibold text-stone-200">Histórico de Divisões ({divisions.length})</h2>
             <Button size="sm" onClick={() => navigate('/divisions')}>Ver todas</Button>

@@ -43,7 +43,7 @@ const SELECT_BASE = `
 
 router.get('/', async (req, res, next) => {
   try {
-    const { status, apiary_local_id, hive_local_id } = req.query as Record<string, string | undefined>;
+    const { status, apiary_local_id, hive_local_id, hive_new_local_id } = req.query as Record<string, string | undefined>;
     const accessibleApiaryIds = await resolveAccessibleApiaryIds(req);
 
     let sql = SELECT_BASE;
@@ -67,6 +67,7 @@ router.get('/', async (req, res, next) => {
     if (status) { sql += ` AND d.status = $${p}`; params.push(status); p++; }
     if (apiary_local_id) { sql += ` AND d.apiary_origin_local_id = $${p}`; params.push(apiary_local_id); p++; }
     if (hive_local_id) { sql += ` AND d.hive_origin_local_id = $${p}`; params.push(hive_local_id); p++; }
+    if (hive_new_local_id) { sql += ` AND d.hive_new_local_id = $${p}`; params.push(hive_new_local_id); p++; }
 
     sql += ' ORDER BY d.identified_at DESC, d.created_at DESC';
     res.json(await query(sql, params));
