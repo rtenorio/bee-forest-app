@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { query, queryOne, pool } from '../db/connection';
 import { validate } from '../middleware/validate';
 import { requireRole } from '../middleware/requireRole';
+import { checkResourceOwnership } from '../middleware/ownership';
 import { HiveCreateSchema, HiveUpdateSchema } from '../shared';
 import type { Request } from 'express';
 
@@ -61,7 +62,7 @@ router.get('/', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-router.get('/:local_id/qrcode', async (req, res, next) => {
+router.get('/:local_id/qrcode', checkResourceOwnership('hive'), async (req, res, next) => {
   try {
     const row = await queryOne<{ qr_code: string | null }>(
       'SELECT qr_code FROM hives WHERE local_id = $1 AND deleted_at IS NULL',
@@ -139,7 +140,7 @@ router.post('/', requireRole('socio', 'responsavel'), validate(HiveCreateSchema)
   } catch (err) { next(err); }
 });
 
-router.put('/:local_id', requireRole('socio', 'responsavel'), validate(HiveUpdateSchema), async (req, res, next) => {
+router.put('/:local_id', requireRole('socio', 'responsavel'), checkResourceOwnership('hive'), validate(HiveUpdateSchema), async (req, res, next) => {
   try {
     const { species_local_id, code, status, installation_date, box_type, modules_count, wood_type, wood_type_other, notes } = req.body;
     const species = species_local_id ? await queryOne<{ server_id: number }>('SELECT server_id FROM species WHERE local_id = $1', [species_local_id]) : undefined;
@@ -158,7 +159,7 @@ router.put('/:local_id', requireRole('socio', 'responsavel'), validate(HiveUpdat
   } catch (err) { next(err); }
 });
 
-router.delete('/:local_id', requireRole('socio', 'responsavel'), async (req, res, next) => {
+router.delete('/:local_id', requireRole('socio', 'responsavel'), checkResourceOwnership('hive'), async (req, res, next) => {
   try {
     const row = await queryOne(
       'UPDATE hives SET deleted_at = NOW() WHERE local_id = $1 AND deleted_at IS NULL RETURNING local_id',

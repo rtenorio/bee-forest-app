@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { query, queryOne } from '../db/connection';
 import { validate } from '../middleware/validate';
 import { requireRole } from '../middleware/requireRole';
+import { checkResourceOwnership } from '../middleware/ownership';
 import { ProductionCreateSchema, ProductionUpdateSchema } from '../shared';
 
 const router = Router();
@@ -43,7 +44,7 @@ router.get('/', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-router.get('/:local_id', async (req, res, next) => {
+router.get('/:local_id', checkResourceOwnership('production'), async (req, res, next) => {
   try {
     const row = await queryOne('SELECT * FROM productions WHERE local_id = $1 AND deleted_at IS NULL', [req.params.local_id]);
     if (!row) { res.status(404).json({ error: 'Produção não encontrada' }); return; }
@@ -64,7 +65,7 @@ router.post('/', validate(ProductionCreateSchema), async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-router.put('/:local_id', validate(ProductionUpdateSchema), async (req, res, next) => {
+router.put('/:local_id', checkResourceOwnership('production'), validate(ProductionUpdateSchema), async (req, res, next) => {
   try {
     const { product_type, quantity_g, harvested_at, quality_grade, notes } = req.body;
     const row = await queryOne(
@@ -80,7 +81,7 @@ router.put('/:local_id', validate(ProductionUpdateSchema), async (req, res, next
   } catch (err) { next(err); }
 });
 
-router.delete('/:local_id', async (req, res, next) => {
+router.delete('/:local_id', checkResourceOwnership('production'), async (req, res, next) => {
   try {
     const row = await queryOne(
       'UPDATE productions SET deleted_at = NOW() WHERE local_id = $1 AND deleted_at IS NULL RETURNING local_id',

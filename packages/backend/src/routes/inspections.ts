@@ -4,6 +4,7 @@ import { pool, query, queryOne } from '../db/connection';
 import type { PoolClient } from 'pg';
 import { validate } from '../middleware/validate';
 import { requireRole } from '../middleware/requireRole';
+import { checkResourceOwnership } from '../middleware/ownership';
 import { InspectionCreateSchema, InspectionUpdateSchema } from '../shared';
 import type { Request } from 'express';
 
@@ -143,7 +144,7 @@ router.post('/', validate(InspectionCreateSchema), async (req, res, next) => {
   }
 });
 
-router.put('/:local_id', requireRole('socio', 'responsavel'), validate(InspectionUpdateSchema), async (req, res, next) => {
+router.put('/:local_id', requireRole('socio', 'responsavel'), checkResourceOwnership('inspection'), validate(InspectionUpdateSchema), async (req, res, next) => {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -200,7 +201,7 @@ router.put('/:local_id', requireRole('socio', 'responsavel'), validate(Inspectio
   }
 });
 
-router.delete('/:local_id', requireRole('socio', 'responsavel'), async (req, res, next) => {
+router.delete('/:local_id', requireRole('socio', 'responsavel'), checkResourceOwnership('inspection'), async (req, res, next) => {
   try {
     const row = await queryOne(
       'UPDATE inspections SET deleted_at = NOW() WHERE local_id = $1 AND deleted_at IS NULL RETURNING local_id',

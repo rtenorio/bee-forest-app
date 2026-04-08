@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { query, queryOne } from '../db/connection';
 import { validate } from '../middleware/validate';
 import { requireRole } from '../middleware/requireRole';
+import { checkResourceOwnership } from '../middleware/ownership';
 import {
   MelgueiraCreateSchema,
   MelgueiraUpdateSchema,
@@ -45,7 +46,7 @@ router.get('/', async (req, res, next) => {
 
 // ── GET /api/melgueiras/:local_id ─────────────────────────────────────────────
 
-router.get('/:local_id', async (req, res, next) => {
+router.get('/:local_id', checkResourceOwnership('melgueira'), async (req, res, next) => {
   try {
     const row = await queryOne<Melgueira>(
       SELECT_BASE + ' AND m.local_id = $1',
@@ -95,6 +96,7 @@ router.post(
 router.patch(
   '/:local_id',
   requireRole('master_admin', 'socio', 'responsavel'),
+  checkResourceOwnership('melgueira'),
   validate(MelgueiraUpdateSchema),
   async (req, res, next) => {
     try {
@@ -132,6 +134,7 @@ router.patch(
 router.patch(
   '/:local_id/instalar',
   requireRole('master_admin', 'socio', 'responsavel'),
+  checkResourceOwnership('melgueira'),
   validate(MelgueiraInstallSchema),
   async (req, res, next) => {
     try {
@@ -174,6 +177,7 @@ router.patch(
 router.patch(
   '/:local_id/retirar',
   requireRole('master_admin', 'socio', 'responsavel'),
+  checkResourceOwnership('melgueira'),
   validate(MelgueiraRemoveSchema),
   async (req, res, next) => {
     try {
@@ -218,6 +222,7 @@ router.patch(
 router.delete(
   '/:local_id',
   requireRole('master_admin', 'socio'),
+  checkResourceOwnership('melgueira'),
   async (req, res, next) => {
     try {
       await query(

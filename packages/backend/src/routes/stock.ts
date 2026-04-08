@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { pool, query, queryOne } from '../db/connection';
 import { requireRole } from '../middleware/requireRole';
+import { checkResourceOwnership } from '../middleware/ownership';
 import { notifyUser } from '../services/notification.service';
 import type { Request } from 'express';
 
@@ -213,7 +214,7 @@ router.post('/items', requireRole('master_admin', 'socio', 'responsavel'), async
 
 // ── PUT /items/:local_id ──────────────────────────────────────────────────────
 
-router.put('/items/:local_id', requireRole('master_admin', 'socio', 'responsavel'), async (req, res, next) => {
+router.put('/items/:local_id', requireRole('master_admin', 'socio', 'responsavel'), checkResourceOwnership('stock_item'), async (req, res, next) => {
   try {
     const { name, min_quantity, notes, unit } = req.body;
     const row = await queryOne(

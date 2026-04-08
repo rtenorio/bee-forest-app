@@ -159,6 +159,12 @@ router.patch('/:id/status', validate(InstructionStatusSchema), async (req, res, 
     );
     if (!instruction) { res.status(404).json({ error: 'Instrução não encontrada' }); return; }
 
+    // Responsavel/orientador só pode alterar status de instruções do seu meliponário
+    if ((user.role === 'responsavel' || user.role === 'orientador') &&
+        !user.apiary_local_ids.includes(instruction.apiary_local_id)) {
+      res.status(403).json({ error: 'Sem permissão para esta instrução' }); return;
+    }
+
     // Tratador só pode marcar done suas próprias caixas
     if (user.role === 'tratador' && instruction.hive_local_id) {
       if (!user.hive_local_ids.includes(instruction.hive_local_id)) {

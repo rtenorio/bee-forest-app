@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { pool, query, queryOne } from '../db/connection';
 import { validate } from '../middleware/validate';
 import { requireRole } from '../middleware/requireRole';
+import { checkResourceOwnership } from '../middleware/ownership';
 import { HarvestCreateSchema, HarvestUpdateSchema } from '../shared';
 import { autoHarvestStockEntry } from './stock';
 import type { Request } from 'express';
@@ -182,7 +183,7 @@ router.post('/', validate(HarvestCreateSchema), async (req, res, next) => {
 // ── PUT /:local_id ────────────────────────────────────────────────────────────
 // Only sócio and responsável can edit
 
-router.put('/:local_id', requireRole('socio', 'responsavel'), validate(HarvestUpdateSchema), async (req, res, next) => {
+router.put('/:local_id', requireRole('socio', 'responsavel'), checkResourceOwnership('harvest'), validate(HarvestUpdateSchema), async (req, res, next) => {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -257,7 +258,7 @@ router.put('/:local_id', requireRole('socio', 'responsavel'), validate(HarvestUp
 
 // ── DELETE /:local_id ─────────────────────────────────────────────────────────
 
-router.delete('/:local_id', requireRole('socio', 'responsavel'), async (req, res, next) => {
+router.delete('/:local_id', requireRole('socio', 'responsavel'), checkResourceOwnership('harvest'), async (req, res, next) => {
   try {
     const row = await queryOne(
       'UPDATE harvests SET deleted_at = NOW() WHERE local_id = $1 AND deleted_at IS NULL RETURNING local_id',

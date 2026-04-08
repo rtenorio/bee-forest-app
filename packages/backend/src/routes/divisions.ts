@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { query, queryOne } from '../db/connection';
 import { validate } from '../middleware/validate';
 import { DivisionCreateSchema, DivisionUpdateSchema } from '../shared';
+import { checkResourceOwnership } from '../middleware/ownership';
 import type { Division } from '@bee-forest/shared';
 
 const router = Router();
@@ -76,7 +77,7 @@ router.get('/', async (req, res, next) => {
 
 // ── GET /api/divisions/:id ────────────────────────────────────────────────────
 
-router.get('/:id', async (req, res, next) => {
+router.get('/:id', checkResourceOwnership('division'), async (req, res, next) => {
   try {
     const row = await queryOne<Division>(
       SELECT_BASE + ' AND d.local_id = $1',
@@ -92,6 +93,17 @@ router.get('/:id', async (req, res, next) => {
 router.post('/', validate(DivisionCreateSchema), async (req, res, next) => {
   try {
     const { local_id, hive_origin_local_id, apiary_origin_local_id, identified_at, identified_by, notes } = req.body;
+
+    // Ownership check: responsavel/orientador must own the origin apiary; tratador must own the origin hive
+    const role = (req as any).user!.role;
+    if (role === 'responsavel' || role === 'orientador') {
+      if (!(req as any).user!.apiary_local_ids.includes(apiary_origin_local_id)) {
+        res.status(403).json({ error: 'Sem permissão para este meliponário' }); return;
+      }
+    }
+    if (role === 'tratador' && !(req as any).user!.hive_local_ids.includes(hive_origin_local_id)) {
+      res.status(403).json({ error: 'Sem permissão para esta caixa' }); return;
+    }
 
     // Deduplicate: skip if a pending division already exists for this hive today
     const existing = await queryOne<{ local_id: string }>(
@@ -114,7 +126,7 @@ router.post('/', validate(DivisionCreateSchema), async (req, res, next) => {
 
 // ── PATCH /api/divisions/:id ──────────────────────────────────────────────────
 
-router.patch('/:id', validate(DivisionUpdateSchema), async (req, res, next) => {
+router.patch('/:id', checkResourceOwnership('division'), validate(DivisionUpdateSchema), async (req, res, next) => {
   try {
     const { id } = req.params;
     const existing = await queryOne<Division>(
@@ -150,7 +162,7 @@ router.patch('/:id', validate(DivisionUpdateSchema), async (req, res, next) => {
 
 // ── DELETE /api/divisions/:id ─────────────────────────────────────────────────
 
-router.delete('/:id', async (req, res, next) => {
+router.delete('/:id', checkResourceOwnership('division'), async (req, res, next) => {
   try {
     const role = req.user!.role;
     if (!['master_admin', 'socio', 'responsavel'].includes(role)) {
