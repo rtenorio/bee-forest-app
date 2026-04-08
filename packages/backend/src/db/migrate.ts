@@ -3,7 +3,7 @@ import path from 'path';
 import bcrypt from 'bcryptjs';
 import { pool } from './connection';
 
-const MIGRATIONS = ['0000_init.sql', '0001_auth.sql', '0002_inspection_v2.sql', '0003_qr_codes.sql', '0004_harvests.sql', '0005_inspection_v3.sql', '0006_harvest_volumes.sql', '0007_user_management.sql', '0008_honey_batches.sql', '0009_hive_fields.sql', '0010_notifications.sql', '0011_stock.sql', '0012_partners.sql', '0013_inspection_copy_flag_and_cleanup.sql', '0014_hive_honey_super.sql', '0015_apiary_status_implantacao.sql', '0016_master_admin_role.sql', '0017_instructions.sql', '0018_divisions.sql', '0019_hive_transfers.sql', '0020_equipment_items.sql', '0021_secondary_role.sql'];
+const MIGRATIONS = ['0000_init.sql', '0001_auth.sql', '0002_inspection_v2.sql', '0003_qr_codes.sql', '0004_harvests.sql', '0005_inspection_v3.sql', '0006_harvest_volumes.sql', '0007_user_management.sql', '0008_honey_batches.sql', '0009_hive_fields.sql', '0010_notifications.sql', '0011_stock.sql', '0012_partners.sql', '0013_inspection_copy_flag_and_cleanup.sql', '0014_hive_honey_super.sql', '0015_apiary_status_implantacao.sql', '0016_master_admin_role.sql', '0017_instructions.sql', '0018_divisions.sql', '0019_hive_transfers.sql', '0020_equipment_items.sql', '0021_secondary_role.sql', '0022_instruction_priority.sql'];
 
 async function migrate() {
   const client = await pool.connect();
