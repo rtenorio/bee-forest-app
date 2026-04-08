@@ -7,6 +7,7 @@ import routes from './routes';
 import { errorHandler, notFound } from './middleware/errorHandler';
 import { pool } from './db/connection';
 import { version } from '../package.json';
+import * as Sentry from '@sentry/node';
 
 export function createApp() {
   const app = express();
@@ -29,6 +30,7 @@ export function createApp() {
   app.use('/api', routes);
 
   app.use(notFound);
+  Sentry.setupExpressErrorHandler(app);
   app.use(errorHandler);
 
   return app;
