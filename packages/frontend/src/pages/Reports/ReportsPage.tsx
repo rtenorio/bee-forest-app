@@ -20,8 +20,15 @@ const PEST_LABELS: Record<string, string> = {
   ants: 'Formigas', wax_moth: 'Traça da cera', lizards: 'Lagartos', spiders: 'Aranhas',
 };
 const DISEASE_LABELS: Record<string, string> = {
-  american_foulbrood: 'Loque americano', nosemosis: 'Nosemose',
-  chalkbrood: 'Cria giz', sacbrood: 'Cria ensacada', stonebrood: 'Cria pedra',
+  podridao_cria: 'Podridão de cria',
+  cria_seca: 'Cria seca',
+  fungo_cria: 'Fungo na cria',
+  fungo: 'Fungo',
+  mal_de_maio: 'Mal de maio',
+  deformidade_asa: 'Deformidade de asa',
+  microsporidiose: 'Microsporidiose',
+  nosemose: 'Nosemose',
+  pillagem: 'Pilhagem',
 };
 const PRODUCT_LABELS: Record<string, string> = {
   honey: 'Mel', propolis: 'Própolis', pollen: 'Pólen', wax: 'Cera',

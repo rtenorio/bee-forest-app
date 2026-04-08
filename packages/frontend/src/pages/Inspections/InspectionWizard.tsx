@@ -700,12 +700,12 @@ const STEPS = [
 ];
 
 const DISEASE_OPTIONS = [
-  { id: 'podridao_cria',   label: '💀 Podridão de cria' },
-  { id: 'nosemose',        label: 'Nosemose' },
-  { id: 'mal_de_maio',     label: 'Mal de maio' },
-  { id: 'pillagem',        label: '🏴‍☠️ Pilhagem' },
-  { id: 'cria_seca',       label: 'Cria seca' },
-  { id: 'fungo',           label: '🍄 Fungo' },
+  { id: 'podridao_cria',     label: '💀 Podridão de cria' },
+  { id: 'cria_seca',         label: 'Cria seca' },
+  { id: 'fungo_cria',        label: '🍄 Fungo na cria' },
+  { id: 'mal_de_maio',       label: 'Mal de maio' },
+  { id: 'deformidade_asa',   label: 'Deformidade de asa' },
+  { id: 'microsporidiose',   label: 'Microsporidiose' },
 ];
 
 // ─── Main wizard ──────────────────────────────────────────────────────────────

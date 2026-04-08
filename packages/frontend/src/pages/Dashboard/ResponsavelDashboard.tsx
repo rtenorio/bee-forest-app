@@ -22,8 +22,15 @@ const INVADER_LABELS: Record<string, string> = {
   besouros: 'Besouros', outros: 'Outros invasores',
 };
 const DISEASE_LABELS: Record<string, string> = {
-  american_foulbrood: 'Loque americano', nosemosis: 'Nosemose',
-  chalkbrood: 'Cria giz', sacbrood: 'Cria ensacada', stonebrood: 'Cria pedra',
+  podridao_cria: 'Podridão de cria',
+  cria_seca: 'Cria seca',
+  fungo_cria: 'Fungo na cria',
+  fungo: 'Fungo',
+  mal_de_maio: 'Mal de maio',
+  deformidade_asa: 'Deformidade de asa',
+  microsporidiose: 'Microsporidiose',
+  nosemose: 'Nosemose',
+  pillagem: 'Pilhagem',
 };
 
 export function ResponsavelDashboard() {
