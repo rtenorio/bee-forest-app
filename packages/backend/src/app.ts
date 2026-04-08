@@ -27,6 +27,10 @@ export function createApp() {
     }
   });
 
+  app.get('/health/sentry-test', (_req, _res, next) => {
+    next(new Error('Sentry test error - Bee Forest Backend'));
+  });
+
   app.use('/api', routes);
 
   app.use(notFound);
