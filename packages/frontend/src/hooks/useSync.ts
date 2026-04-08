@@ -92,11 +92,32 @@ export function useSync() {
       if (items.length === 0) {
         const initialPullDone = !!localStorage.getItem(INITIAL_PULL_KEY);
         if (!idbEmpty && initialPullDone) {
-          // Nothing to push and IDB already has data — nothing to do
-          setIsSyncing(false);
+          // Nothing to push — pull incremental changes from other users via the dedicated pull endpoint
+          const lastSyncAt = localStorage.getItem('bee-forest-last-sync');
+          const since = lastSyncAt ?? '1970-01-01T00:00:00.000Z';
+          const { token } = (await import('@/store/authStore')).useAuthStore.getState();
+          const pullResponse = await fetch(
+            `${import.meta.env.VITE_API_URL ?? ''}/api/sync/pull?since=${encodeURIComponent(since)}`,
+            { headers: token ? { Authorization: `Bearer ${token}` } : {} },
+          );
+          if (!pullResponse.ok) throw new Error(`Pull failed: ${pullResponse.status}`);
+          const { server_changes } = await pullResponse.json();
+          for (const change of server_changes) {
+            const repo = repoMap[change.entity_type as EntityType];
+            if (!repo) continue;
+            for (const record of change.records as Parameters<typeof repo.upsertFromServer>[0][]) {
+              await repo.upsertFromServer(record as never);
+            }
+          }
+          const now = new Date().toISOString();
+          setLastSyncAt(now);
+          localStorage.setItem('bee-forest-last-sync', now);
+          if (server_changes.some((c: { records: unknown[] }) => c.records.length > 0)) {
+            queryClient.invalidateQueries();
+          }
           return;
         }
-        // IDB is empty or initial pull hasn't run yet — proceed to pull all data
+        // IDB is empty or initial pull hasn't run yet — proceed to full sync below
       }
 
       // Force last_sync_at = null when IDB is empty so the server returns ALL records
