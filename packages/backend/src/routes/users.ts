@@ -15,8 +15,10 @@ const ROLE_RANK: Record<string, number> = {
 
 function rolesVisibleTo(actorRole: string): string[] {
   if (actorRole === 'master_admin') return ['master_admin', 'socio', 'orientador', 'responsavel', 'tratador'];
-  if (actorRole === 'socio') return ['orientador', 'responsavel', 'tratador'];
-  if (actorRole === 'responsavel') return ['tratador'];
+  if (actorRole === 'socio')        return ['orientador', 'responsavel', 'tratador'];
+  if (actorRole === 'responsavel')  return ['orientador', 'responsavel', 'tratador'];
+  if (actorRole === 'orientador')   return ['orientador', 'responsavel', 'tratador'];
+  if (actorRole === 'tratador')     return ['tratador'];
   return [];
 }
 
