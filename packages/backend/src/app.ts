@@ -5,6 +5,8 @@ import morgan from 'morgan';
 import { config } from './config';
 import routes from './routes';
 import { errorHandler, notFound } from './middleware/errorHandler';
+import { pool } from './db/connection';
+import { version } from '../package.json';
 
 export function createApp() {
   const app = express();
@@ -14,7 +16,15 @@ export function createApp() {
   app.use(express.json({ limit: '10mb' }));
   app.use(morgan(config.nodeEnv === 'production' ? 'combined' : 'dev'));
 
-  app.get('/health', (_req, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }));
+  app.get('/health', async (_req, res) => {
+    const timestamp = new Date().toISOString();
+    try {
+      await pool.query('SELECT 1');
+      res.status(200).json({ status: 'ok', database: 'connected', timestamp, version });
+    } catch {
+      res.status(503).json({ status: 'error', database: 'error', timestamp, version });
+    }
+  });
 
   app.use('/api', routes);
 
