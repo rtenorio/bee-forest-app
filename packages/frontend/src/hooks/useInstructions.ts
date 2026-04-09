@@ -89,7 +89,7 @@ export function useCreateInstructionResponse(instructionLocalId: string) {
 // ── Audio upload via R2 presigned URL ─────────────────────────────────────────
 
 export async function requestAudioUploadUrl(filename: string, contentType: string) {
-  return apiFetch<{ uploadUrl: string; publicUrl: string; key: string }>('/instructions/upload-url', {
+  return apiFetch<{ uploadUrl: string; readUrl: string; key: string }>('/instructions/upload-url', {
     method: 'POST',
     body: JSON.stringify({ filename, contentType }),
   });

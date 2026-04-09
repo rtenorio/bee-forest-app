@@ -131,14 +131,14 @@ router.post('/', validate(InstructionCreateSchema), async (req, res, next) => {
       return;
     }
 
-    const { local_id, apiary_local_id, hive_local_id, text_content, audio_url, priority_days, due_date } = req.body;
+    const { local_id, apiary_local_id, hive_local_id, text_content, audio_url, audio_key, priority_days, due_date } = req.body;
 
     const row = await queryOne<{ id: number; local_id: string; status: string; created_at: string }>(
       `INSERT INTO hive_instructions
-         (local_id, apiary_local_id, hive_local_id, author_id, text_content, audio_url, priority_days, due_date)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+         (local_id, apiary_local_id, hive_local_id, author_id, text_content, audio_url, audio_key, priority_days, due_date)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
        RETURNING *`,
-      [local_id, apiary_local_id, hive_local_id ?? null, user.id, text_content ?? null, audio_url ?? null, priority_days ?? null, due_date ?? null]
+      [local_id, apiary_local_id, hive_local_id ?? null, user.id, text_content ?? null, audio_url ?? null, audio_key ?? null, priority_days ?? null, due_date ?? null]
     );
 
     res.status(201).json(row);
@@ -235,7 +235,7 @@ router.post('/:id/responses', validate(InstructionResponseCreateSchema), async (
   try {
     const user = req.user!;
     const { id } = req.params;
-    const { local_id, text_content, audio_url } = req.body;
+    const { local_id, text_content, audio_url, audio_key } = req.body;
 
     const instruction = await queryOne<{ id: number }>(
       'SELECT id FROM hive_instructions WHERE local_id = $1 AND deleted_at IS NULL',
@@ -245,10 +245,10 @@ router.post('/:id/responses', validate(InstructionResponseCreateSchema), async (
 
     const row = await queryOne(
       `INSERT INTO hive_instruction_responses
-         (local_id, instruction_local_id, tratador_id, text_content, audio_url)
-       VALUES ($1, $2, $3, $4, $5)
+         (local_id, instruction_local_id, tratador_id, text_content, audio_url, audio_key)
+       VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING *`,
-      [local_id, id, user.id, text_content ?? null, audio_url ?? null]
+      [local_id, id, user.id, text_content ?? null, audio_url ?? null, audio_key ?? null]
     );
 
     // Auto-mark instruction as done when tratador responds

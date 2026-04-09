@@ -13,6 +13,7 @@ import {
   uploadAudioToR2,
 } from '@/hooks/useInstructions';
 import type { Instruction } from '@bee-forest/shared';
+import { useSignedUrl } from '@/hooks/useSignedUrl';
 import { useAuthStore } from '@/store/authStore';
 import { useUIStore } from '@/store/uiStore';
 import { AudioRecorder } from '@/components/inspection/AudioRecorder';
@@ -504,18 +505,20 @@ function OrientacaoCard({ instruction }: { instruction: Instruction }) {
   const { recording, blob, start, stop, clear } = useBlobRecorder();
   const markDone = useUpdateInstructionStatus();
   const createResponse = useCreateInstructionResponse(instruction.local_id);
+  const { url: signedAudioSrc } = useSignedUrl(instruction.audio_key);
+  const audioSrc = signedAudioSrc ?? instruction.audio_url;
 
   async function sendReply() {
     if (!replyText.trim() && !blob) return;
     setUploading(true);
     try {
-      let audioUrl: string | null = null;
+      let audioKey: string | null = null;
       if (blob) {
-        const { uploadUrl, publicUrl } = await requestAudioUploadUrl(`reply-${Date.now()}.webm`, 'audio/webm');
+        const { uploadUrl, key } = await requestAudioUploadUrl(`reply-${Date.now()}.webm`, 'audio/webm');
         await uploadAudioToR2(uploadUrl, blob);
-        audioUrl = publicUrl;
+        audioKey = key;
       }
-      await createResponse.mutateAsync({ local_id: uuidv4(), text_content: replyText.trim() || null, audio_url: audioUrl });
+      await createResponse.mutateAsync({ local_id: uuidv4(), text_content: replyText.trim() || null, audio_key: audioKey });
       await markDone.mutateAsync({ localId: instruction.local_id, status: 'done' });
       setReplyOpen(false);
     } finally {
@@ -529,10 +532,10 @@ function OrientacaoCard({ instruction }: { instruction: Instruction }) {
         {instruction.text_content && (
           <p className="text-lg text-stone-100 leading-relaxed">{instruction.text_content}</p>
         )}
-        {instruction.audio_url && (
+        {audioSrc && (
           <div className="space-y-1">
             <p className="text-xs text-stone-400 uppercase tracking-wide">Orientação em áudio</p>
-            <audio controls src={instruction.audio_url} className="w-full" style={{ height: '48px' }} />
+            <audio controls src={audioSrc} className="w-full" style={{ height: '48px' }} />
           </div>
         )}
         <p className="text-xs text-stone-500">De: {instruction.author_name}</p>
@@ -598,18 +601,18 @@ function OrientacoesStep({ hiveLocalId, apiaryLocalId }: { hiveLocalId: string; 
     if (!msgText.trim() && !msgBlob) return;
     setMsgSending(true);
     try {
-      let audioUrl: string | null = null;
+      let audioKey: string | null = null;
       if (msgBlob) {
-        const { uploadUrl, publicUrl } = await requestAudioUploadUrl(`msg-${Date.now()}.webm`, 'audio/webm');
+        const { uploadUrl, key } = await requestAudioUploadUrl(`msg-${Date.now()}.webm`, 'audio/webm');
         await uploadAudioToR2(uploadUrl, msgBlob);
-        audioUrl = publicUrl;
+        audioKey = key;
       }
       await createInstruction.mutateAsync({
         local_id: uuidv4(),
         apiary_local_id: apiaryLocalId,
         hive_local_id: hiveLocalId || null,
         text_content: msgText.trim() || null,
-        audio_url: audioUrl,
+        audio_key: audioKey,
       });
       setMsgSent(true);
       setMsgOpen(false);

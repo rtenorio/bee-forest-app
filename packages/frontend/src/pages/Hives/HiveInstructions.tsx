@@ -9,6 +9,7 @@ import {
   requestAudioUploadUrl,
   uploadAudioToR2,
 } from '@/hooks/useInstructions';
+import { useSignedUrl } from '@/hooks/useSignedUrl';
 import { AudioRecorder } from '@/pages/Instructions/AudioRecorder';
 import type { Instruction } from '@bee-forest/shared';
 
@@ -58,26 +59,28 @@ function InstructionItem({ instruction, hiveLocalId }: { instruction: Instructio
 
   const markDone = useUpdateInstructionStatus();
   const createResponse = useCreateInstructionResponse(instruction.local_id);
+  const { url: instructionAudioSrc } = useSignedUrl(instruction.audio_key);
+  const audioSrc = instructionAudioSrc ?? instruction.audio_url;
 
   async function handleReply() {
     if (!replyText.trim() && !audioBlob) return;
     setUploading(true);
     try {
-      let audioUrl: string | null = null;
+      let audioKey: string | null = null;
       if (audioBlob) {
         const mimeType = audioBlob.type || 'audio/webm';
         const ext = mimeType.includes('mp4') ? 'mp4' : mimeType.includes('ogg') ? 'ogg' : 'webm';
-        const { uploadUrl, publicUrl } = await requestAudioUploadUrl(
+        const { uploadUrl, key } = await requestAudioUploadUrl(
           `response-${Date.now()}.${ext}`,
           mimeType
         );
         await uploadAudioToR2(uploadUrl, audioBlob, mimeType);
-        audioUrl = publicUrl;
+        audioKey = key;
       }
       await createResponse.mutateAsync({
         local_id: uuidv4(),
         text_content: replyText.trim() || null,
-        audio_url: audioUrl,
+        audio_key: audioKey,
       });
       setReplyText('');
       setAudioBlob(null);
@@ -99,12 +102,12 @@ function InstructionItem({ instruction, hiveLocalId }: { instruction: Instructio
           <p className="text-base text-stone-100 leading-relaxed">{instruction.text_content}</p>
         )}
 
-        {instruction.audio_url && (
+        {audioSrc && (
           <div className="space-y-1">
             <p className="text-xs text-stone-400 uppercase tracking-wide">Orientação em áudio</p>
             <audio
               controls
-              src={instruction.audio_url}
+              src={audioSrc}
               className="w-full"
               style={{ height: '48px' }}
             />

@@ -10,6 +10,7 @@ export interface Instruction {
   author_role: string;
   text_content: string | null;
   audio_url: string | null;
+  audio_key: string | null;
   status: InstructionStatus;
   priority_days: number | null;
   due_date: string | null;
@@ -26,6 +27,7 @@ export interface InstructionResponse {
   tratador_name: string;
   text_content: string | null;
   audio_url: string | null;
+  audio_key: string | null;
   created_at: string;
 }
 
@@ -35,6 +37,7 @@ export interface InstructionCreate {
   hive_local_id?: string | null;
   text_content?: string | null;
   audio_url?: string | null;
+  audio_key?: string | null;
   priority_days?: number | null;
   due_date?: string | null;
 }
@@ -43,4 +46,5 @@ export interface InstructionResponseCreate {
   local_id: string;
   text_content?: string | null;
   audio_url?: string | null;
+  audio_key?: string | null;
 }

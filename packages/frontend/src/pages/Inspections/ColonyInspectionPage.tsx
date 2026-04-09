@@ -12,6 +12,7 @@ import {
   uploadAudioToR2,
 } from '@/hooks/useInstructions';
 import { AudioRecorder } from '@/pages/Instructions/AudioRecorder';
+import { useSignedUrl } from '@/hooks/useSignedUrl';
 import { useHive, useHives } from '@/hooks/useHives';
 import { useApiaries } from '@/hooks/useApiaries';
 import { useAuthStore } from '@/store/authStore';
@@ -391,6 +392,15 @@ function AudioPlayButton({ src }: { src: string }) {
   );
 }
 
+// ─── Signed audio play button (safe to use inside .map()) ────────────────────
+
+function SignedAudioPlayButton({ audioKey, audioUrl }: { audioKey: string | null; audioUrl: string | null }) {
+  const { url: signedSrc } = useSignedUrl(audioKey);
+  const src = signedSrc ?? audioUrl;
+  if (!src) return null;
+  return <AudioPlayButton src={src} />;
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export function ColonyInspectionPage() {
@@ -435,7 +445,7 @@ export function ColonyInspectionPage() {
     if (!msgBlob) return;
     setMsgSending(true);
     try {
-      const { uploadUrl, publicUrl } = await requestAudioUploadUrl(
+      const { uploadUrl, key } = await requestAudioUploadUrl(
         `orientacao-response-${Date.now()}.webm`,
         'audio/webm'
       );
@@ -444,7 +454,7 @@ export function ColonyInspectionPage() {
         await createResponse.mutateAsync({
           local_id: uuidv4(),
           text_content: null,
-          audio_url: publicUrl,
+          audio_key: key,
         });
       } else {
         await createInstruction.mutateAsync({
@@ -452,7 +462,7 @@ export function ColonyInspectionPage() {
           apiary_local_id: hive?.apiary_local_id ?? '',
           hive_local_id: hive_local_id || null,
           text_content: null,
-          audio_url: publicUrl,
+          audio_key: key,
         });
       }
       setMsgBlob(null);
@@ -1252,9 +1262,7 @@ export function ColonyInspectionPage() {
                       {inst.text_content && (
                         <p className="text-base text-stone-100 leading-relaxed">{inst.text_content}</p>
                       )}
-                      {inst.audio_url && (
-                        <AudioPlayButton src={inst.audio_url} />
-                      )}
+                      <SignedAudioPlayButton audioKey={inst.audio_key} audioUrl={inst.audio_url} />
                       <p className="text-xs text-stone-500">De: {inst.author_name}</p>
                     </div>
                     <div className="px-4 pb-4">

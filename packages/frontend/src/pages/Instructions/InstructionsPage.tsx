@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
+import { useSignedUrl } from '@/hooks/useSignedUrl';
 import { useAuthStore } from '@/store/authStore';
 import { useApiaries } from '@/hooks/useApiaries';
 import { useHives } from '@/hooks/useHives';
@@ -70,6 +71,15 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
+// ── Signed audio player (for use inside .map()) ───────────────────────────────
+
+function ResponseAudio({ audioKey, audioUrl }: { audioKey: string | null; audioUrl: string | null }) {
+  const { url: signedSrc } = useSignedUrl(audioKey);
+  const src = signedSrc ?? audioUrl;
+  if (!src) return null;
+  return <audio controls src={src} className="w-full h-8 mt-1" />;
+}
+
 // ── Instruction Card ──────────────────────────────────────────────────────────
 
 function InstructionCard({
@@ -91,25 +101,27 @@ function InstructionCard({
   const [replyText, setReplyText] = useState('');
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [uploading, setUploading] = useState(false);
+  const { url: instructionAudioSrc } = useSignedUrl(instruction.audio_key);
+  const audioSrc = instructionAudioSrc ?? instruction.audio_url;
 
   async function handleReply(e: React.FormEvent) {
     e.preventDefault();
     if (!replyText.trim() && !audioBlob) return;
     setUploading(true);
     try {
-      let audioUrl: string | null = null;
+      let audioKey: string | null = null;
       if (audioBlob) {
-        const { uploadUrl, publicUrl } = await requestAudioUploadUrl(
+        const { uploadUrl, key } = await requestAudioUploadUrl(
           `response-${Date.now()}.webm`,
           'audio/webm'
         );
         await uploadAudioToR2(uploadUrl, audioBlob);
-        audioUrl = publicUrl;
+        audioKey = key;
       }
       await createResponse.mutateAsync({
         local_id: uuidv4(),
         text_content: replyText.trim() || null,
-        audio_url: audioUrl,
+        audio_key: audioKey,
       });
       setReplyText('');
       setAudioBlob(null);
@@ -141,7 +153,7 @@ function InstructionCard({
             {instruction.text_content && (
               <p className="text-sm text-stone-200 line-clamp-2">{instruction.text_content}</p>
             )}
-            {instruction.audio_url && !instruction.text_content && (
+            {(instruction.audio_key || instruction.audio_url) && !instruction.text_content && (
               <p className="text-sm text-amber-400 italic">Orientação em áudio</p>
             )}
           </div>
@@ -165,10 +177,10 @@ function InstructionCard({
           {instruction.text_content && (
             <p className="text-sm text-stone-200">{instruction.text_content}</p>
           )}
-          {instruction.audio_url && (
+          {audioSrc && (
             <div>
               <p className="text-xs text-stone-500 mb-1">Orientação em áudio:</p>
-              <audio controls src={instruction.audio_url} className="w-full h-10" />
+              <audio controls src={audioSrc} className="w-full h-10" />
             </div>
           )}
 
@@ -205,7 +217,7 @@ function InstructionCard({
                     </span>
                   </div>
                   {r.text_content && <p className="text-sm text-stone-200">{r.text_content}</p>}
-                  {r.audio_url && <audio controls src={r.audio_url} className="w-full h-8 mt-1" />}
+                  <ResponseAudio audioKey={r.audio_key} audioUrl={r.audio_url} />
                 </div>
               ))}
             </div>
@@ -264,14 +276,14 @@ function CreateInstructionForm({ onClose }: { onClose: () => void }) {
     setUploading(true);
     setUploadError(null);
     try {
-      let audioUrl: string | null = null;
+      let audioKey: string | null = null;
       if (audioBlob) {
-        const { uploadUrl, publicUrl } = await requestAudioUploadUrl(
+        const { uploadUrl, key } = await requestAudioUploadUrl(
           `instruction-${Date.now()}.webm`,
           'audio/webm'
         );
         await uploadAudioToR2(uploadUrl, audioBlob);
-        audioUrl = publicUrl;
+        audioKey = key;
       }
       let priority_days: number | null = null;
       let due_date: string | null = null;
@@ -287,7 +299,7 @@ function CreateInstructionForm({ onClose }: { onClose: () => void }) {
         apiary_local_id: selectedApiary,
         hive_local_id: selectedHive || null,
         text_content: textContent.trim() || null,
-        audio_url: audioUrl,
+        audio_key: audioKey,
         priority_days,
         due_date,
       });
