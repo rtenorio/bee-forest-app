@@ -32,8 +32,11 @@ export function createApp() {
   app.use('/api', routes);
 
   // ── Swagger UI ─────────────────────────────────────────────────────────────
-  // Available in dev, or in production when the key matches via header or query param.
-  app.use('/api-docs', (req: Request, res: Response, next: NextFunction) => {
+  // Static assets (JS, CSS) are served freely so the browser can load them.
+  // Only the root page checks the key, preventing unauthenticated spec discovery.
+  app.use('/api-docs', swaggerUi.serve);
+
+  app.get('/api-docs', (req: Request, res: Response, next: NextFunction) => {
     const docsKey = process.env.API_DOCS_KEY;
     const isDev   = config.nodeEnv !== 'production';
     const hasKey  = docsKey && (
@@ -42,7 +45,8 @@ export function createApp() {
     );
     if (isDev || hasKey) return next();
     res.status(404).json({ error: 'Not found' });
-  }, swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+  }, swaggerUi.setup(swaggerSpec, {
+    explorer: true,
     customSiteTitle: 'Bee Forest API Docs',
     customCss: '.swagger-ui .topbar { display: none }',
   }));
