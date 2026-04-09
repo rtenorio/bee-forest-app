@@ -519,7 +519,7 @@ function OrientacaoCard({ instruction }: { instruction: Instruction }) {
         audioKey = key;
       }
       await createResponse.mutateAsync({ local_id: uuidv4(), text_content: replyText.trim() || null, audio_key: audioKey });
-      await markDone.mutateAsync({ localId: instruction.local_id, status: 'done' });
+      await markDone.mutateAsync({ localId: instruction.local_id, status: 'concluida' });
       setReplyOpen(false);
     } finally {
       setUploading(false);
@@ -552,7 +552,7 @@ function OrientacaoCard({ instruction }: { instruction: Instruction }) {
             Gravar resposta
           </button>
           <button type="button"
-            onClick={() => markDone.mutate({ localId: instruction.local_id, status: 'done' })}
+            onClick={() => markDone.mutate({ localId: instruction.local_id, status: 'concluida' })}
             disabled={markDone.isPending}
             className="w-full flex items-center justify-center gap-2 bg-emerald-700 hover:bg-emerald-600 disabled:opacity-50 text-white text-lg font-bold rounded-2xl py-4 transition-colors"
           >

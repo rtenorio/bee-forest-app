@@ -1268,7 +1268,7 @@ export function ColonyInspectionPage() {
                     <div className="px-4 pb-4">
                       <button
                         type="button"
-                        onClick={() => markDoneInstruction.mutate({ localId: inst.local_id, status: 'done' })}
+                        onClick={() => markDoneInstruction.mutate({ localId: inst.local_id, status: 'concluida' })}
                         disabled={markDoneInstruction.isPending}
                         className="w-full flex items-center justify-center gap-2 bg-emerald-700 hover:bg-emerald-600 disabled:opacity-50 text-white text-lg font-semibold rounded-xl py-4 transition-colors"
                       >

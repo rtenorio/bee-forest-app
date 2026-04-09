@@ -338,18 +338,28 @@ export const InstructionCreateSchema = z.object({
   hive_local_id: z.string().uuid().optional().nullable(),
   text_content: z.string().optional().nullable(),
   audio_url: z.string().optional().nullable(),
+  audio_key: z.string().optional().nullable(),
   priority_days: z.number().int().positive().optional().nullable(),
   due_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable(),
+  prazo_conclusao: z.string().datetime({ offset: true }).optional().nullable(),
 });
 
+export const INSTRUCTION_STATUSES = ['pendente', 'em_execucao', 'concluida', 'validada', 'rejeitada'] as const;
+export type InstructionStatus = typeof INSTRUCTION_STATUSES[number];
+
 export const InstructionStatusSchema = z.object({
-  status: z.enum(['pending', 'done']),
+  status: z.enum(INSTRUCTION_STATUSES),
+  evidencia_key: z.string().optional().nullable(),
+  evidencia_url: z.string().optional().nullable(),
+  motivo_rejeicao: z.string().optional().nullable(),
 });
 
 export const InstructionResponseCreateSchema = z.object({
   local_id: z.string().uuid(),
   text_content: z.string().optional().nullable(),
   audio_url: z.string().optional().nullable(),
+  audio_key: z.string().optional().nullable(),
+  evidencia_key: z.string().optional().nullable(),
 });
 
 // ── Schemas: Divisions ────────────────────────────────────────────────────────

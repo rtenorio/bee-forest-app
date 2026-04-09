@@ -30,6 +30,7 @@ const navItems: NavItem[] = [
   { to: '/users', label: 'Usuários', icon: '👥', end: false, roles: ['master_admin', 'socio', 'responsavel'] },
   { to: '/admin/health', label: 'Saúde do Sistema', icon: '🖥️', end: false, roles: ['master_admin'] },
   { to: '/admin/audit', label: 'Auditoria', icon: '📋', end: false, roles: ['master_admin'] },
+  { to: '/admin/sla-report', label: 'Relatório SLA', icon: '📊', end: false, roles: ['master_admin', 'responsavel'] },
   { to: '/notifications', label: 'Notificações', icon: '🔔', end: false },
   { to: '/settings', label: 'Configurações', icon: '⚙️', end: false },
 ];

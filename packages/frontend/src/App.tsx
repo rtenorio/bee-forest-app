@@ -46,6 +46,7 @@ import { ResponsavelDashboard } from './pages/Dashboard/ResponsavelDashboard';
 import { TratadorDashboard } from './pages/Dashboard/TratadorDashboard';
 import { AuditPage } from './pages/Admin/AuditPage';
 import { SystemHealthPage } from './pages/Admin/SystemHealthPage';
+import { SLAReportPage } from './pages/Admin/SLAReportPage';
 import { useAuthStore } from './store/authStore';
 
 function RoleDashboard() {
@@ -108,6 +109,7 @@ export function App() {
           <Route path="settings/notifications" element={<NotificationSettingsPage />} />
           <Route path="admin/audit" element={<AuditPage />} />
           <Route path="admin/health" element={<SystemHealthPage />} />
+          <Route path="admin/sla-report" element={<SLAReportPage />} />
         </Route>
       </Route>
 
