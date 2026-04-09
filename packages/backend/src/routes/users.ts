@@ -2,6 +2,7 @@ import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import { query, queryOne, pool } from '../db/connection';
 import { validate } from '../middleware/validate';
+import { auditLog } from '../middleware/auditLog';
 import { CreateUserSchema, UpdateUserSchema, ChangeRoleSchema } from '../shared';
 import type { UserRole } from '../shared';
 
@@ -120,7 +121,14 @@ router.get('/', async (req, res, next) => {
 
 // ─── POST /api/users ──────────────────────────────────────────────────────────
 
-router.post('/', validate(CreateUserSchema), async (req, res, next) => {
+router.post('/',
+  validate(CreateUserSchema),
+  auditLog('CREATE', 'user', (req, body: any) => ({
+    resource_id: String(body?.id ?? ''),
+    resource_label: body?.name ?? req.body.name,
+    payload: { role: req.body.role, email: req.body.email },
+  })),
+  async (req, res, next) => {
   const client = await pool.connect();
   try {
     const actorRole = req.user!.role;
@@ -203,7 +211,14 @@ router.get('/:id', async (req, res, next) => {
 
 // ─── PUT /api/users/:id ───────────────────────────────────────────────────────
 
-router.put('/:id', validate(UpdateUserSchema), async (req, res, next) => {
+router.put('/:id',
+  validate(UpdateUserSchema),
+  auditLog('UPDATE', 'user', (req, body: any) => ({
+    resource_id: req.params.id as string,
+    resource_label: body?.name ?? req.body.name,
+    payload: { fields: Object.keys(req.body) },
+  })),
+  async (req, res, next) => {
   const client = await pool.connect();
   try {
     const actorRole = req.user!.role;

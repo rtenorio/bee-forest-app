@@ -28,6 +28,7 @@ const navItems: NavItem[] = [
   { to: '/partners/finance', label: 'Financeiro Parceiros', icon: '💰', end: false, roles: ['master_admin', 'socio', 'responsavel'], indent: true },
   { to: '/reports', label: 'Relatórios', icon: '📊', end: false, roles: ['socio', 'responsavel'] },
   { to: '/users', label: 'Usuários', icon: '👥', end: false, roles: ['master_admin', 'socio', 'responsavel'] },
+  { to: '/admin/audit', label: 'Auditoria', icon: '📋', end: false, roles: ['master_admin'] },
   { to: '/notifications', label: 'Notificações', icon: '🔔', end: false },
   { to: '/settings', label: 'Configurações', icon: '⚙️', end: false },
 ];

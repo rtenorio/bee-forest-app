@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { query, queryOne } from '../db/connection';
+import { auditLog } from '../middleware/auditLog';
 import { validate } from '../middleware/validate';
 import {
   InstructionCreateSchema,
@@ -123,7 +124,14 @@ router.get('/', async (req, res, next) => {
 
 // ── POST /api/instructions ────────────────────────────────────────────────────
 
-router.post('/', validate(InstructionCreateSchema), async (req, res, next) => {
+router.post('/',
+  validate(InstructionCreateSchema),
+  auditLog('CREATE', 'instruction', (req, body: any) => ({
+    resource_id: body?.local_id ?? req.body.local_id,
+    resource_label: req.body.text_content?.slice(0, 60) ?? 'Orientação',
+    payload: { apiary_local_id: req.body.apiary_local_id, hive_local_id: req.body.hive_local_id },
+  })),
+  async (req, res, next) => {
   try {
     const user = req.user!;
     if (user.role === 'tratador') {
@@ -149,7 +157,14 @@ router.post('/', validate(InstructionCreateSchema), async (req, res, next) => {
 
 // ── PATCH /api/instructions/:id/status ───────────────────────────────────────
 
-router.patch('/:id/status', validate(InstructionStatusSchema), async (req, res, next) => {
+router.patch('/:id/status',
+  validate(InstructionStatusSchema),
+  auditLog('UPDATE', 'instruction', (req) => ({
+    resource_id: req.params.id as string,
+    resource_label: `Status → ${req.body.status}`,
+    payload: { status: req.body.status },
+  })),
+  async (req, res, next) => {
   try {
     const user = req.user!;
     const { id } = req.params;

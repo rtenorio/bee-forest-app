@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { query, queryOne } from '../db/connection';
 import { validate } from '../middleware/validate';
 import { requireRole } from '../middleware/requireRole';
+import { auditLog } from '../middleware/auditLog';
 import { ApiaryCreateSchema, ApiaryUpdateSchema } from '../shared';
 import type { Request } from 'express';
 
@@ -53,7 +54,15 @@ router.post('/', requireRole('socio', 'responsavel'), validate(ApiaryCreateSchem
   } catch (err) { next(err); }
 });
 
-router.put('/:local_id', requireRole('socio', 'responsavel'), validate(ApiaryUpdateSchema), async (req, res, next) => {
+router.put('/:local_id',
+  requireRole('socio', 'responsavel'),
+  validate(ApiaryUpdateSchema),
+  auditLog('UPDATE', 'apiary', (req, body: any) => ({
+    resource_id: req.params.local_id as string,
+    resource_label: body?.name ?? req.body.name,
+    payload: { name: req.body.name, location: req.body.location },
+  })),
+  async (req, res, next) => {
   try {
     if (req.user!.role === 'responsavel' && !req.user!.apiary_local_ids.includes(req.params.local_id as string)) {
       res.status(403).json({ error: 'Sem permissão' }); return;

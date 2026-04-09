@@ -21,6 +21,7 @@ import transfersRouter from './transfers';
 import equipmentRouter from './equipment';
 import melgueirasRouter from './melgueiras';
 import mediaRouter from './media';
+import adminRouter from './admin';
 import { authenticate } from '../middleware/authenticate';
 
 const router = Router();
@@ -50,5 +51,6 @@ router.use('/transfers', authenticate, transfersRouter);
 router.use('/equipment', authenticate, equipmentRouter);
 router.use('/melgueiras', authenticate, melgueirasRouter);
 router.use('/media', authenticate, mediaRouter);
+router.use('/admin', authenticate, adminRouter);
 
 export default router;

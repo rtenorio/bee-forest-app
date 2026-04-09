@@ -5,6 +5,7 @@ import type { PoolClient } from 'pg';
 import { validate } from '../middleware/validate';
 import { requireRole } from '../middleware/requireRole';
 import { checkResourceOwnership } from '../middleware/ownership';
+import { auditLog } from '../middleware/auditLog';
 import { InspectionCreateSchema, InspectionUpdateSchema } from '../shared';
 import type { Request } from 'express';
 
@@ -91,7 +92,14 @@ async function upsertTasks(
   }
 }
 
-router.post('/', validate(InspectionCreateSchema), async (req, res, next) => {
+router.post('/',
+  validate(InspectionCreateSchema),
+  auditLog('CREATE', 'inspection', (req, body: any) => ({
+    resource_id: body?.local_id,
+    resource_label: `Inspeção em ${req.body.hive_local_id}`,
+    payload: { hive_local_id: req.body.hive_local_id, inspected_at: req.body.inspected_at, inspector_name: req.body.inspector_name },
+  })),
+  async (req, res, next) => {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -144,7 +152,16 @@ router.post('/', validate(InspectionCreateSchema), async (req, res, next) => {
   }
 });
 
-router.put('/:local_id', requireRole('socio', 'responsavel'), checkResourceOwnership('inspection'), validate(InspectionUpdateSchema), async (req, res, next) => {
+router.put('/:local_id',
+  requireRole('socio', 'responsavel'),
+  checkResourceOwnership('inspection'),
+  validate(InspectionUpdateSchema),
+  auditLog('UPDATE', 'inspection', (req) => ({
+    resource_id: req.params.local_id as string,
+    resource_label: `Inspeção ${(req.params.local_id as string).slice(0, 8)}`,
+    payload: { inspected_at: req.body.inspected_at, inspector_name: req.body.inspector_name },
+  })),
+  async (req, res, next) => {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -201,7 +218,13 @@ router.put('/:local_id', requireRole('socio', 'responsavel'), checkResourceOwner
   }
 });
 
-router.delete('/:local_id', requireRole('socio', 'responsavel'), checkResourceOwnership('inspection'), async (req, res, next) => {
+router.delete('/:local_id',
+  requireRole('socio', 'responsavel'),
+  checkResourceOwnership('inspection'),
+  auditLog('DELETE', 'inspection', (req) => ({
+    resource_id: req.params.local_id as string,
+  })),
+  async (req, res, next) => {
   try {
     const row = await queryOne(
       'UPDATE inspections SET deleted_at = NOW() WHERE local_id = $1 AND deleted_at IS NULL RETURNING local_id',

@@ -4,6 +4,7 @@ import { query, queryOne, pool } from '../db/connection';
 import { validate } from '../middleware/validate';
 import { requireRole } from '../middleware/requireRole';
 import { checkResourceOwnership } from '../middleware/ownership';
+import { auditLog } from '../middleware/auditLog';
 import { HiveCreateSchema, HiveUpdateSchema } from '../shared';
 import type { Request } from 'express';
 
@@ -95,7 +96,15 @@ router.get('/:local_id', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-router.post('/', requireRole('socio', 'responsavel'), validate(HiveCreateSchema), async (req, res, next) => {
+router.post('/',
+  requireRole('socio', 'responsavel'),
+  validate(HiveCreateSchema),
+  auditLog('CREATE', 'hive', (req, body: any) => ({
+    resource_id: body?.local_id,
+    resource_label: body?.qr_code ?? body?.code ?? req.body.code,
+    payload: { apiary_local_id: req.body.apiary_local_id, code: req.body.code, status: req.body.status },
+  })),
+  async (req, res, next) => {
   try {
     const local_id = uuidv4();
     const { apiary_local_id, species_local_id, code, status, installation_date, box_type, modules_count, wood_type, wood_type_other, notes } = req.body;
@@ -140,7 +149,16 @@ router.post('/', requireRole('socio', 'responsavel'), validate(HiveCreateSchema)
   } catch (err) { next(err); }
 });
 
-router.put('/:local_id', requireRole('socio', 'responsavel'), checkResourceOwnership('hive'), validate(HiveUpdateSchema), async (req, res, next) => {
+router.put('/:local_id',
+  requireRole('socio', 'responsavel'),
+  checkResourceOwnership('hive'),
+  validate(HiveUpdateSchema),
+  auditLog('UPDATE', 'hive', (req, body: any) => ({
+    resource_id: req.params.local_id as string,
+    resource_label: body?.qr_code ?? body?.code ?? req.body.code,
+    payload: { code: req.body.code, status: req.body.status },
+  })),
+  async (req, res, next) => {
   try {
     const { species_local_id, code, status, installation_date, box_type, modules_count, wood_type, wood_type_other, notes } = req.body;
     const species = species_local_id ? await queryOne<{ server_id: number }>('SELECT server_id FROM species WHERE local_id = $1', [species_local_id]) : undefined;
@@ -159,7 +177,13 @@ router.put('/:local_id', requireRole('socio', 'responsavel'), checkResourceOwner
   } catch (err) { next(err); }
 });
 
-router.delete('/:local_id', requireRole('socio', 'responsavel'), checkResourceOwnership('hive'), async (req, res, next) => {
+router.delete('/:local_id',
+  requireRole('socio', 'responsavel'),
+  checkResourceOwnership('hive'),
+  auditLog('DELETE', 'hive', (req) => ({
+    resource_id: req.params.local_id as string,
+  })),
+  async (req, res, next) => {
   try {
     const row = await queryOne(
       'UPDATE hives SET deleted_at = NOW() WHERE local_id = $1 AND deleted_at IS NULL RETURNING local_id',

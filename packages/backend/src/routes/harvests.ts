@@ -4,6 +4,7 @@ import { pool, query, queryOne } from '../db/connection';
 import { validate } from '../middleware/validate';
 import { requireRole } from '../middleware/requireRole';
 import { checkResourceOwnership } from '../middleware/ownership';
+import { auditLog } from '../middleware/auditLog';
 import { HarvestCreateSchema, HarvestUpdateSchema } from '../shared';
 import { autoHarvestStockEntry } from './stock';
 import type { Request } from 'express';
@@ -89,7 +90,14 @@ router.get('/:local_id', async (req, res, next) => {
 
 // ── POST / ────────────────────────────────────────────────────────────────────
 
-router.post('/', validate(HarvestCreateSchema), async (req, res, next) => {
+router.post('/',
+  validate(HarvestCreateSchema),
+  auditLog('CREATE', 'harvest', (req, body: any) => ({
+    resource_id: body?.local_id,
+    resource_label: `Colheita ${req.body.apiary_local_id} ${req.body.harvested_at?.slice(0, 10) ?? ''}`.trim(),
+    payload: { apiary_local_id: req.body.apiary_local_id, honey_type: req.body.honey_type, total_volume_ml: req.body.total_volume_ml },
+  })),
+  async (req, res, next) => {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -258,7 +266,13 @@ router.put('/:local_id', requireRole('socio', 'responsavel'), checkResourceOwner
 
 // ── DELETE /:local_id ─────────────────────────────────────────────────────────
 
-router.delete('/:local_id', requireRole('socio', 'responsavel'), checkResourceOwnership('harvest'), async (req, res, next) => {
+router.delete('/:local_id',
+  requireRole('socio', 'responsavel'),
+  checkResourceOwnership('harvest'),
+  auditLog('DELETE', 'harvest', (req) => ({
+    resource_id: req.params.local_id as string,
+  })),
+  async (req, res, next) => {
   try {
     const row = await queryOne(
       'UPDATE harvests SET deleted_at = NOW() WHERE local_id = $1 AND deleted_at IS NULL RETURNING local_id',
