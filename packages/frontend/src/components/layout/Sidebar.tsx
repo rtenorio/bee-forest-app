@@ -22,6 +22,7 @@ const navItems: NavItem[] = [
   { to: '/batches', label: 'Lotes de Mel', icon: '🍯', end: true, roles: ['socio', 'responsavel'] },
   { to: '/batches/quality', label: 'Painel de Qualidade', icon: '⚠️', end: false, roles: ['master_admin', 'socio', 'responsavel'], indent: true },
   { to: '/batches/reports', label: 'Relatórios de Lotes', icon: '📈', end: false, roles: ['master_admin', 'socio', 'responsavel'], indent: true },
+  { to: '/lotes', label: 'Rastreabilidade Mel', icon: '🫙', end: true, roles: ['master_admin', 'socio', 'responsavel'] },
   { to: '/stock', label: 'Estoque', icon: '📦', end: true },
   { to: '/partners', label: 'Parceiros', icon: '🤝', end: true, roles: ['master_admin', 'socio', 'responsavel'] },
   { to: '/partners/quality', label: 'Qualidade Parceiros', icon: '⚗️', end: false, roles: ['master_admin', 'socio', 'responsavel'], indent: true },

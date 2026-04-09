@@ -23,6 +23,7 @@ import melgueirasRouter from './melgueiras';
 import mediaRouter from './media';
 import adminRouter from './admin';
 import financeiroRouter from './financeiro';
+import lotesRouter from './lotes';
 import { authenticate } from '../middleware/authenticate';
 
 const router = Router();
@@ -54,5 +55,7 @@ router.use('/melgueiras', authenticate, melgueirasRouter);
 router.use('/media', authenticate, mediaRouter);
 router.use('/admin', authenticate, adminRouter);
 router.use('/financeiro', authenticate, financeiroRouter);
+// lotes: public/:local_id/public handles auth internally; all other handlers call authenticate
+router.use('/lotes', lotesRouter);
 
 export default router;

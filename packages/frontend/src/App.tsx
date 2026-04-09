@@ -50,6 +50,9 @@ import { CustosPage } from './pages/Financeiro/CustosPage';
 import { AuditPage } from './pages/Admin/AuditPage';
 import { SystemHealthPage } from './pages/Admin/SystemHealthPage';
 import { SLAReportPage } from './pages/Admin/SLAReportPage';
+import { LotesPage } from './pages/Lotes/LotesPage';
+import { LoteDetailPage } from './pages/Lotes/LoteDetailPage';
+import { RastreabilidadePage } from './pages/Lotes/RastreabilidadePage';
 import { useAuthStore } from './store/authStore';
 
 function RoleDashboard() {
@@ -67,6 +70,7 @@ export function App() {
       {/* Páginas públicas — sem autenticação */}
       <Route path="h/:codigo" element={<HiveLandingPage />} />
       <Route path="trace/:codigo" element={<TracePage />} />
+      <Route path="rastreabilidade/:local_id" element={<RastreabilidadePage />} />
 
       <Route element={<ProtectedRoute />}>
         {/* Full-screen pages (no AppShell chrome) */}
@@ -113,6 +117,8 @@ export function App() {
           <Route path="financeiro" element={<FinanceiroDashboard />} />
           <Route path="financeiro/producao" element={<ProducaoPage />} />
           <Route path="financeiro/custos" element={<CustosPage />} />
+          <Route path="lotes" element={<LotesPage />} />
+          <Route path="lotes/:id" element={<LoteDetailPage />} />
           <Route path="admin/audit" element={<AuditPage />} />
           <Route path="admin/health" element={<SystemHealthPage />} />
           <Route path="admin/sla-report" element={<SLAReportPage />} />
