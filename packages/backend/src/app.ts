@@ -32,11 +32,14 @@ export function createApp() {
   app.use('/api', routes);
 
   // ── Swagger UI ─────────────────────────────────────────────────────────────
-  // Available in dev, or in production when X-API-Docs-Key header matches env var.
+  // Available in dev, or in production when the key matches via header or query param.
   app.use('/api-docs', (req: Request, res: Response, next: NextFunction) => {
     const docsKey = process.env.API_DOCS_KEY;
     const isDev   = config.nodeEnv !== 'production';
-    const hasKey  = docsKey && req.headers['x-api-docs-key'] === docsKey;
+    const hasKey  = docsKey && (
+      req.headers['x-api-docs-key'] === docsKey ||
+      req.query['key'] === docsKey
+    );
     if (isDev || hasKey) return next();
     res.status(404).json({ error: 'Not found' });
   }, swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
