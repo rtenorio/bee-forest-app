@@ -45,6 +45,7 @@ import { SocioDashboard } from './pages/Dashboard/SocioDashboard';
 import { ResponsavelDashboard } from './pages/Dashboard/ResponsavelDashboard';
 import { TratadorDashboard } from './pages/Dashboard/TratadorDashboard';
 import { AuditPage } from './pages/Admin/AuditPage';
+import { SystemHealthPage } from './pages/Admin/SystemHealthPage';
 import { useAuthStore } from './store/authStore';
 
 function RoleDashboard() {
@@ -106,6 +107,7 @@ export function App() {
           <Route path="settings" element={<SettingsPage />} />
           <Route path="settings/notifications" element={<NotificationSettingsPage />} />
           <Route path="admin/audit" element={<AuditPage />} />
+          <Route path="admin/health" element={<SystemHealthPage />} />
         </Route>
       </Route>
 
