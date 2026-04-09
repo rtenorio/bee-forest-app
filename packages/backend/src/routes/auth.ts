@@ -37,7 +37,50 @@ async function buildUserResponse(userId: number) {
   return { ...user, apiary_local_ids, hive_local_ids };
 }
 
-// POST /api/auth/login
+/**
+ * @openapi
+ * /api/auth/login:
+ *   post:
+ *     tags: [auth]
+ *     summary: Autenticar usuário
+ *     description: Recebe e-mail e senha, retorna JWT e perfil completo do usuário.
+ *     security: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email, password]
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 example: master@beeforest.com
+ *               password:
+ *                 type: string
+ *                 format: password
+ *                 example: BeeForest@2024
+ *     responses:
+ *       200:
+ *         description: Login bem-sucedido
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 token:
+ *                   type: string
+ *                   description: JWT para usar como Bearer token
+ *                 user:
+ *                   $ref: '#/components/schemas/User'
+ *       401:
+ *         description: Credenciais inválidas
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 router.post('/login', validate(LoginSchema), async (req, res, next) => {
   try {
     const { email, password } = req.body;
@@ -64,7 +107,27 @@ router.post('/login', validate(LoginSchema), async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// GET /api/auth/me
+/**
+ * @openapi
+ * /api/auth/me:
+ *   get:
+ *     tags: [auth]
+ *     summary: Perfil do usuário autenticado
+ *     description: Retorna os dados completos do usuário logado, incluindo IDs de meliponários e colmeias atribuídos.
+ *     responses:
+ *       200:
+ *         description: Perfil do usuário
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/User'
+ *       401:
+ *         description: Token ausente ou inválido
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 router.get('/me', authenticate, async (req, res, next) => {
   try {
     const fullUser = await buildUserResponse(req.user!.id);

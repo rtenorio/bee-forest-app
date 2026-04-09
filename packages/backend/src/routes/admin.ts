@@ -25,6 +25,59 @@ const router = Router();
 // ── GET /api/admin/audit-logs ─────────────────────────────────────────────────
 // Only master_admin can access. Supports pagination and filters.
 
+/**
+ * @openapi
+ * /api/admin/audit-logs:
+ *   get:
+ *     tags: [admin]
+ *     summary: Trilha de auditoria
+ *     description: Lista todas as ações registradas no sistema. Apenas master_admin. Suporta paginação e filtros.
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema: { type: integer, default: 1 }
+ *       - in: query
+ *         name: limit
+ *         schema: { type: integer, default: 50, maximum: 200 }
+ *       - in: query
+ *         name: user_id
+ *         schema: { type: integer }
+ *         description: Filtrar por ID do usuário
+ *       - in: query
+ *         name: resource_type
+ *         schema: { type: string }
+ *         description: Tipo de recurso (instruction, hive, apiary, inspection, etc.)
+ *       - in: query
+ *         name: action
+ *         schema: { type: string, enum: [CREATE, UPDATE, DELETE] }
+ *       - in: query
+ *         name: date_from
+ *         schema: { type: string, format: date-time }
+ *       - in: query
+ *         name: date_to
+ *         schema: { type: string, format: date-time }
+ *     responses:
+ *       200:
+ *         description: Logs de auditoria paginados
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 logs:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/AuditLog'
+ *                 total:      { type: integer }
+ *                 page:       { type: integer }
+ *                 totalPages: { type: integer }
+ *       403:
+ *         description: Sem permissão (apenas master_admin)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 router.get('/audit-logs', requireRole('master_admin'), async (req, res, next) => {
   try {
     const page      = Math.max(1, parseInt(req.query.page as string) || 1);
@@ -101,6 +154,57 @@ router.get('/audit-logs', requireRole('master_admin'), async (req, res, next) =>
 // Only master_admin. All checks run concurrently; individual failures are
 // captured so a partial outage never breaks the entire response.
 
+/**
+ * @openapi
+ * /api/admin/system-health:
+ *   get:
+ *     tags: [admin]
+ *     summary: Saúde do sistema
+ *     description: |
+ *       Verifica o status de todos os serviços em paralelo. Falhas individuais são capturadas
+ *       e não interrompem o endpoint. Apenas master_admin.
+ *     responses:
+ *       200:
+ *         description: Status dos serviços
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 database:
+ *                   type: string
+ *                   enum: [ok, error]
+ *                 r2:
+ *                   type: string
+ *                   enum: [ok, error]
+ *                 backup:
+ *                   type: object
+ *                   properties:
+ *                     timestamp: { type: string, format: date-time, nullable: true }
+ *                     status:    { type: string, enum: [ok, old, unknown, error] }
+ *                 stats:
+ *                   type: object
+ *                   properties:
+ *                     total_hives:              { type: integer }
+ *                     total_inspections:        { type: integer }
+ *                     total_users:              { type: integer }
+ *                     inspections_last_7_days:  { type: integer }
+ *                 sync_pending:
+ *                   type: object
+ *                   properties:
+ *                     total: { type: integer }
+ *                 media_errors_24h:
+ *                   type: integer
+ *                   description: Erros de mídia nas últimas 24 horas
+ *                 uptime_seconds:
+ *                   type: number
+ *       403:
+ *         description: Sem permissão (apenas master_admin)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 router.get('/system-health', requireRole('master_admin'), async (req, res, next) => {
   try {
     const [

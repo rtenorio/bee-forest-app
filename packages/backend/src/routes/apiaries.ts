@@ -18,6 +18,29 @@ function scopeClause(req: Request): { clause: string; params: unknown[] } {
   return { clause: '', params: [] };
 }
 
+/**
+ * @openapi
+ * /api/apiaries:
+ *   get:
+ *     tags: [apiaries]
+ *     summary: Listar meliponários
+ *     description: Retorna todos os meliponários acessíveis ao usuário. Responsáveis veem apenas os seus; sócio/master veem todos. Tratadores não têm acesso.
+ *     responses:
+ *       200:
+ *         description: Lista de meliponários
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Apiary'
+ *       403:
+ *         description: Sem permissão (tratador)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 router.get('/', async (req, res, next) => {
   try {
     if (req.user!.role === 'tratador') { res.status(403).json({ error: 'Sem permissão' }); return; }
@@ -30,6 +53,40 @@ router.get('/', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+/**
+ * @openapi
+ * /api/apiaries/{local_id}:
+ *   get:
+ *     tags: [apiaries]
+ *     summary: Detalhe de um meliponário
+ *     parameters:
+ *       - in: path
+ *         name: local_id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: UUID do meliponário
+ *     responses:
+ *       200:
+ *         description: Meliponário encontrado
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Apiary'
+ *       403:
+ *         description: Sem permissão
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       404:
+ *         description: Não encontrado
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 router.get('/:local_id', async (req, res, next) => {
   try {
     if (req.user!.role === 'tratador') { res.status(403).json({ error: 'Sem permissão' }); return; }
@@ -42,6 +99,41 @@ router.get('/:local_id', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+/**
+ * @openapi
+ * /api/apiaries:
+ *   post:
+ *     tags: [apiaries]
+ *     summary: Criar meliponário
+ *     description: Cria um novo meliponário. Requer papel sócio ou responsável.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [name, location]
+ *             properties:
+ *               name:       { type: string, example: "Meliponário Serra Verde" }
+ *               location:   { type: string, example: "Fazenda Boa Vista" }
+ *               latitude:   { type: number, nullable: true }
+ *               longitude:  { type: number, nullable: true }
+ *               owner_name: { type: string, nullable: true }
+ *               notes:      { type: string, nullable: true }
+ *     responses:
+ *       201:
+ *         description: Meliponário criado
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Apiary'
+ *       403:
+ *         description: Sem permissão
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 router.post('/', requireRole('socio', 'responsavel'), validate(ApiaryCreateSchema), async (req, res, next) => {
   try {
     const local_id = uuidv4();

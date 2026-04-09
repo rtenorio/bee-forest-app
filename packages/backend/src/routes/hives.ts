@@ -37,6 +37,30 @@ function hiveScopeClause(req: Request, tableAlias = 'h'): { clause: string; para
   return { clause: '', params: [] };
 }
 
+/**
+ * @openapi
+ * /api/hives:
+ *   get:
+ *     tags: [hives]
+ *     summary: Listar caixas de abelha
+ *     description: Retorna colmeias acessíveis ao usuário. Aceita filtro por meliponário.
+ *     parameters:
+ *       - in: query
+ *         name: apiary_local_id
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Filtrar por meliponário
+ *     responses:
+ *       200:
+ *         description: Lista de caixas
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Hive'
+ */
 router.get('/', async (req, res, next) => {
   try {
     const { apiary_local_id } = req.query;
@@ -77,6 +101,39 @@ router.get('/:local_id/qrcode', checkResourceOwnership('hive'), async (req, res,
   } catch (err) { next(err); }
 });
 
+/**
+ * @openapi
+ * /api/hives/{local_id}:
+ *   get:
+ *     tags: [hives]
+ *     summary: Detalhe de uma caixa de abelha
+ *     parameters:
+ *       - in: path
+ *         name: local_id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Caixa encontrada
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Hive'
+ *       403:
+ *         description: Sem permissão
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       404:
+ *         description: Não encontrada
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 router.get('/:local_id', async (req, res, next) => {
   try {
     const row = await queryOne<Record<string, unknown>>(
@@ -96,6 +153,43 @@ router.get('/:local_id', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+/**
+ * @openapi
+ * /api/hives:
+ *   post:
+ *     tags: [hives]
+ *     summary: Criar caixa de abelha
+ *     description: Cria uma nova colmeia. Gera QR code automaticamente com base na localização do meliponário.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [apiary_local_id, code, status, box_type]
+ *             properties:
+ *               apiary_local_id:   { type: string, format: uuid }
+ *               code:              { type: string, example: "CME-001-SRV" }
+ *               status:            { type: string, enum: [active, inactive, dead, transferred] }
+ *               box_type:          { type: string, example: "INPA" }
+ *               species_local_id:  { type: string, format: uuid, nullable: true }
+ *               installation_date: { type: string, format: date, nullable: true }
+ *               modules_count:     { type: integer, nullable: true }
+ *               notes:             { type: string, nullable: true }
+ *     responses:
+ *       201:
+ *         description: Caixa criada
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Hive'
+ *       403:
+ *         description: Sem permissão
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 router.post('/',
   requireRole('socio', 'responsavel'),
   validate(HiveCreateSchema),
@@ -149,6 +243,47 @@ router.post('/',
   } catch (err) { next(err); }
 });
 
+/**
+ * @openapi
+ * /api/hives/{local_id}:
+ *   put:
+ *     tags: [hives]
+ *     summary: Atualizar caixa de abelha
+ *     parameters:
+ *       - in: path
+ *         name: local_id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               code:              { type: string }
+ *               status:            { type: string, enum: [active, inactive, dead, transferred] }
+ *               box_type:          { type: string }
+ *               species_local_id:  { type: string, format: uuid, nullable: true }
+ *               installation_date: { type: string, format: date, nullable: true }
+ *               modules_count:     { type: integer, nullable: true }
+ *               notes:             { type: string, nullable: true }
+ *     responses:
+ *       200:
+ *         description: Caixa atualizada
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Hive'
+ *       404:
+ *         description: Não encontrada
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 router.put('/:local_id',
   requireRole('socio', 'responsavel'),
   checkResourceOwnership('hive'),

@@ -45,6 +45,38 @@ async function resolveAccessibleApiaryIds(req: any, contextHiveId?: string): Pro
 
 // ── GET /api/instructions ─────────────────────────────────────────────────────
 
+/**
+ * @openapi
+ * /api/instructions:
+ *   get:
+ *     tags: [instructions]
+ *     summary: Listar orientações/tarefas
+ *     description: Retorna orientações filtradas pelo escopo do usuário e parâmetros opcionais.
+ *     parameters:
+ *       - in: query
+ *         name: apiary_local_id
+ *         schema: { type: string, format: uuid }
+ *         description: Filtrar por meliponário
+ *       - in: query
+ *         name: hive_local_id
+ *         schema: { type: string, format: uuid }
+ *         description: Filtrar por colmeia
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [pendente, em_execucao, concluida, validada, rejeitada]
+ *         description: Filtrar por status
+ *     responses:
+ *       200:
+ *         description: Lista de orientações
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Instruction'
+ */
 router.get('/', async (req, res, next) => {
   try {
     const user = req.user!;
@@ -93,6 +125,43 @@ router.get('/', async (req, res, next) => {
 
 // ── POST /api/instructions ────────────────────────────────────────────────────
 
+/**
+ * @openapi
+ * /api/instructions:
+ *   post:
+ *     tags: [instructions]
+ *     summary: Criar orientação/tarefa
+ *     description: Cria uma nova orientação com prazo opcional. Tratadores não podem criar. Suporta áudio e texto.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [local_id, apiary_local_id]
+ *             properties:
+ *               local_id:         { type: string, format: uuid }
+ *               apiary_local_id:  { type: string, format: uuid }
+ *               hive_local_id:    { type: string, format: uuid, nullable: true, description: "null = orientação para todo o meliponário" }
+ *               text_content:     { type: string, nullable: true }
+ *               audio_key:        { type: string, nullable: true, description: "Chave R2 do áudio" }
+ *               priority_days:    { type: integer, nullable: true, description: "null = urgente" }
+ *               due_date:         { type: string, format: date, nullable: true }
+ *               prazo_conclusao:  { type: string, format: date-time, nullable: true }
+ *     responses:
+ *       201:
+ *         description: Orientação criada
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Instruction'
+ *       403:
+ *         description: Tratadores não podem criar orientações
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 router.post('/',
   validate(InstructionCreateSchema),
   auditLog('CREATE', 'instruction', (req, body: any) => ({
@@ -134,6 +203,70 @@ router.post('/',
 
 // ── PATCH /api/instructions/:id/status ───────────────────────────────────────
 
+/**
+ * @openapi
+ * /api/instructions/{id}/status:
+ *   patch:
+ *     tags: [instructions]
+ *     summary: Atualizar status da tarefa (SLA workflow)
+ *     description: |
+ *       Máquina de estados por papel:
+ *       - **tratador**: pode mover para `em_execucao` ou `concluida` (evidência obrigatória para concluída)
+ *       - **responsavel / orientador**: pode mover para `validada` ou `rejeitada` (apenas de `concluida`; motivo obrigatório para rejeição)
+ *       - **socio / master_admin**: qualquer transição
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: local_id da orientação
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [status]
+ *             properties:
+ *               status:
+ *                 type: string
+ *                 enum: [pendente, em_execucao, concluida, validada, rejeitada]
+ *               evidencia_key:
+ *                 type: string
+ *                 nullable: true
+ *                 description: Chave R2 da evidência (obrigatória para concluida)
+ *               motivo_rejeicao:
+ *                 type: string
+ *                 nullable: true
+ *                 description: Motivo de rejeição (obrigatório para rejeitada)
+ *     responses:
+ *       200:
+ *         description: Status atualizado
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Instruction'
+ *       400:
+ *         description: Evidência ou motivo de rejeição ausente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       403:
+ *         description: Transição não permitida para o papel do usuário
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       422:
+ *         description: Regra de negócio violada (ex.: validar tarefa que não está concluída)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 router.patch('/:id/status',
   validate(InstructionStatusSchema),
   auditLog('UPDATE', 'instruction', (req) => ({

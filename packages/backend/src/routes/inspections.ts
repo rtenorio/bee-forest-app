@@ -27,6 +27,30 @@ async function resolveHiveScope(req: Request): Promise<string[] | null> {
   return [];
 }
 
+/**
+ * @openapi
+ * /api/inspections:
+ *   get:
+ *     tags: [inspections]
+ *     summary: Listar inspeções
+ *     description: Retorna inspeções filtradas pelo escopo do usuário. Aceita filtro por colmeia.
+ *     parameters:
+ *       - in: query
+ *         name: hive_local_id
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Filtrar por colmeia específica
+ *     responses:
+ *       200:
+ *         description: Lista de inspeções
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Inspection'
+ */
 router.get('/', async (req, res, next) => {
   try {
     const { hive_local_id } = req.query;
@@ -53,6 +77,39 @@ router.get('/', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+/**
+ * @openapi
+ * /api/inspections/{local_id}:
+ *   get:
+ *     tags: [inspections]
+ *     summary: Detalhe de uma inspeção
+ *     parameters:
+ *       - in: path
+ *         name: local_id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Inspeção encontrada
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Inspection'
+ *       403:
+ *         description: Sem permissão
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       404:
+ *         description: Não encontrada
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 router.get('/:local_id', async (req, res, next) => {
   try {
     const row = await queryOne<Record<string, unknown>>(
@@ -92,6 +149,47 @@ async function upsertTasks(
   }
 }
 
+/**
+ * @openapi
+ * /api/inspections:
+ *   post:
+ *     tags: [inspections]
+ *     summary: Criar inspeção
+ *     description: Registra uma nova inspeção de colmeia com checklist completo e dados climáticos opcionais.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [hive_local_id, inspected_at, inspector_name, checklist]
+ *             properties:
+ *               hive_local_id:        { type: string, format: uuid }
+ *               inspected_at:         { type: string, format: date-time }
+ *               inspector_name:       { type: string }
+ *               checklist:            { type: object, description: "Checklist completo da inspeção" }
+ *               weight_kg:            { type: number, nullable: true }
+ *               temperature_c:        { type: number, nullable: true }
+ *               humidity_pct:         { type: number, nullable: true }
+ *               precipitation_mm:     { type: number, nullable: true }
+ *               sky_condition:        { type: string, nullable: true }
+ *               notes:                { type: string, nullable: true }
+ *               next_inspection_due:  { type: string, format: date, nullable: true }
+ *               copied_from_previous: { type: boolean, nullable: true }
+ *     responses:
+ *       201:
+ *         description: Inspeção criada
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Inspection'
+ *       403:
+ *         description: Sem permissão
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 router.post('/',
   validate(InspectionCreateSchema),
   auditLog('CREATE', 'inspection', (req, body: any) => ({
