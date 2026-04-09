@@ -6,7 +6,9 @@ import {
   InstructionStatusSchema,
   InstructionResponseCreateSchema,
 } from '../shared';
-import { getUploadUrl, getPublicUrl } from '../services/r2';
+import { getUploadUrl } from '../services/r2';
+import { generateSignedUrl } from '../lib/r2';
+import { validateUpload } from '../middleware/upload';
 import { v4 as uuidv4 } from 'uuid';
 
 const router = Router();
@@ -264,19 +266,25 @@ router.post('/:id/responses', validate(InstructionResponseCreateSchema), async (
 });
 
 // ── POST /api/instructions/upload-url ────────────────────────────────────────
-// Frontend solicita URL pré-assinada para fazer upload de áudio direto ao R2
+// Frontend solicita URL pré-assinada para upload direto ao R2.
+// Retorna:
+//   uploadUrl — URL pré-assinada de PUT (5 min) para o cliente fazer upload
+//   readUrl   — URL pré-assinada de GET (1 h) para exibir o arquivo após upload
+//   key       — chave do objeto no R2 (armazenar no banco para gerar readUrls futuras)
 
-router.post('/upload-url', async (req, res, next) => {
+router.post('/upload-url', validateUpload, async (req, res, next) => {
   try {
     const { filename, contentType } = req.body as { filename: string; contentType: string };
-    if (!filename || !contentType) {
-      res.status(400).json({ error: 'filename e contentType são obrigatórios' });
+    if (!filename) {
+      res.status(400).json({ error: 'filename é obrigatório' });
       return;
     }
     const key = `instructions/${uuidv4()}-${filename}`;
-    const uploadUrl = await getUploadUrl(key, contentType);
-    const publicUrl = getPublicUrl(key);
-    res.json({ uploadUrl, publicUrl, key });
+    const [uploadUrl, readUrl] = await Promise.all([
+      getUploadUrl(key, contentType),
+      generateSignedUrl(key, 3600),
+    ]);
+    res.json({ uploadUrl, readUrl, key });
   } catch (err) {
     next(err);
   }
