@@ -1,10 +1,24 @@
 import { Router } from 'express';
-import { ListObjectsV2Command } from '@aws-sdk/client-s3';
+import { S3Client, ListObjectsV2Command } from '@aws-sdk/client-s3';
 import { query, pool } from '../db/connection';
 import { r2, R2_BUCKET } from '../services/r2';
 import { requireRole } from '../middleware/requireRole';
 
 const R2_BUCKET_BACKUP = process.env.R2_BUCKET_BACKUP ?? 'bee-forest-backup';
+
+// Build a dedicated S3 client for the backup bucket.
+// Uses R2_BACKUP_ACCESS_KEY_ID / R2_BACKUP_SECRET_ACCESS_KEY when available;
+// falls back to the standard R2 credentials so the same Cloudflare account
+// can still reach the backup bucket if separate keys were not provisioned.
+const R2_ACCOUNT_ID = process.env.R2_ACCOUNT_ID ?? '';
+const r2Backup = new S3Client({
+  region: 'auto',
+  endpoint: `https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+  credentials: {
+    accessKeyId:     process.env.R2_BACKUP_ACCESS_KEY_ID     ?? process.env.R2_ACCESS_KEY_ID     ?? '',
+    secretAccessKey: process.env.R2_BACKUP_SECRET_ACCESS_KEY ?? process.env.R2_SECRET_ACCESS_KEY ?? '',
+  },
+});
 
 const router = Router();
 
@@ -145,7 +159,7 @@ async function checkR2(): Promise<'ok' | 'error'> {
 }
 
 async function checkLastBackup(): Promise<{ timestamp: string | null; status: string }> {
-  const result = await r2.send(
+  const result = await r2Backup.send(
     new ListObjectsV2Command({ Bucket: R2_BUCKET_BACKUP, Prefix: 'backup-', MaxKeys: 100 })
   );
 
