@@ -22,6 +22,7 @@ import equipmentRouter from './equipment';
 import melgueirasRouter from './melgueiras';
 import mediaRouter from './media';
 import adminRouter from './admin';
+import financeiroRouter from './financeiro';
 import { authenticate } from '../middleware/authenticate';
 
 const router = Router();
@@ -52,5 +53,6 @@ router.use('/equipment', authenticate, equipmentRouter);
 router.use('/melgueiras', authenticate, melgueirasRouter);
 router.use('/media', authenticate, mediaRouter);
 router.use('/admin', authenticate, adminRouter);
+router.use('/financeiro', authenticate, financeiroRouter);
 
 export default router;

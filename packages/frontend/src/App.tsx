@@ -44,6 +44,9 @@ import { DivisionDetail } from './pages/Divisions/DivisionDetail';
 import { SocioDashboard } from './pages/Dashboard/SocioDashboard';
 import { ResponsavelDashboard } from './pages/Dashboard/ResponsavelDashboard';
 import { TratadorDashboard } from './pages/Dashboard/TratadorDashboard';
+import { FinanceiroDashboard } from './pages/Financeiro/FinanceiroDashboard';
+import { ProducaoPage } from './pages/Financeiro/ProducaoPage';
+import { CustosPage } from './pages/Financeiro/CustosPage';
 import { AuditPage } from './pages/Admin/AuditPage';
 import { SystemHealthPage } from './pages/Admin/SystemHealthPage';
 import { SLAReportPage } from './pages/Admin/SLAReportPage';
@@ -107,6 +110,9 @@ export function App() {
           <Route path="notifications" element={<NotificationsPage />} />
           <Route path="settings" element={<SettingsPage />} />
           <Route path="settings/notifications" element={<NotificationSettingsPage />} />
+          <Route path="financeiro" element={<FinanceiroDashboard />} />
+          <Route path="financeiro/producao" element={<ProducaoPage />} />
+          <Route path="financeiro/custos" element={<CustosPage />} />
           <Route path="admin/audit" element={<AuditPage />} />
           <Route path="admin/health" element={<SystemHealthPage />} />
           <Route path="admin/sla-report" element={<SLAReportPage />} />
