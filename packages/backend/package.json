@@ -10,7 +10,9 @@
     "db:migrate": "tsx src/db/migrate.ts",
     "db:seed": "tsx src/db/seed.ts",
     "db:seed-hives": "tsx src/db/seed_hives.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1024.0",
@@ -39,9 +41,12 @@
     "@types/node": "^22.13.5",
     "@types/node-cron": "^3.0.11",
     "@types/pg": "^8.11.11",
+    "@types/supertest": "^6.0.3",
     "@types/uuid": "^10.0.0",
     "@types/web-push": "^3.6.4",
+    "supertest": "^7.2.2",
     "tsx": "^4.19.3",
-    "typescript": "^5.7.3"
+    "typescript": "^5.7.3",
+    "vitest": "^3.2.4"
   }
 }

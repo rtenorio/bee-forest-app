@@ -19,7 +19,7 @@ function scopeClause(req: Request): { clause: string; params: unknown[] } {
 
 router.get('/', async (req, res, next) => {
   try {
-    if (req.user!.role === 'tratador') { res.json([]); return; }
+    if (req.user!.role === 'tratador') { res.status(403).json({ error: 'Sem permissão' }); return; }
     const { clause, params } = scopeClause(req);
     const rows = await query(
       `SELECT * FROM apiaries WHERE deleted_at IS NULL ${clause} ORDER BY name`,
