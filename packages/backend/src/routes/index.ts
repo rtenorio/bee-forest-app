@@ -24,6 +24,8 @@ import mediaRouter from './media';
 import adminRouter from './admin';
 import financeiroRouter from './financeiro';
 import lotesRouter from './lotes';
+import contactRouter from './contact';
+import checkoutRouter from './checkout';
 import { authenticate } from '../middleware/authenticate';
 
 const router = Router();
@@ -31,6 +33,8 @@ const router = Router();
 // Public routes (sem autenticação)
 router.use('/auth', authRouter);
 router.use('/public', publicRouter);
+router.use('/contact', contactRouter);
+router.use('/checkout', checkoutRouter);
 
 // Protected routes
 router.use('/apiaries', authenticate, apiariesRouter);

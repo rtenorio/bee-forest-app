@@ -15,7 +15,14 @@ export function createApp() {
   const app = express();
 
   app.use(helmet());
-  app.use(cors({ origin: config.corsOrigin, credentials: true }));
+  app.use(cors({
+    origin: (origin, callback) => {
+      // Allow requests with no origin (mobile apps, curl, etc.) and listed origins
+      if (!origin || config.corsOrigins.includes(origin)) return callback(null, true);
+      callback(new Error(`CORS blocked: ${origin}`));
+    },
+    credentials: true,
+  }));
   app.use(express.json({ limit: '10mb' }));
   app.use(morgan(config.nodeEnv === 'production' ? 'combined' : 'dev'));
 
