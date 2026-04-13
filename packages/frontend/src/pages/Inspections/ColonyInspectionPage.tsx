@@ -29,6 +29,7 @@ import { InspectionSummaryCard, computeScore } from '@/components/inspection/Ins
 import { cn } from '@/utils/cn';
 import { todayISO } from '@/utils/dates';
 import type { InspectionChecklist, InspectionTask, SkyCondition, Instruction } from '@bee-forest/shared';
+import { toggleInvasores, toggleSinaisEnfraquecimento, toggleAlteracoesInternas } from '@bee-forest/shared';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -57,42 +58,54 @@ interface FormState {
 
 function defaultChecklist(): InspectionChecklist {
   return {
-    inspection_type: null,
-    time_of_day: null,
+    // Contexto
+    inspection_type: 'external_internal',
+    time_of_day: 'morning',
+    // Clima
     precipitation_observed: false,
     weather_feel: [],
-    perceived_bloom: null,
+    perceived_bloom: 'medium',
     weather_notes: '',
-    activity_level: null,
-    activity_observations: [],
+    // Atividade
+    activity_level: 'normal',
+    activity_observations: ['entrada_organizada'],
     entry_notes: '',
-    colony_strength: null,
-    strength_observations: [],
-    honey_stores: null,
-    pollen_stores: null,
-    food_observations: [],
+    // Força
+    colony_strength: 'medium',
+    strength_observations: ['populacao_compativel'],
+    // Reservas
+    honey_stores: 'adequate',
+    pollen_stores: 'adequate',
+    food_observations: ['potes_mel_integros', 'potes_polen_integros'],
     food_notes: '',
-    brood_status: null,
-    brood_observations: [],
+    // Cria
+    brood_status: 'normal',
+    brood_observations: ['rainha_visualizada', 'postura_recente', 'cria_normal'],
     brood_notes: '',
-    box_observations: [],
+    // Caixa
+    box_observations: ['caixa_integra', 'tampa_vedando', 'entrada_adequada'],
     box_notes: '',
-    invaders: [],
+    // Sanidade — neutros pré-selecionados (exclusão mútua via handlers)
+    invaders: ['ausentes'],
     other_invader_text: '',
-    weakness_signs: [],
-    internal_changes: [],
+    weakness_signs: ['nenhum'],
+    internal_changes: ['nenhuma'],
     odor_description: '',
     sanitary_severity: null,
-    productive_potential: null,
-    productive_observations: [],
+    // Potencial produtivo
+    productive_potential: 'medium',
+    productive_observations: ['boa_entrada_alimento', 'apta_producao'],
     productive_notes: '',
-    management_actions: [],
+    // Manejo
+    management_actions: ['sem_intervencao'],
     management_description: '',
     materials_used: '',
+    // Tarefas
     tasks: [],
-    overall_status: null,
-    recommendation: null,
-    next_inspection_days: null,
+    // Conclusão
+    overall_status: 'healthy',
+    recommendation: 'maintain_routine',
+    next_inspection_days: 7,
     final_summary: '',
     generate_alert: false,
     notify_technician: false,
@@ -169,6 +182,7 @@ const BOX_CHIPS = [
 ];
 
 const INVADER_CHIPS = [
+  { value: 'ausentes', label: 'Ausentes' },
   { value: 'formigas', label: 'Formigas' },
   { value: 'moscas_foridas', label: 'Moscas fóridas' },
   { value: 'forideos_nos_potes', label: 'Forídeos nos potes' },
@@ -180,6 +194,7 @@ const INVADER_CHIPS = [
 ];
 
 const WEAKNESS_CHIPS = [
+  { value: 'nenhum', label: 'Nenhum' },
   { value: 'baixa_atividade', label: 'Baixa atividade' },
   { value: 'poucas_campeiras', label: 'Poucas campeiras' },
   { value: 'colonia_fraca', label: 'Colônia fraca' },
@@ -190,6 +205,7 @@ const WEAKNESS_CHIPS = [
 ];
 
 const INTERNAL_CHIPS = [
+  { value: 'nenhuma', label: 'Nenhuma' },
   { value: 'umidade_excessiva', label: 'Umidade excessiva' },
   { value: 'mofo', label: 'Mofo' },
   { value: 'mel_fermentando', label: 'Mel fermentando' },
@@ -1092,7 +1108,16 @@ export function ColonyInspectionPage() {
         <InspectionSection step={isInternal ? 8 : 7} title="Sanidade" subtitle="Específico para uruçu — abelha sem ferrão" icon="🔬">
           <div>
             <p className="text-xs font-semibold text-stone-400 uppercase tracking-wider mb-2">Invasores e predadores</p>
-            <ChipGroup options={INVADER_CHIPS} value={form.checklist.invaders} onChange={(v) => setCL('invaders', v)} color="red" />
+            <ChipGroup
+              options={INVADER_CHIPS}
+              value={form.checklist.invaders}
+              onChange={(next) => {
+                const prev = form.checklist.invaders;
+                const toggled = next.find(x => !prev.includes(x)) ?? prev.find(x => !next.includes(x));
+                if (toggled) setCL('invaders', toggleInvasores(prev, toggled));
+              }}
+              color="red"
+            />
             {form.checklist.invaders.includes('outros') && (
               <input
                 type="text"
@@ -1106,13 +1131,31 @@ export function ColonyInspectionPage() {
 
           <div>
             <p className="text-xs font-semibold text-stone-400 uppercase tracking-wider mb-2">Sinais de enfraquecimento</p>
-            <ChipGroup options={WEAKNESS_CHIPS} value={form.checklist.weakness_signs} onChange={(v) => setCL('weakness_signs', v)} color="red" />
+            <ChipGroup
+              options={WEAKNESS_CHIPS}
+              value={form.checklist.weakness_signs}
+              onChange={(next) => {
+                const prev = form.checklist.weakness_signs;
+                const toggled = next.find(x => !prev.includes(x)) ?? prev.find(x => !next.includes(x));
+                if (toggled) setCL('weakness_signs', toggleSinaisEnfraquecimento(prev, toggled));
+              }}
+              color="red"
+            />
           </div>
 
           {isInternal && (
             <div>
               <p className="text-xs font-semibold text-stone-400 uppercase tracking-wider mb-2">Alterações internas</p>
-              <ChipGroup options={INTERNAL_CHIPS} value={form.checklist.internal_changes} onChange={(v) => setCL('internal_changes', v)} color="red" />
+              <ChipGroup
+                options={INTERNAL_CHIPS}
+                value={form.checklist.internal_changes}
+                onChange={(next) => {
+                  const prev = form.checklist.internal_changes;
+                  const toggled = next.find(x => !prev.includes(x)) ?? prev.find(x => !next.includes(x));
+                  if (toggled) setCL('internal_changes', toggleAlteracoesInternas(prev, toggled));
+                }}
+                color="red"
+              />
               {form.checklist.internal_changes.includes('odor_anormal') && (
                 <input
                   type="text"
