@@ -17,42 +17,65 @@ import type { InspectionChecklist } from '@bee-forest/shared';
 import type { InspectionAIResult } from '@/types/inspection';
 
 const DEFAULT_CHECKLIST: InspectionChecklist = {
-  inspection_type: null,
-  time_of_day: null,
+  // Contexto
+  inspection_type: 'external_internal',
+  time_of_day: 'morning',
+
+  // Clima
   precipitation_observed: false,
   weather_feel: [],
-  perceived_bloom: null,
+  perceived_bloom: 'medium',
   weather_notes: '',
-  activity_level: null,
-  activity_observations: [],
+
+  // Atividade
+  activity_level: 'normal',
+  activity_observations: ['organized_entry'],
   entry_notes: '',
-  colony_strength: null,
-  strength_observations: [],
-  honey_stores: null,
-  pollen_stores: null,
-  food_observations: [],
+
+  // Força da colônia
+  colony_strength: 'medium',
+  strength_observations: ['compatible_population'],
+
+  // Reservas
+  honey_stores: 'adequate',
+  pollen_stores: 'adequate',
+  food_observations: ['honey_pots_intact', 'pollen_pots_intact'],
   food_notes: '',
-  brood_status: null,
-  brood_observations: [],
+
+  // Cria
+  brood_status: 'normal',
+  brood_observations: ['queen_visualized', 'recent_laying_visible', 'normal_brood'],
   brood_notes: '',
-  box_observations: [],
+
+  // Condição da caixa
+  box_observations: ['intact_box', 'lid_sealing_well', 'adequate_entrance'],
   box_notes: '',
-  invaders: [],
+
+  // Sanidade — valores neutros (exclusão mútua gerenciada pelo SanidadeTab)
+  invaders: ['ausentes'],
   other_invader_text: '',
-  weakness_signs: [],
-  internal_changes: [],
+  weakness_signs: ['nenhum'],
+  internal_changes: ['nenhuma'],
   odor_description: '',
   sanitary_severity: null,
-  productive_potential: null,
-  productive_observations: [],
+
+  // Potencial produtivo
+  productive_potential: 'medium',
+  productive_observations: ['good_food_intake', 'apt_for_production'],
   productive_notes: '',
-  management_actions: [],
+
+  // Manejo
+  management_actions: ['no_intervention'],
   management_description: '',
   materials_used: '',
+
+  // Tarefas
   tasks: [],
-  overall_status: null,
-  recommendation: null,
-  next_inspection_days: null,
+
+  // Conclusão
+  overall_status: 'healthy',
+  recommendation: 'maintain_routine',
+  next_inspection_days: 7,
   final_summary: '',
   generate_alert: false,
   notify_technician: false,
