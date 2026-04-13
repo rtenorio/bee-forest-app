@@ -16,6 +16,9 @@ export * from './types/division';
 export * from './types/transfer';
 export * from './types/equipment';
 
+// Inspection domain
+export * from './inspection/sanidadeDefaults';
+
 // Schemas
 export * from './schemas/auth.schema';
 export * from './schemas/apiary.schema';

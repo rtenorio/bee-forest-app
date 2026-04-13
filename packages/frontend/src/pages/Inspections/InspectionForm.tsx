@@ -5,12 +5,16 @@ import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
 import { Button } from '@/components/ui/Button';
 import { InspectionChecklistForm } from '@/components/inspection/InspectionChecklist';
+import { SanidadeTab } from '@/components/inspection/SanidadeTab';
+import { FotoAnaliseIA } from '@/components/inspection/FotoAnaliseIA';
 import { useCreateInspection } from '@/hooks/useInspections';
 import { useHives } from '@/hooks/useHives';
 import { useUIStore } from '@/store/uiStore';
-import { InspectionCreateSchema } from '@bee-forest/shared';
+import { useInspectionAI } from '@/hooks/useInspectionAI';
+import { InspectionCreateSchema, SANIDADE_INITIAL_VALUES } from '@bee-forest/shared';
 import { todayISO, nowISO } from '@/utils/dates';
 import type { InspectionChecklist } from '@bee-forest/shared';
+import type { InspectionAIResult } from '@/types/inspection';
 
 const DEFAULT_CHECKLIST: InspectionChecklist = {
   inspection_type: null,
@@ -90,7 +94,28 @@ export function InspectionForm({ defaultHiveId, onSuccess, onCancel }: Props) {
     next_inspection_due: '',
   });
   const [checklist, setChecklist] = useState<InspectionChecklist>(DEFAULT_CHECKLIST);
+  const [sanidade, setSanidade] = useState(SANIDADE_INITIAL_VALUES);
+  const [aiSuggestions, setAISuggestions] = useState<InspectionAIResult | null>(null);
+  const [showFotoAnaliseIA, setShowFotoAnaliseIA] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // setFieldValue unificado para o hook useInspectionAI
+  const setFieldValue = (field: string, value: unknown) => {
+    if (field === 'invasores' || field === 'sinaisEnfraquecimento' || field === 'alteracoesInternas') {
+      setSanidade((s) => ({ ...s, [field]: value as string[] }));
+    } else if (field.startsWith('_aiSuggestion_')) {
+      // sugestões de sanidade com confiança média — passa para o SanidadeTab via aiSuggestions
+    } else {
+      setForm((f) => ({ ...f, [field]: value }));
+    }
+  };
+
+  const { aplicarResultadoIA } = useInspectionAI(setFieldValue);
+
+  const handleAIResult = (resultado: InspectionAIResult) => {
+    setAISuggestions(resultado);
+    aplicarResultadoIA(resultado);
+  };
 
   const set = (key: string, value: string) => setForm((f) => ({ ...f, [key]: value }));
 
@@ -102,7 +127,12 @@ export function InspectionForm({ defaultHiveId, onSuccess, onCancel }: Props) {
       hive_local_id: form.hive_local_id,
       inspected_at: new Date(form.inspected_at).toISOString(),
       inspector_name: form.inspector_name,
-      checklist,
+      checklist: {
+        ...checklist,
+        invaders: sanidade.invasores,
+        weakness_signs: sanidade.sinaisEnfraquecimento,
+        internal_changes: sanidade.alteracoesInternas,
+      },
       weight_kg: form.weight_kg ? parseFloat(form.weight_kg) : null,
       temperature_c: form.temperature_c ? parseFloat(form.temperature_c) : null,
       sky_condition: form.sky_condition || null,
@@ -163,10 +193,53 @@ export function InspectionForm({ defaultHiveId, onSuccess, onCancel }: Props) {
         />
       </div>
 
+      {/* Botão de análise por IA */}
+      <div className="border-t border-stone-800 pt-4">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+          <h3 className="font-semibold text-stone-200">Análise por IA</h3>
+          <button
+            type="button"
+            onClick={() => setShowFotoAnaliseIA((v) => !v)}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '7px 14px',
+              borderRadius: 8,
+              border: '1px solid var(--color-border-tertiary)',
+              background: showFotoAnaliseIA ? 'var(--color-background-info)' : 'var(--color-background-secondary)',
+              color: showFotoAnaliseIA ? 'var(--color-text-info)' : 'var(--color-text-secondary)',
+              fontSize: 13,
+              cursor: 'pointer',
+            }}
+          >
+            🤖 {showFotoAnaliseIA ? 'Fechar' : 'Preencher com fotos'}
+          </button>
+        </div>
+        {showFotoAnaliseIA && (
+          <div style={{ marginBottom: 20 }}>
+            <FotoAnaliseIA
+              onResultado={handleAIResult}
+              onFechar={() => setShowFotoAnaliseIA(false)}
+            />
+          </div>
+        )}
+      </div>
+
       {/* Checklist */}
       <div className="border-t border-stone-800 pt-4">
         <h3 className="font-semibold text-stone-200 mb-4">Checklist da Inspeção</h3>
         <InspectionChecklistForm value={checklist} onChange={setChecklist} />
+      </div>
+
+      {/* Sanidade */}
+      <div className="border-t border-stone-800 pt-4">
+        <h3 className="font-semibold text-stone-200 mb-1">Sanidade</h3>
+        <SanidadeTab
+          values={sanidade}
+          onChange={(field, value) => setSanidade((s) => ({ ...s, [field]: value }))}
+          aiSuggestions={aiSuggestions ?? undefined}
+        />
       </div>
 
       <Textarea

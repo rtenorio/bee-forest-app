@@ -8,8 +8,11 @@ import { checkResourceOwnership } from '../middleware/ownership';
 import { auditLog } from '../middleware/auditLog';
 import { InspectionCreateSchema, InspectionUpdateSchema } from '../shared';
 import type { Request } from 'express';
+import { analyzeInspectionPhotos } from './inspections/analyzePhotos';
 
 const router = Router();
+
+router.post('/analyze-photos', analyzeInspectionPhotos);
 
 async function resolveHiveScope(req: Request): Promise<string[] | null> {
   const role = req.user!.role;
