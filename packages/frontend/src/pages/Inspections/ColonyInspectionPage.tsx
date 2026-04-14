@@ -30,6 +30,9 @@ import { cn } from '@/utils/cn';
 import { todayISO } from '@/utils/dates';
 import type { InspectionChecklist, InspectionTask, SkyCondition, Instruction } from '@bee-forest/shared';
 import { toggleInvasores, toggleSinaisEnfraquecimento, toggleAlteracoesInternas } from '@bee-forest/shared';
+import { FotoAnaliseIA } from '@/components/inspection/FotoAnaliseIA';
+import { useInspectionAI } from '@/hooks/useInspectionAI';
+import type { InspectionAIResult } from '@/types/inspection';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -435,6 +438,7 @@ export function ColonyInspectionPage() {
 
   const [selectedId, setSelectedId] = useState('');
   const [form, setForm] = useState<FormState>(() => makeDefault(user?.name ?? ''));
+  const [showFotoIA, setShowFotoIA] = useState(false);
   const [weatherLoading, setWeatherLoading] = useState(false);
   const [savingDraft, setSavingDraft] = useState(false);
   const [fromLastInspection, setFromLastInspection] = useState(false);
@@ -530,6 +534,27 @@ export function ColonyInspectionPage() {
   const setCL = useCallback(<K extends keyof InspectionChecklist>(key: K, value: InspectionChecklist[K]) => {
     setForm((f) => ({ ...f, checklist: { ...f.checklist, [key]: value } }));
   }, []);
+
+  const setFieldValue = useCallback((field: string, value: unknown) => {
+    const clFields: Array<keyof InspectionChecklist> = [
+      'activity_level', 'activity_observations', 'colony_strength', 'strength_observations',
+      'honey_stores', 'pollen_stores', 'food_observations',
+      'brood_status', 'brood_observations', 'box_observations',
+      'invaders', 'weakness_signs', 'internal_changes',
+      'productive_potential', 'productive_observations',
+      'overall_status', 'recommendation',
+    ];
+    if (clFields.includes(field as keyof InspectionChecklist)) {
+      setCL(field as keyof InspectionChecklist, value as never);
+    }
+  }, [setCL]);
+
+  const { aplicarResultadoIA } = useInspectionAI(setFieldValue);
+
+  const handleAIResult = useCallback((resultado: InspectionAIResult) => {
+    aplicarResultadoIA(resultado);
+    setShowFotoIA(false);
+  }, [aplicarResultadoIA]);
 
   // ── Auto-fetch weather on mount ───────────────────────────────────────────
 
@@ -926,6 +951,33 @@ export function ColonyInspectionPage() {
             </div>
           )
         )}
+
+        {/* ═══ ANÁLISE POR IA ════════════════════════════════════════════════ */}
+        <div className="rounded-2xl border border-stone-800 bg-stone-900/60 px-4 py-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-semibold text-stone-200">Análise por IA</p>
+              <p className="text-xs text-stone-500 mt-0.5">Tire fotos da caixa para preencher o formulário automaticamente</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowFotoIA((v) => !v)}
+              className={cn(
+                'flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors',
+                showFotoIA
+                  ? 'bg-sky-500/20 border-sky-500/50 text-sky-300'
+                  : 'bg-stone-800 border-stone-700 text-stone-400 hover:border-stone-600 hover:text-stone-300'
+              )}
+            >
+              🤖 {showFotoIA ? 'Fechar' : 'Preencher com fotos'}
+            </button>
+          </div>
+          {showFotoIA && (
+            <div className="mt-4">
+              <FotoAnaliseIA onResultado={handleAIResult} onFechar={() => setShowFotoIA(false)} />
+            </div>
+          )}
+        </div>
 
         {/* ═══ SECTION 2: Condições Climáticas ══════════════════════════════ */}
         <InspectionSection step={1} title="Condições Climáticas" subtitle="Dados automáticos — editáveis" icon="🌤️">
