@@ -3,6 +3,7 @@
 
 import React, { useRef, useState } from 'react';
 import type { InspectionAIResult } from '../../types/inspection';
+import { apiFetch } from '../../api/client';
 
 interface FotoAnaliseIAProps {
   onResultado: (resultado: InspectionAIResult) => void;
@@ -86,15 +87,12 @@ export function FotoAnaliseIA({ onResultado, onFechar }: FotoAnaliseIAProps) {
         body.fotoInternaType = fotoInterna.mediaType;
       }
 
-      const response = await fetch('/api/inspections/analyze-photos', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
+      const json = await apiFetch<{ success: boolean; data: InspectionAIResult; error?: string }>(
+        '/inspections/analyze-photos',
+        { method: 'POST', body: JSON.stringify(body) },
+      );
 
-      const json = await response.json();
-
-      if (!response.ok || !json.success) {
+      if (!json.success) {
         throw new Error(json.error || 'Erro na análise.');
       }
 
