@@ -78,6 +78,9 @@ export function FotoAnaliseIA({ onResultado, onFechar }: FotoAnaliseIAProps) {
     setEstado('analisando');
     setErro(null);
 
+    const base = import.meta.env.VITE_API_URL ?? '';
+    const url = `${base}/api/inspections/analyze-photos`;
+
     try {
       const body: Record<string, string> = {};
       if (fotoExterna) {
@@ -101,7 +104,8 @@ export function FotoAnaliseIA({ onResultado, onFechar }: FotoAnaliseIAProps) {
       setResultado(json.data);
       setEstado('concluido');
     } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Erro ao analisar as fotos.');
+      const msg = e instanceof Error ? e.message : 'Erro ao analisar as fotos.';
+      setErro(`${msg}\n\nURL: ${url}`);
       setEstado('erro');
     }
   }
@@ -329,6 +333,8 @@ export function FotoAnaliseIA({ onResultado, onFechar }: FotoAnaliseIAProps) {
             marginBottom: 16,
             fontSize: 13,
             color: 'var(--color-text-danger)',
+            whiteSpace: 'pre-line',
+            wordBreak: 'break-word',
           }}
         >
           {erro}
