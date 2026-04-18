@@ -15,8 +15,11 @@ export async function apiFetch<T = unknown>(path: string, options: FetchOptions 
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const base = import.meta.env.VITE_API_URL ?? '';
-  const res = await fetch(`${base}/api${path}`, { ...fetchOptions, headers });
+  const rawBase = import.meta.env.VITE_API_URL ?? '';
+  const base = rawBase.replace(/\/+$/, '');
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  const url = `${base}/api${normalizedPath}`;
+  const res = await fetch(url, { ...fetchOptions, headers });
 
   if (res.status === 401) {
     useAuthStore.getState().clearAuth();
