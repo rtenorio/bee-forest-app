@@ -2,16 +2,18 @@
 
 -- Tabela de fotos vinculadas à inspeção
 CREATE TABLE IF NOT EXISTS inspection_photos (
-  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  inspection_id UUID NOT NULL REFERENCES inspections(id) ON DELETE CASCADE,
-  tipo          VARCHAR(20) NOT NULL CHECK (tipo IN ('externa', 'interna')),
-  storage_key   TEXT NOT NULL,         -- chave no storage (S3/Railway volume)
-  content_type  VARCHAR(50) DEFAULT 'image/jpeg',
-  tamanho_bytes INTEGER,
-  criado_em     TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  inspection_local_id VARCHAR(36) NOT NULL
+    REFERENCES inspections(local_id) ON DELETE CASCADE,
+  tipo                VARCHAR(20) NOT NULL CHECK (tipo IN ('externa', 'interna')),
+  storage_key         TEXT NOT NULL,
+  content_type        VARCHAR(50) DEFAULT 'image/jpeg',
+  tamanho_bytes       INTEGER,
+  criado_em           TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_inspection_photos_inspection_id ON inspection_photos(inspection_id);
+CREATE INDEX IF NOT EXISTS idx_inspection_photos_inspection_local_id
+  ON inspection_photos(inspection_local_id);
 
 -- Coluna para armazenar o resultado bruto da análise de IA (JSONB)
 ALTER TABLE inspections
