@@ -105,7 +105,11 @@ export function FotoAnaliseIA({ onResultado, onFechar }: FotoAnaliseIAProps) {
       setEstado('concluido');
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Erro ao analisar as fotos.';
-      setErro(`${msg}\n\nURL: ${url}`);
+      console.error('[FotoAnaliseIA] Falha na análise', { url, error: e });
+      try {
+        await navigator.clipboard?.writeText(`${msg} | URL: ${url}`);
+      } catch { /* clipboard pode falhar em contextos sem HTTPS ou sem permissão */ }
+      setErro(`${msg}\n\nURL: ${url}\n\n(copiada para a área de transferência)`);
       setEstado('erro');
     }
   }
@@ -437,7 +441,9 @@ function SlotFoto({
       <p style={{ fontSize: 12, fontWeight: 500, color: 'var(--color-text-secondary)', marginBottom: 6 }}>
         {titulo}
       </p>
-      <div
+      <button
+        type="button"
+        onClick={onAbrirGaleria}
         style={{
           width: '100%',
           aspectRatio: '1',
@@ -449,6 +455,9 @@ function SlotFoto({
           overflow: 'hidden',
           position: 'relative',
           marginBottom: 6,
+          padding: 0,
+          cursor: 'pointer',
+          display: 'block',
         }}
       >
         {foto ? (
@@ -492,7 +501,7 @@ function SlotFoto({
             ✓ capturada
           </div>
         )}
-      </div>
+      </button>
       <div style={{ display: 'flex', gap: 4 }}>
         <button
           type="button"
