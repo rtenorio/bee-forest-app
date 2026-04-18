@@ -25,8 +25,10 @@ export function FotoAnaliseIA({ onResultado, onFechar }: FotoAnaliseIAProps) {
   const [erro, setErro] = useState<string | null>(null);
   const [resultado, setResultado] = useState<InspectionAIResult | null>(null);
 
-  const inputExternoRef = useRef<HTMLInputElement>(null);
-  const inputInternoRef = useRef<HTMLInputElement>(null);
+  const inputExternoCameraRef = useRef<HTMLInputElement>(null);
+  const inputExternoGaleriaRef = useRef<HTMLInputElement>(null);
+  const inputInternoCameraRef = useRef<HTMLInputElement>(null);
+  const inputInternoGaleriaRef = useRef<HTMLInputElement>(null);
 
   // Converte File para base64
   async function fileParaBase64(file: File): Promise<FotoCapturada> {
@@ -154,156 +156,54 @@ export function FotoAnaliseIA({ onResultado, onFechar }: FotoAnaliseIAProps) {
       {estado !== 'concluido' && (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
           {/* Foto Externa */}
-          <div>
-            <p style={{ fontSize: 12, fontWeight: 500, color: 'var(--color-text-secondary)', marginBottom: 6 }}>
-              Foto Externa
-            </p>
-            <button
-              type="button"
-              onClick={() => inputExternoRef.current?.click()}
-              style={{
-                width: '100%',
-                aspectRatio: '1',
-                borderRadius: 8,
-                border: fotoExterna
-                  ? '2px solid var(--color-border-success)'
-                  : '1.5px dashed var(--color-border-secondary)',
-                background: fotoExterna
-                  ? 'none'
-                  : 'var(--color-background-secondary)',
-                cursor: 'pointer',
-                overflow: 'hidden',
-                padding: 0,
-                position: 'relative',
-              }}
-            >
-              {fotoExterna ? (
-                <img
-                  src={fotoExterna.preview}
-                  alt="Foto externa"
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                />
-              ) : (
-                <div
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    height: '100%',
-                    gap: 6,
-                    padding: 12,
-                  }}
-                >
-                  <span style={{ fontSize: 24 }}>📷</span>
-                  <span style={{ fontSize: 11, color: 'var(--color-text-secondary)', textAlign: 'center' }}>
-                    Entrada da caixa
-                  </span>
-                </div>
-              )}
-              {fotoExterna && (
-                <div
-                  style={{
-                    position: 'absolute',
-                    bottom: 4,
-                    right: 4,
-                    background: 'var(--color-background-success)',
-                    borderRadius: 12,
-                    padding: '2px 6px',
-                    fontSize: 10,
-                    color: 'var(--color-text-success)',
-                    fontWeight: 500,
-                  }}
-                >
-                  ✓ capturada
-                </div>
-              )}
-            </button>
-            <input
-              ref={inputExternoRef}
-              type="file"
-              accept="image/*"
-              capture="environment"
-              style={{ display: 'none' }}
-              onChange={(e) => handleCapturarFoto(e, 'externa')}
-            />
-          </div>
+          <SlotFoto
+            titulo="Foto Externa"
+            placeholderEmoji="📷"
+            placeholderTexto="Entrada da caixa"
+            foto={fotoExterna}
+            onAbrirCamera={() => inputExternoCameraRef.current?.click()}
+            onAbrirGaleria={() => inputExternoGaleriaRef.current?.click()}
+          />
+          <input
+            ref={inputExternoCameraRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            style={{ display: 'none' }}
+            onChange={(e) => handleCapturarFoto(e, 'externa')}
+          />
+          <input
+            ref={inputExternoGaleriaRef}
+            type="file"
+            accept="image/*"
+            style={{ display: 'none' }}
+            onChange={(e) => handleCapturarFoto(e, 'externa')}
+          />
 
           {/* Foto Interna */}
-          <div>
-            <p style={{ fontSize: 12, fontWeight: 500, color: 'var(--color-text-secondary)', marginBottom: 6 }}>
-              Foto Interna
-            </p>
-            <button
-              type="button"
-              onClick={() => inputInternoRef.current?.click()}
-              style={{
-                width: '100%',
-                aspectRatio: '1',
-                borderRadius: 8,
-                border: fotoInterna
-                  ? '2px solid var(--color-border-success)'
-                  : '1.5px dashed var(--color-border-secondary)',
-                background: fotoInterna
-                  ? 'none'
-                  : 'var(--color-background-secondary)',
-                cursor: 'pointer',
-                overflow: 'hidden',
-                padding: 0,
-                position: 'relative',
-              }}
-            >
-              {fotoInterna ? (
-                <img
-                  src={fotoInterna.preview}
-                  alt="Foto interna"
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                />
-              ) : (
-                <div
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    height: '100%',
-                    gap: 6,
-                    padding: 12,
-                  }}
-                >
-                  <span style={{ fontSize: 24 }}>🐝</span>
-                  <span style={{ fontSize: 11, color: 'var(--color-text-secondary)', textAlign: 'center' }}>
-                    Interior da caixa
-                  </span>
-                </div>
-              )}
-              {fotoInterna && (
-                <div
-                  style={{
-                    position: 'absolute',
-                    bottom: 4,
-                    right: 4,
-                    background: 'var(--color-background-success)',
-                    borderRadius: 12,
-                    padding: '2px 6px',
-                    fontSize: 10,
-                    color: 'var(--color-text-success)',
-                    fontWeight: 500,
-                  }}
-                >
-                  ✓ capturada
-                </div>
-              )}
-            </button>
-            <input
-              ref={inputInternoRef}
-              type="file"
-              accept="image/*"
-              capture="environment"
-              style={{ display: 'none' }}
-              onChange={(e) => handleCapturarFoto(e, 'interna')}
-            />
-          </div>
+          <SlotFoto
+            titulo="Foto Interna"
+            placeholderEmoji="🐝"
+            placeholderTexto="Interior da caixa"
+            foto={fotoInterna}
+            onAbrirCamera={() => inputInternoCameraRef.current?.click()}
+            onAbrirGaleria={() => inputInternoGaleriaRef.current?.click()}
+          />
+          <input
+            ref={inputInternoCameraRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            style={{ display: 'none' }}
+            onChange={(e) => handleCapturarFoto(e, 'interna')}
+          />
+          <input
+            ref={inputInternoGaleriaRef}
+            type="file"
+            accept="image/*"
+            style={{ display: 'none' }}
+            onChange={(e) => handleCapturarFoto(e, 'interna')}
+          />
         </div>
       )}
 
@@ -506,6 +406,131 @@ export function FotoAnaliseIA({ onResultado, onFechar }: FotoAnaliseIAProps) {
       <p style={{ fontSize: 11, color: 'var(--color-text-secondary)', textAlign: 'center', marginTop: 10 }}>
         As fotos ficam salvas no histórico da inspeção
       </p>
+    </div>
+  );
+}
+
+// Slot de foto com preview + dois botões (câmera / galeria)
+function SlotFoto({
+  titulo,
+  placeholderEmoji,
+  placeholderTexto,
+  foto,
+  onAbrirCamera,
+  onAbrirGaleria,
+}: {
+  titulo: string;
+  placeholderEmoji: string;
+  placeholderTexto: string;
+  foto: FotoCapturada | null;
+  onAbrirCamera: () => void;
+  onAbrirGaleria: () => void;
+}) {
+  return (
+    <div>
+      <p style={{ fontSize: 12, fontWeight: 500, color: 'var(--color-text-secondary)', marginBottom: 6 }}>
+        {titulo}
+      </p>
+      <div
+        style={{
+          width: '100%',
+          aspectRatio: '1',
+          borderRadius: 8,
+          border: foto
+            ? '2px solid var(--color-border-success)'
+            : '1.5px dashed var(--color-border-secondary)',
+          background: foto ? 'none' : 'var(--color-background-secondary)',
+          overflow: 'hidden',
+          position: 'relative',
+          marginBottom: 6,
+        }}
+      >
+        {foto ? (
+          <img
+            src={foto.preview}
+            alt={titulo}
+            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+          />
+        ) : (
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              height: '100%',
+              gap: 6,
+              padding: 12,
+            }}
+          >
+            <span style={{ fontSize: 24 }}>{placeholderEmoji}</span>
+            <span style={{ fontSize: 11, color: 'var(--color-text-secondary)', textAlign: 'center' }}>
+              {placeholderTexto}
+            </span>
+          </div>
+        )}
+        {foto && (
+          <div
+            style={{
+              position: 'absolute',
+              bottom: 4,
+              right: 4,
+              background: 'var(--color-background-success)',
+              borderRadius: 12,
+              padding: '2px 6px',
+              fontSize: 10,
+              color: 'var(--color-text-success)',
+              fontWeight: 500,
+            }}
+          >
+            ✓ capturada
+          </div>
+        )}
+      </div>
+      <div style={{ display: 'flex', gap: 4 }}>
+        <button
+          type="button"
+          onClick={onAbrirCamera}
+          style={{
+            flex: 1,
+            padding: '6px 4px',
+            borderRadius: 6,
+            border: '1px solid var(--color-border-secondary)',
+            background: 'var(--color-background-primary)',
+            color: 'var(--color-text-primary)',
+            fontSize: 11,
+            fontWeight: 500,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 3,
+          }}
+        >
+          📷 Câmera
+        </button>
+        <button
+          type="button"
+          onClick={onAbrirGaleria}
+          style={{
+            flex: 1,
+            padding: '6px 4px',
+            borderRadius: 6,
+            border: '1px solid var(--color-border-secondary)',
+            background: 'var(--color-background-primary)',
+            color: 'var(--color-text-primary)',
+            fontSize: 11,
+            fontWeight: 500,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 3,
+          }}
+        >
+          🖼️ Galeria
+        </button>
+      </div>
     </div>
   );
 }
