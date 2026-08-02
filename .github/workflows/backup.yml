@@ -14,7 +14,14 @@ jobs:
       - name: Install PostgreSQL client
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y postgresql-client
+          sudo apt-get install -y curl ca-certificates
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc --fail \
+            https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" \
+            | sudo tee /etc/apt/sources.list.d/pgdg.list
+          sudo apt-get update -qq
+          sudo apt-get install -y postgresql-client-18
       - name: Set backup filename
         id: filename
         run: |
@@ -24,8 +31,16 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
-          pg_dump "$DATABASE_URL" | gzip > "${{ steps.filename.outputs.FILENAME }}"
-          echo "Backup criado: ${{ steps.filename.outputs.FILENAME }} ($(du -sh ${{ steps.filename.outputs.FILENAME }} | cut -f1))"
+          set -euo pipefail
+          FILE="${{ steps.filename.outputs.FILENAME }}"
+          /usr/lib/postgresql/18/bin/pg_dump "$DATABASE_URL" | gzip > "$FILE"
+          SIZE=$(stat -c%s "$FILE")
+          echo "Tamanho do backup: ${SIZE} bytes"
+          if [ "$SIZE" -lt 1000 ]; then
+            echo "ERRO: backup vazio ou muito pequeno (${SIZE} bytes)." >&2
+            exit 1
+          fi
+          echo "Backup criado: $FILE ($(du -sh "$FILE" | cut -f1))"
       - name: Configure AWS CLI for Cloudflare R2
         env:
           R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
