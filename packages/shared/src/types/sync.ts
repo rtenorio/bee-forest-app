@@ -27,6 +27,17 @@ export interface SyncQueueItem {
   created_at: string;
   attempts: number;
   last_error: string | null;
+  /**
+   * updated_at que o SERVIDOR tinha na última vez que este cliente viu o registro.
+   * É a base do compare-and-swap: o servidor só aceita a escrita se o seu
+   * updated_at atual ainda for igual a este valor.
+   *
+   * Nunca comparar payload.updated_at (relógio do cliente) com o updated_at do
+   * servidor — relógios dessincronizados geram conflitos fantasma.
+   *
+   * null = registro novo (CREATE), sem versão no servidor para comparar.
+   */
+  base_updated_at: string | null;
 }
 
 export interface SyncPayload {

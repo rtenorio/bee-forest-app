@@ -53,13 +53,19 @@ export function useSync() {
   const { isSyncing, setIsSyncing, setPendingCount, setLastSyncAt, setConflicts, setLastError, setFailedCriticalItems } = useSyncStore();
   const syncIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // Trava de reentrância. Precisa ser ref, não o `isSyncing` do store: estado do
+  // React só muda no próximo render, então dois disparos no mesmo tick liam
+  // `false` e saíam juntos — o mesmo item era enviado várias vezes.
+  const syncingRef = useRef(false);
+
   const refreshPendingCount = useCallback(async () => {
     const count = await syncQueueRepo.count();
     setPendingCount(count);
   }, [setPendingCount]);
 
   const triggerSync = useCallback(async () => {
-    if (isSyncing || !isOnline) return;
+    if (syncingRef.current || !isOnline) return;
+    syncingRef.current = true;
 
     setIsSyncing(true);
     setLastError(null);
@@ -167,6 +173,17 @@ export function useSync() {
         }
       }
 
+      // Item conflitado não entra em `resolved`, então não é removido da fila.
+      // Sem contar tentativa ele reenviava a cada ciclo, para sempre, e o banner
+      // nunca sumia. Contando, ele chega a MAX_ATTEMPTS e cai na lógica de
+      // item travado — purgado se descartável, sinalizado ao usuário se crítico.
+      const conflictedIds = new Set(result.conflicts.map((c) => c.local_id));
+      await Promise.all(
+        items
+          .filter((i) => conflictedIds.has(i.entity_local_id))
+          .map((i) => syncQueueRepo.incrementAttempt(i.id, 'Conflito de versão com o servidor'))
+      );
+
       setConflicts(result.conflicts);
       const now = new Date().toISOString();
       setLastSyncAt(now);
@@ -179,10 +196,11 @@ export function useSync() {
     } catch (err) {
       setLastError(err instanceof Error ? err.message : 'Erro de sincronização');
     } finally {
+      syncingRef.current = false;
       setIsSyncing(false);
       await refreshPendingCount();
     }
-  }, [isSyncing, isOnline, setIsSyncing, setLastError, setConflicts, setLastSyncAt, queryClient, refreshPendingCount]);
+  }, [isOnline, setIsSyncing, setLastError, setConflicts, setLastSyncAt, queryClient, refreshPendingCount]);
 
   // Auto-sync when coming online
   useEffect(() => {

@@ -9,6 +9,8 @@ export const SyncQueueItemSchema = z.object({
   created_at: z.string(),
   attempts: z.number().int().min(0).default(0),
   last_error: z.string().nullable().default(null),
+  // optional: clientes antigos, já instalados, não enviam este campo
+  base_updated_at: z.string().nullable().optional(),
 });
 
 export const SyncPayloadSchema = z.object({

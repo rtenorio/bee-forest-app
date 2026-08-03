@@ -104,10 +104,23 @@ router.post('/', validate(SyncPayloadSchema), async (req, res, next) => {
           resolved.push({ local_id: item.entity_local_id, server_id: result.rows[0].server_id, updated_at: result.rows[0].updated_at });
         }
       } else {
+        // Compare-and-swap sobre a versão do servidor.
+        //
+        // NÃO comparar payload.updated_at (relógio do cliente) com o updated_at
+        // do servidor: relógios dessincronizados geram conflitos fantasma — um
+        // cliente atrasado nunca consegue escrever. base_updated_at é o
+        // updated_at que o próprio servidor emitiu, então a comparação é
+        // servidor-contra-servidor e imune a desvio de relógio.
         const serverUpdatedAt = new Date(existing.rows[0].updated_at).getTime();
-        const clientUpdatedAt = payload.updated_at ? new Date(payload.updated_at as string).getTime() : 0;
+        const rawBase = item.base_updated_at;
+        const base = rawBase ? new Date(rawBase).getTime() : null;
 
-        if (clientUpdatedAt >= serverUpdatedAt) {
+        // base null = CREATE reenviado (push duplicado) → upsert idempotente.
+        // base ausente = cliente antigo, sem o campo → mesmo tratamento, senão
+        // ficaria travado na fila para sempre.
+        const safeToWrite = base === null || base === serverUpdatedAt;
+
+        if (safeToWrite) {
           const setClauses = Object.keys(dbPayload).map((k, i) => `${k} = $${i + 2}`).join(', ');
           const vals = [item.entity_local_id, ...Object.values(dbPayload)];
           if (setClauses) {
@@ -117,6 +130,14 @@ router.post('/', validate(SyncPayloadSchema), async (req, res, next) => {
             if (result.rows[0]) {
               resolved.push({ local_id: item.entity_local_id, server_id: result.rows[0].server_id, updated_at: result.rows[0].updated_at });
             }
+          } else {
+            // Nada a escrever — ainda assim o item está resolvido, senão fica
+            // preso na fila do cliente indefinidamente
+            resolved.push({
+              local_id: item.entity_local_id,
+              server_id: existing.rows[0].server_id,
+              updated_at: existing.rows[0].updated_at,
+            });
           }
         } else {
           const serverRecord = await client.query(`SELECT * FROM ${table} WHERE local_id = $1`, [item.entity_local_id]);

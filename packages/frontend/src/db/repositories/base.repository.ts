@@ -31,7 +31,8 @@ export abstract class BaseRepository<T extends SyncMeta> {
     const entity = { ...data, ...meta } as unknown as T;
     // @ts-expect-error dynamic store
     await db.put(this.storeName, entity);
-    await this.enqueueSync('CREATE', entity);
+    // Registro novo: não existe versão no servidor para servir de base
+    await this.enqueueSync('CREATE', entity, null);
     return entity;
   }
 
@@ -48,7 +49,8 @@ export abstract class BaseRepository<T extends SyncMeta> {
     };
     // @ts-expect-error dynamic store
     await db.put(this.storeName, updated);
-    await this.enqueueSync('UPDATE', updated);
+    // existing.updated_at é a versão do servidor enquanto o registro não estiver sujo
+    await this.enqueueSync('UPDATE', updated, existing.updated_at);
     return updated;
   }
 
@@ -65,7 +67,7 @@ export abstract class BaseRepository<T extends SyncMeta> {
     };
     // @ts-expect-error dynamic store
     await db.put(this.storeName, deleted);
-    await this.enqueueSync('DELETE', deleted);
+    await this.enqueueSync('DELETE', deleted, existing.updated_at);
   }
 
   async getAll(): Promise<T[]> {
@@ -119,8 +121,19 @@ export abstract class BaseRepository<T extends SyncMeta> {
     );
   }
 
-  private async enqueueSync(operation: 'CREATE' | 'UPDATE' | 'DELETE', entity: T): Promise<void> {
+  private async enqueueSync(
+    operation: 'CREATE' | 'UPDATE' | 'DELETE',
+    entity: T,
+    baseUpdatedAt: string | null
+  ): Promise<void> {
     const db = await this.getDb();
+
+    // Edições encadeadas offline: o item pendente já carrega a versão do servidor.
+    // Herdar dele — senão a base viraria o timestamp da edição local anterior.
+    const pending = (await db.getAll('sync_queue'))
+      .filter((q) => q.entity_local_id === entity.local_id)
+      .sort((a, b) => a.created_at.localeCompare(b.created_at))[0];
+
     const queueItem: SyncQueueItem = {
       id: uuidv4(),
       entity_type: this.entityType,
@@ -130,6 +143,7 @@ export abstract class BaseRepository<T extends SyncMeta> {
       created_at: new Date().toISOString(),
       attempts: 0,
       last_error: null,
+      base_updated_at: pending ? pending.base_updated_at ?? null : baseUpdatedAt,
     };
     await db.put('sync_queue', queueItem);
   }

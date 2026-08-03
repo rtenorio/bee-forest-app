@@ -31,6 +31,12 @@ export interface SyncQueueItem {
   created_at: string;
   attempts: number;
   last_error: string | null;
+  /**
+   * updated_at que o SERVIDOR tinha na última vez que o cliente viu o registro.
+   * Base do compare-and-swap em routes/sync.ts. Opcional: clientes já instalados
+   * não enviam este campo.
+   */
+  base_updated_at?: string | null;
 }
 
 // ── Schemas: Auth ─────────────────────────────────────────────────────────────
@@ -245,6 +251,8 @@ export const SyncQueueItemSchema = z.object({
   created_at: z.string(),
   attempts: z.number().int().min(0).default(0),
   last_error: z.string().nullable().default(null),
+  // optional: clientes antigos, já instalados, não enviam este campo
+  base_updated_at: z.string().nullable().optional(),
 });
 
 export const SyncPayloadSchema = z.object({
