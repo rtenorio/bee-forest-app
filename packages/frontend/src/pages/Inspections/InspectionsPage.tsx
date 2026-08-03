@@ -28,7 +28,10 @@ export function InspectionsPage() {
             {inspections.length} inspeção{inspections.length !== 1 ? 'ões' : ''}
           </p>
         </div>
-        <Button onClick={() => navigate('/inspections/new')}>+ Nova Inspeção</Button>
+        <div className="flex gap-2">
+          <Button variant="secondary" onClick={() => navigate('/inspections/batch')}>+ Inspeção em lote</Button>
+          <Button onClick={() => navigate('/inspections/new')}>+ Nova Inspeção</Button>
+        </div>
       </div>
 
       {sorted.length === 0 ? (

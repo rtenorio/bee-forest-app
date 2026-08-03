@@ -8,6 +8,7 @@ import { PrintLabelsPage } from './pages/Hives/PrintLabelsPage';
 import { PrintLabelsFullPage } from './pages/Hives/PrintLabelsFullPage';
 import { InspectionsPage } from './pages/Inspections/InspectionsPage';
 import { ColonyInspectionPage } from './pages/Inspections/ColonyInspectionPage';
+import { BatchInspectionPage } from './pages/Inspections/BatchInspectionPage';
 import { ProductionsPage } from './pages/Productions/ProductionsPage';
 import { FeedingsPage } from './pages/Feedings/FeedingsPage';
 import { HarvestsPage } from './pages/Harvests/HarvestsPage';
@@ -75,6 +76,7 @@ export function App() {
       <Route element={<ProtectedRoute />}>
         {/* Full-screen pages (no AppShell chrome) */}
         <Route path="inspections/new" element={<ColonyInspectionPage />} />
+        <Route path="inspections/batch" element={<BatchInspectionPage />} />
         <Route path="harvests/new" element={<HarvestWizard />} />
         <Route path="scan" element={<QRScanPage />} />
         <Route path="print/labels" element={<PrintLabelsFullPage />} />
