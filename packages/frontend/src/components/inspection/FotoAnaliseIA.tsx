@@ -15,7 +15,82 @@ type EstadoAnalise = 'idle' | 'capturando_externa' | 'capturando_interna' | 'ana
 interface FotoCapturada {
   base64: string;
   mediaType: string;
-  preview: string; // URL objeto para preview
+  preview: string; // data URL para preview
+}
+
+// Foto de celular tem 3-6 MB, o que estoura o limite de 5 MB por imagem da API
+// e o limite de 10 MB de corpo do Express. 1600px é bem mais do que a IA precisa
+// para avaliar atividade na entrada, densidade e condição da caixa.
+const MAX_DIMENSAO = 1600;
+const QUALIDADE_JPEG = 0.85;
+
+interface ImagemCarregada {
+  fonte: CanvasImageSource;
+  width: number;
+  height: number;
+  liberar: () => void;
+}
+
+// Decodifica o arquivo respeitando a orientação EXIF — foto de celular costuma
+// vir rotacionada, e sem isso a IA analisa a imagem deitada.
+async function carregarImagem(file: File): Promise<ImagemCarregada> {
+  if (typeof createImageBitmap === 'function') {
+    try {
+      const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
+      return {
+        fonte: bitmap,
+        width: bitmap.width,
+        height: bitmap.height,
+        liberar: () => bitmap.close(),
+      };
+    } catch {
+      // Formato não suportado por createImageBitmap — cai no fallback abaixo
+    }
+  }
+
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const el = new Image();
+      el.onload = () => resolve(el);
+      el.onerror = () => reject(new Error('formato de imagem não suportado por este navegador'));
+      el.src = url;
+    });
+    return {
+      fonte: img,
+      width: img.naturalWidth,
+      height: img.naturalHeight,
+      liberar: () => URL.revokeObjectURL(url),
+    };
+  } catch (e) {
+    URL.revokeObjectURL(url);
+    throw e;
+  }
+}
+
+// Reduz e re-codifica em JPEG. O re-encode também resolve fotos HEIC do iPhone,
+// formato que a API não aceita.
+async function fileParaBase64(file: File): Promise<FotoCapturada> {
+  const imagem = await carregarImagem(file);
+  try {
+    const escala = Math.min(1, MAX_DIMENSAO / Math.max(imagem.width, imagem.height));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(imagem.width * escala);
+    canvas.height = Math.round(imagem.height * escala);
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('não foi possível processar a imagem neste navegador');
+    ctx.drawImage(imagem.fonte, 0, 0, canvas.width, canvas.height);
+
+    const dataUrl = canvas.toDataURL('image/jpeg', QUALIDADE_JPEG);
+    return {
+      base64: dataUrl.split(',')[1],
+      mediaType: 'image/jpeg',
+      preview: dataUrl,
+    };
+  } finally {
+    imagem.liberar();
+  }
 }
 
 export function FotoAnaliseIA({ onResultado, onFechar }: FotoAnaliseIAProps) {
@@ -64,8 +139,9 @@ export function FotoAnaliseIA({ onResultado, onFechar }: FotoAnaliseIAProps) {
       } else {
         setFotoInterna(foto);
       }
-    } catch {
-      setErro('Erro ao processar a foto. Tente novamente.');
+    } catch (e) {
+      const motivo = e instanceof Error ? e.message : 'erro desconhecido';
+      setErro(`Erro ao processar a foto: ${motivo}`);
     }
 
     // Limpa o input para permitir nova captura

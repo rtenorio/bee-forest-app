@@ -192,6 +192,12 @@ export async function analyzeInspectionPhotos(req: Request, res: Response) {
     });
   } catch (error) {
     console.error('Erro na análise de fotos:', error);
-    return res.status(500).json({ error: 'Erro interno ao analisar as fotos.' });
+    // Propaga a causa real (limite de tamanho, formato recusado, rate limit).
+    // Sem isso todo erro chegava ao app como "Erro interno", escondendo o motivo.
+    const detalhe = error instanceof Error ? error.message : String(error);
+    const status = (error as { status?: number }).status;
+    return res
+      .status(typeof status === 'number' && status >= 400 && status < 600 ? status : 500)
+      .json({ error: `Falha ao analisar as fotos: ${detalhe}` });
   }
 }
