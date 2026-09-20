@@ -125,8 +125,13 @@ export async function analyzeInspectionPhotos(req: Request, res: Response) {
         : 'Esta é a foto INTERNA da caixa (interior com favos, abelhas e estrutura).';
 
     const response = await anthropic.messages.create({
-      model: 'claude-opus-4-7',
-      max_tokens: 1024,
+      model: 'claude-opus-5',
+      // No Opus 5 o raciocínio vem ligado por padrão (adaptativo) e consome o
+      // mesmo orçamento de max_tokens. Com os 1024 de antes o JSON truncava no
+      // meio, caindo no erro de parse mais abaixo — daí a folga aqui.
+      max_tokens: 8192,
+      // Extração de campos a partir de imagem não precisa de esforço alto.
+      output_config: { effort: 'low' },
       system: INSPECTION_PROMPT,
       messages: [
         {
