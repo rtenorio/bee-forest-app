@@ -62,7 +62,10 @@ export const InspectionChecklistSchema = z.object({
   productive_notes: z.string().default(''),
 
   // Manejo
+  // Legado: preservado para o histórico antigo. Inspeções novas usam os dois abaixo.
   management_actions: z.array(z.string()).default([]),
+  management_actions_done: z.array(z.string()).default([]),
+  management_actions_pending: z.array(z.string()).default([]),
   management_description: z.string().default(''),
   materials_used: z.string().default(''),
 

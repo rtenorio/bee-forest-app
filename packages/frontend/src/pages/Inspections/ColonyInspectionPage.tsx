@@ -23,6 +23,7 @@ import { Input } from '@/components/ui/Input';
 import { Spinner } from '@/components/ui/Spinner';
 import { InspectionSection } from '@/components/inspection/InspectionSection';
 import { ChipGroup } from '@/components/inspection/ChipGroup';
+import { MANEJO_TASKS, SEM_INTERVENCAO } from '@/pages/Manejo/manejoTasks';
 import { OptionCards } from '@/components/inspection/OptionCards';
 import { UploadCard } from '@/components/inspection/UploadCard';
 import { InspectionSummaryCard, computeScore } from '@/components/inspection/InspectionSummaryCard';
@@ -99,8 +100,11 @@ function defaultChecklist(): InspectionChecklist {
     productive_potential: 'medium',
     productive_observations: ['boa_entrada_alimento', 'apta_producao'],
     productive_notes: '',
-    // Manejo
-    management_actions: ['sem_intervencao'],
+    // Manejo — o campo legado nasce vazio em inspeções novas; quem vale agora
+    // são os dois campos separados (realizado × pendente).
+    management_actions: [],
+    management_actions_done: ['sem_intervencao'],
+    management_actions_pending: ['sem_intervencao'],
     management_description: '',
     materials_used: '',
     // Tarefas
@@ -226,19 +230,17 @@ const PRODUCTIVE_CHIPS = [
   { value: 'nao_apta_manejo_produtivo', label: 'Não apta para manejo produtivo' },
 ];
 
-const MANAGEMENT_CHIPS = [
-  { value: 'sem_intervencao', label: 'Sem intervenção' },
-  { value: 'alimentacao', label: 'Alimentação' },
-  { value: 'limpeza_externa', label: 'Limpeza externa' },
-  { value: 'controle_formigas', label: 'Controle de formigas' },
-  { value: 'reducao_entrada', label: 'Redução da entrada' },
-  { value: 'troca_caixa', label: 'Troca de caixa' },
-  { value: 'ajuste_vedacao', label: 'Ajuste de vedação' },
-  { value: 'reorganizacao_interna', label: 'Reorganização interna' },
-  { value: 'divisao', label: 'Divisão' },
-  { value: 'isolamento_colonia', label: 'Isolamento da colônia' },
-  { value: 'uniao_colonia', label: 'União com outra colônia' },
-  { value: 'encaminhada_avaliacao', label: 'Encaminhada para avaliação técnica' },
+// Manejo: a fonte única das chaves é MANEJO_TASKS (pages/Manejo/manejoTasks.ts),
+// o mesmo catálogo que alimenta o Painel de Manejo. Só os rótulos mudam por
+// bloco — passado no realizado, infinitivo no pendente.
+const MANAGEMENT_DONE_CHIPS = [
+  { value: SEM_INTERVENCAO, label: 'Sem intervenção' },
+  ...MANEJO_TASKS.map((t) => ({ value: t.key, label: t.labelFeito })),
+];
+
+const MANAGEMENT_PENDING_CHIPS = [
+  { value: SEM_INTERVENCAO, label: 'Nada pendente' },
+  ...MANEJO_TASKS.map((t) => ({ value: t.key, label: t.labelPendente })),
 ];
 
 const PREDEFINED_TASKS = [
@@ -653,7 +655,9 @@ export function ColonyInspectionPage() {
       });
 
       // Auto-create pending division if "divisao" chip was selected
-      if (checklist.management_actions.includes('divisao') && hive?.apiary_local_id) {
+      // Gatilho no bloco PENDENTE: a Division nasce 'pendente', com
+      // identified_at/identified_by — é divisão a executar, não executada.
+      if (checklist.management_actions_pending.includes('divisao') && hive?.apiary_local_id) {
         createDivision.mutate({
           local_id: uuidv4(),
           hive_origin_local_id: hive_local_id,
@@ -1246,11 +1250,18 @@ export function ColonyInspectionPage() {
           </div>
         </InspectionSection>
 
-        {/* ═══ SECTION 11: Manejo Realizado ════════════════════════════════ */}
-        <InspectionSection step={isInternal ? 10 : 9} title="Manejo Realizado" icon="🛠️">
+        {/* ═══ SECTION 11: Manejo ══════════════════════════════════════════ */}
+        {/* Dois blocos independentes: o que foi feito nesta visita e o que a
+            caixa ainda precisa. O mesmo manejo pode estar nos dois — dividi
+            hoje e ainda preciso dividir de novo é caso real. */}
+        <InspectionSection step={isInternal ? 10 : 9} title="Manejo" icon="🛠️">
           <div>
-            <FieldLabel>Ações realizadas</FieldLabel>
-            <ChipGroup options={MANAGEMENT_CHIPS} value={form.checklist.management_actions} onChange={(v) => setCL('management_actions', v)} color="sky" />
+            <FieldLabel>MANEJO REALIZADO NESTA VISITA</FieldLabel>
+            <ChipGroup options={MANAGEMENT_DONE_CHIPS} value={form.checklist.management_actions_done} onChange={(v) => setCL('management_actions_done', v)} color="emerald" />
+          </div>
+          <div>
+            <FieldLabel hint="Alimenta o Painel de Manejo">MANEJO PENDENTE</FieldLabel>
+            <ChipGroup options={MANAGEMENT_PENDING_CHIPS} value={form.checklist.management_actions_pending} onChange={(v) => setCL('management_actions_pending', v)} color="amber" />
           </div>
           <div>
             <FieldLabel>Observações necessárias</FieldLabel>

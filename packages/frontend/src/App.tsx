@@ -9,6 +9,8 @@ import { PrintLabelsFullPage } from './pages/Hives/PrintLabelsFullPage';
 import { InspectionsPage } from './pages/Inspections/InspectionsPage';
 import { ColonyInspectionPage } from './pages/Inspections/ColonyInspectionPage';
 import { BatchInspectionPage } from './pages/Inspections/BatchInspectionPage';
+import { ManejoPage } from './pages/Manejo/ManejoPage';
+import { ManejoTaskPage } from './pages/Manejo/ManejoTaskPage';
 import { ProductionsPage } from './pages/Productions/ProductionsPage';
 import { FeedingsPage } from './pages/Feedings/FeedingsPage';
 import { HarvestsPage } from './pages/Harvests/HarvestsPage';
@@ -89,6 +91,8 @@ export function App() {
           <Route path="hives/print-labels" element={<PrintLabelsPage />} />
           <Route path="hives/:id" element={<HiveDetail />} />
           <Route path="inspections" element={<InspectionsPage />} />
+          <Route path="manejo" element={<ManejoPage />} />
+          <Route path="manejo/:taskKey" element={<ManejoTaskPage />} />
           <Route path="productions" element={<ProductionsPage />} />
           <Route path="reports" element={<ReportsPage />} />
           <Route path="feedings" element={<FeedingsPage />} />

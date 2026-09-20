@@ -157,7 +157,10 @@ export const InspectionChecklistSchema = z.object({
   productive_potential: z.enum(['very_low', 'low', 'medium', 'high', 'very_high']).nullable().default(null),
   productive_observations: z.array(z.string()).default([]),
   productive_notes: z.string().default(''),
+  // Legado: preservado para o histórico antigo. Inspeções novas usam os dois abaixo.
   management_actions: z.array(z.string()).default([]),
+  management_actions_done: z.array(z.string()).default([]),
+  management_actions_pending: z.array(z.string()).default([]),
   management_description: z.string().default(''),
   materials_used: z.string().default(''),
   tasks: z.array(InspectionTaskSchema).default([]),

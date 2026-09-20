@@ -12,6 +12,7 @@ const navItems: NavItem[] = [
   { to: '/apiaries', label: 'Meliponários', icon: '🏡', end: false, roles: ['socio', 'responsavel'] },
   { to: '/hives', label: 'Caixas de abelha', icon: '🏠', end: false },
   { to: '/inspections', label: 'Inspeções', icon: '🔍', end: false },
+  { to: '/manejo', label: 'Manejo', icon: '🛠️', end: false },
   { to: '/instructions', label: 'Orientações', icon: '💬', end: false, badge: true },
   { to: '/divisions', label: 'Divisões', icon: '✂️', end: false },
   { to: '/scan', label: 'Escanear QR', icon: '📷', end: false },

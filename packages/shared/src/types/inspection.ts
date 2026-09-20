@@ -63,8 +63,20 @@ export interface InspectionChecklist {
   productive_observations: string[];
   productive_notes: string;
 
-  // ── Manejo realizado ──────────────────────────────────────────────────────
+  // ── Manejo (legado) ───────────────────────────────────────────────────────
+  // Mantido para não quebrar o histórico anterior à separação feito × pendente.
+  // Inspeções novas gravam management_actions_done / management_actions_pending
+  // e deixam este campo vazio. Não migrar, não converter, não remover.
   management_actions: string[];
+
+  // ── Manejo realizado nesta visita ─────────────────────────────────────────
+  management_actions_done: string[];
+
+  // ── Manejo pendente (o que a caixa ainda precisa) ─────────────────────────
+  // Estado derivado: alimenta o Painel de Manejo e deixa de valer quando uma
+  // inspeção mais nova não lista mais a chave.
+  management_actions_pending: string[];
+
   management_description: string;
   materials_used: string;
 

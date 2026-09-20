@@ -108,7 +108,14 @@ export function InspectionChecklistForm({ value }: Props) {
   const invaders = [...safeArray(c.invaders), ...safeArray(c.pests_observed)];
   const weaknessSigns = safeArray(c.weakness_signs);
   const internalChanges = safeArray(c.internal_changes);
+  // Manejo legado (v2 interventions + v3 management_actions): inspeções antigas
+  // não distinguem feito de pendente, então continuam num bloco só.
   const mgmtActions = [...safeArray(c.management_actions), ...safeArray(c.interventions)];
+  // Inspeções novas gravam os dois campos separados.
+  const mgmtDone = safeArray(c.management_actions_done);
+  const mgmtPending = safeArray(c.management_actions_pending);
+  const mgmtNote = typeof c.management_description === 'string' ? c.management_description : '';
+  const mgmtMaterials = typeof c.materials_used === 'string' ? c.materials_used : '';
   const productiveObs = safeArray(c.productive_observations);
   const tasks = safeArray(c.tasks);
 
@@ -225,12 +232,36 @@ export function InspectionChecklistForm({ value }: Props) {
         </Section>
       )}
 
-      {/* Management */}
+      {/* Manejo — formato antigo: um bloco só, sem distinção feito × pendente */}
       {mgmtActions.length > 0 && (
-        <Section title="Manejo realizado">
+        <Section title="Manejo registrado">
           <TagList tags={mgmtActions} color="emerald" />
           {c.management_description && <p className="text-xs text-stone-400 mt-1 italic">"{String(c.management_description)}"</p>}
           {c.materials_used && <p className="text-xs text-stone-500 mt-1">Materiais: {String(c.materials_used)}</p>}
+        </Section>
+      )}
+
+      {/* Manejo — formato novo: realizado e pendente separados */}
+      {mgmtDone.length > 0 && (
+        <Section title="Manejo realizado nesta visita">
+          <TagList tags={mgmtDone} color="emerald" />
+        </Section>
+      )}
+
+      {mgmtPending.length > 0 && (
+        <Section title="Manejo pendente">
+          <TagList tags={mgmtPending} color="amber" />
+        </Section>
+      )}
+
+      {/* Observações e materiais: em inspeções novas o texto acompanha os dois
+          blocos acima, não o bloco legado */}
+      {mgmtActions.length === 0
+        && (mgmtDone.length > 0 || mgmtPending.length > 0)
+        && (mgmtNote !== '' || mgmtMaterials !== '') && (
+        <Section title="Observações do manejo">
+          {mgmtNote !== '' && <p className="text-xs text-stone-400 italic">"{mgmtNote}"</p>}
+          {mgmtMaterials !== '' && <p className="text-xs text-stone-500 mt-1">Materiais: {mgmtMaterials}</p>}
         </Section>
       )}
 

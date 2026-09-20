@@ -51,8 +51,15 @@ export function normalizeChecklistHealth(checklist: unknown): ChecklistHealth {
   );
   const hasAlerts = allInvaders.length > 0 || diseasesObserved.length > 0 || criticalWeakness;
 
-  // Feeding need: v3 management_actions[], v2 needs_feeding boolean
-  const mgmtActions = safeArray(c.management_actions);
+  // Feeding need: v4 management_actions_pending[], v3 management_actions[],
+  // v2 needs_feeding boolean.
+  // "Precisa alimentar" é justamente uma pendência, então o campo novo entra
+  // aqui — sem ele, inspeções novas (que deixam o legado vazio) perderiam o
+  // indicador nos cards e dashboards.
+  const mgmtActions = [
+    ...safeArray(c.management_actions),
+    ...safeArray(c.management_actions_pending),
+  ];
   const needsFeeding =
     !!c.needs_feeding ||
     mgmtActions.some((a) => a.includes('alimenta'));

@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { v4 as uuidv4 } from 'uuid';
 import { useCreateInspection } from '@/hooks/useInspections';
 import { useCreateDivision } from '@/hooks/useDivisions';
@@ -13,6 +13,7 @@ import { Spinner } from '@/components/ui/Spinner';
 import { Textarea } from '@/components/ui/Textarea';
 import { InspectionSection } from '@/components/inspection/InspectionSection';
 import { ChipGroup } from '@/components/inspection/ChipGroup';
+import { MANEJO_TASKS, SEM_INTERVENCAO } from '@/pages/Manejo/manejoTasks';
 import { OptionCards } from '@/components/inspection/OptionCards';
 import { InspectionSummaryCard, computeScore } from '@/components/inspection/InspectionSummaryCard';
 import { cn } from '@/utils/cn';
@@ -121,19 +122,16 @@ const PRODUCTIVE_CHIPS = [
   { value: 'nao_apta_manejo_produtivo', label: 'Não apta para manejo produtivo' },
 ];
 
-const MANAGEMENT_CHIPS = [
-  { value: 'sem_intervencao', label: 'Sem intervenção' },
-  { value: 'alimentacao', label: 'Alimentação' },
-  { value: 'limpeza_externa', label: 'Limpeza externa' },
-  { value: 'controle_formigas', label: 'Controle de formigas' },
-  { value: 'reducao_entrada', label: 'Redução da entrada' },
-  { value: 'troca_caixa', label: 'Troca de caixa' },
-  { value: 'ajuste_vedacao', label: 'Ajuste de vedação' },
-  { value: 'reorganizacao_interna', label: 'Reorganização interna' },
-  { value: 'divisao', label: 'Divisão' },
-  { value: 'isolamento_colonia', label: 'Isolamento da colônia' },
-  { value: 'uniao_colonia', label: 'União com outra colônia' },
-  { value: 'encaminhada_avaliacao', label: 'Encaminhada para avaliação técnica' },
+// Mesmas chaves do Painel de Manejo (pages/Manejo/manejoTasks.ts); só os
+// rótulos mudam por bloco — passado no realizado, infinitivo no pendente.
+const MANAGEMENT_DONE_CHIPS = [
+  { value: SEM_INTERVENCAO, label: 'Sem intervenção' },
+  ...MANEJO_TASKS.map((t) => ({ value: t.key, label: t.labelFeito })),
+];
+
+const MANAGEMENT_PENDING_CHIPS = [
+  { value: SEM_INTERVENCAO, label: 'Nada pendente' },
+  ...MANEJO_TASKS.map((t) => ({ value: t.key, label: t.labelPendente })),
 ];
 
 const PREDEFINED_TASKS = [
@@ -204,7 +202,10 @@ function defaultChecklist(): InspectionChecklist {
     productive_potential: 'medium',
     productive_observations: ['boa_entrada_alimento', 'apta_producao'],
     productive_notes: '',
-    management_actions: ['sem_intervencao'],
+    // Campo legado vazio em inspeções novas; valem os dois separados abaixo.
+    management_actions: [],
+    management_actions_done: ['sem_intervencao'],
+    management_actions_pending: ['sem_intervencao'],
     management_description: '',
     materials_used: '',
     tasks: [],
@@ -356,6 +357,14 @@ export function BatchInspectionPage() {
   const [batchError, setBatchError] = useState<{ saved: number; total: number; hiveCode: string; message: string } | null>(null);
   const [weatherLoading, setWeatherLoading] = useState(false);
   const [weatherFetched, setWeatherFetched] = useState(false);
+  const [preselectAviso, setPreselectAviso] = useState<string | null>(null);
+
+  // Pré-seleção vinda do Painel de Manejo. preselectApiaryRef marca o
+  // meliponário cuja seleção o efeito de reset não deve limpar.
+  const preselectApiaryRef = useRef<string | null>(null);
+  const preselectDone = useRef(false);
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
 
   const accessibleHives = useMemo(() => {
     if (!user) return [];
@@ -382,8 +391,66 @@ export function BatchInspectionPage() {
     [apiaryHives, selectedHiveIds]
   );
 
+  // Pré-seleção de caixas: location.state ({ colonyIds }) ou ?colonias=id1,id2.
+  // A tela continua passando pela etapa de conferência (etapa 2) — só chega nela
+  // já com as caixas marcadas. Como a inspeção em lote é de um único
+  // meliponário, vale o da primeira caixa válida; as demais ficam de fora com
+  // aviso discreto.
+  useEffect(() => {
+    if (preselectDone.current) return;
+    if (accessibleHives.length === 0) return; // cache local ainda carregando
+
+    const state = location.state as { colonyIds?: unknown } | null;
+    const fromState = Array.isArray(state?.colonyIds)
+      ? (state!.colonyIds as unknown[]).filter((v): v is string => typeof v === 'string')
+      : null;
+    const fromQuery = searchParams.get('colonias')
+      ?.split(',').map((s) => s.trim()).filter(Boolean) ?? null;
+    const ids = fromState?.length ? fromState : fromQuery;
+
+    preselectDone.current = true;
+    if (!ids || ids.length === 0) return;
+
+    const byId = new Map(accessibleHives.map((h) => [h.local_id, h]));
+    const validas = ids
+      .map((id) => byId.get(id))
+      .filter((h): h is NonNullable<typeof h> => !!h);
+    const foraDoEscopo = ids.length - validas.length;
+
+    if (validas.length === 0) {
+      setPreselectAviso('As caixas indicadas não estão disponíveis no seu acesso. Selecione manualmente.');
+      return;
+    }
+
+    const alvo = validas[0].apiary_local_id;
+    const mesmoMeliponario = validas.filter((h) => h.apiary_local_id === alvo);
+    const outroMeliponario = validas.length - mesmoMeliponario.length;
+
+    preselectApiaryRef.current = alvo;
+    setApiaryId(alvo);
+    setSelectedHiveIds(mesmoMeliponario.map((h) => h.local_id));
+    setStep(2);
+
+    const partes: string[] = [];
+    if (outroMeliponario > 0) {
+      partes.push(`${outroMeliponario} caixa${outroMeliponario !== 1 ? 's' : ''} de outro${outroMeliponario !== 1 ? 's' : ''} meliponário${outroMeliponario !== 1 ? 's' : ''}`);
+    }
+    if (foraDoEscopo > 0) {
+      partes.push(`${foraDoEscopo} fora do seu acesso`);
+    }
+    if (partes.length > 0) {
+      setPreselectAviso(`${partes.join(' e ')} não entraram neste lote — a inspeção em lote é de um meliponário só.`);
+    }
+  }, [accessibleHives, location.state, searchParams]);
+
   // Reset hive selection when apiary changes
   useEffect(() => {
+    // Não limpar a seleção que a pré-seleção acabou de aplicar.
+    if (preselectApiaryRef.current === apiaryId) {
+      preselectApiaryRef.current = null;
+      setWeatherFetched(false);
+      return;
+    }
     setSelectedHiveIds([]);
     setWeatherFetched(false);
   }, [apiaryId]);
@@ -458,7 +525,10 @@ export function BatchInspectionPage() {
       recommendation: form.checklist.recommendation ?? score.recommendation,
     };
     const next_inspection_due = nextDueFromDays(checklist.next_inspection_days);
-    const willCreateDivision = checklist.management_actions.includes('divisao');
+    // Divisão responde ao bloco PENDENTE: o registro criado nasce com status
+    // 'pendente' e data de identificação (ver DivisionStatus), ou seja, é uma
+    // divisão a executar — não uma já executada.
+    const willCreateDivision = checklist.management_actions_pending.includes('divisao');
 
     let saved = 0;
     try {
@@ -641,6 +711,21 @@ export function BatchInspectionPage() {
       </header>
 
       <div className="max-w-3xl mx-auto px-4 py-6 space-y-4 pb-32">
+
+        {/* Aviso discreto de caixas ignoradas na pré-seleção */}
+        {preselectAviso && (
+          <div className="flex items-start gap-2 text-xs text-stone-400 bg-stone-900 border border-stone-800 rounded-lg px-3 py-2">
+            <span className="shrink-0">ℹ️</span>
+            <span className="flex-1">{preselectAviso}</span>
+            <button
+              onClick={() => setPreselectAviso(null)}
+              className="text-stone-600 hover:text-stone-400 shrink-0"
+              aria-label="Fechar aviso"
+            >
+              ✕
+            </button>
+          </div>
+        )}
 
         {/* ═══ STEP 1: Selecionar meliponário ═══════════════════════════════ */}
         {step === 1 && (
@@ -1020,13 +1105,18 @@ export function BatchInspectionPage() {
               </div>
             </InspectionSection>
 
-            {/* Manejo */}
-            <InspectionSection step={isInternal ? 10 : 9} title="Manejo Realizado" icon="🛠️">
+            {/* Manejo — dois blocos independentes: feito nesta visita × pendente.
+                O mesmo manejo pode estar nos dois ao mesmo tempo. */}
+            <InspectionSection step={isInternal ? 10 : 9} title="Manejo" icon="🛠️">
               <div>
-                <FieldLabel>Ações realizadas</FieldLabel>
-                <ChipGroup options={MANAGEMENT_CHIPS} value={form.checklist.management_actions} onChange={(v) => setCL('management_actions', v)} color="sky" />
+                <FieldLabel>MANEJO REALIZADO NESTA VISITA</FieldLabel>
+                <ChipGroup options={MANAGEMENT_DONE_CHIPS} value={form.checklist.management_actions_done} onChange={(v) => setCL('management_actions_done', v)} color="emerald" />
               </div>
-              {form.checklist.management_actions.includes('divisao') && (
+              <div>
+                <FieldLabel hint="Alimenta o Painel de Manejo">MANEJO PENDENTE</FieldLabel>
+                <ChipGroup options={MANAGEMENT_PENDING_CHIPS} value={form.checklist.management_actions_pending} onChange={(v) => setCL('management_actions_pending', v)} color="amber" />
+              </div>
+              {form.checklist.management_actions_pending.includes('divisao') && (
                 <p className="text-xs text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-lg px-3 py-2">
                   ⚠️ Divisão será criada em {selectedHiveIds.length} caixa{selectedHiveIds.length !== 1 ? 's' : ''} — confira se faz sentido aplicar a todas.
                 </p>
