@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Modal } from '@/components/ui/Modal';
 import { Spinner } from '@/components/ui/Spinner';
 import { HiveCard } from '@/components/hive/HiveCard';
+import { HiveBulkBar, HiveSelectOverlay, HiveSelectToolbar } from '@/components/hive/HiveBulkActions';
 import { HiveForm } from '../Hives/HiveForm';
 import { ApiaryForm } from './ApiaryForm';
 import { daysSince } from '@/utils/dates';
@@ -34,12 +35,19 @@ export function ApiaryDetail() {
   const [editApiary, setEditApiary] = useState(false);
   const [addHive, setAddHive] = useState(false);
   const [filterStatus, setFilterStatus] = useState<string>('');
+  const [selecting, setSelecting] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   if (isLoading) return <div className="flex justify-center py-16"><Spinner /></div>;
   if (!apiary) return <div className="text-stone-400 text-center py-16">Meliponário não encontrado</div>;
 
   const activeHives = hives.filter((h) => h.status === 'active');
   const filtered = filterStatus ? hives.filter((h) => h.status === filterStatus) : hives;
+  // Ações em lote valem só para as caixas visíveis no filtro atual.
+  const selectedVisible = filtered.filter((h) => selectedIds.includes(h.local_id));
+  const toggleSelected = (hiveId: string) =>
+    setSelectedIds((cur) => cur.includes(hiveId) ? cur.filter((x) => x !== hiveId) : [...cur, hiveId]);
+  const exitSelecting = () => { setSelecting(false); setSelectedIds([]); };
 
   function handleDeleteApiary() {
     if (!confirm(`Excluir meliponário "${apiary!.name}"? Isso não apagará as caixas já registradas.`)) return;
@@ -47,7 +55,7 @@ export function ApiaryDetail() {
   }
 
   return (
-    <div className="space-y-6 max-w-5xl">
+    <div className={selecting ? 'space-y-6 max-w-5xl pb-32' : 'space-y-6 max-w-5xl'}>
       {/* Header */}
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-3">
@@ -145,7 +153,15 @@ export function ApiaryDetail() {
             Caixas
             <span className="ml-2 text-stone-500 font-normal text-sm">({filtered.length})</span>
           </h2>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
+            {canManage && !selecting && hives.length > 0 && (
+              <button
+                onClick={() => setSelecting(true)}
+                className="text-xs px-2.5 py-1 rounded-full border border-amber-500/50 text-amber-300 hover:bg-amber-500/10"
+              >
+                Selecionar
+              </button>
+            )}
             {(['', 'active', 'inactive', 'dead', 'transferred'] as const).map((s) => (
               <button
                 key={s}
@@ -161,6 +177,18 @@ export function ApiaryDetail() {
             ))}
           </div>
         </div>
+
+        {selecting && (
+          <div className="mb-3">
+            <HiveSelectToolbar
+              total={filtered.length}
+              selected={selectedVisible.length}
+              onSelectAll={() => setSelectedIds(filtered.map((h) => h.local_id))}
+              onClear={() => setSelectedIds([])}
+              onExit={exitSelecting}
+            />
+          </div>
+        )}
 
         {filtered.length === 0 ? (
           <div className="text-center py-12 text-stone-500">
@@ -186,13 +214,19 @@ export function ApiaryDetail() {
               return (
                 <div key={hive.local_id} className="relative group">
                   <HiveCard hive={hive} lastInspectedAt={latest?.inspected_at} speciesName={species?.name} />
-                  {canManage && (
+                  {selecting ? (
+                    <HiveSelectOverlay
+                      code={hive.code}
+                      checked={selectedIds.includes(hive.local_id)}
+                      onToggle={() => toggleSelected(hive.local_id)}
+                    />
+                  ) : canManage && (
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         if (confirm(`Excluir caixa "${hive.code}"?`)) deleteHive.mutate(hive.local_id);
                       }}
-                      className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 w-6 h-6 flex items-center justify-center rounded-full bg-red-900/80 text-red-300 hover:bg-red-800 transition-all text-xs font-bold"
+                      className="absolute top-2 right-2 pointer-fine:opacity-0 pointer-fine:group-hover:opacity-100 w-6 h-6 flex items-center justify-center rounded-full bg-red-900/80 text-red-300 hover:bg-red-800 transition-all text-xs font-bold"
                       title="Excluir caixa"
                     >
                       ×
@@ -204,6 +238,8 @@ export function ApiaryDetail() {
           </div>
         )}
       </div>
+
+      {selecting && <HiveBulkBar selected={selectedVisible} onDone={exitSelecting} />}
 
       {/* Modals */}
       <Modal open={editApiary} onClose={() => setEditApiary(false)} title="Editar Meliponário">

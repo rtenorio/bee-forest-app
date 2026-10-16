@@ -64,6 +64,32 @@ export function useUpdateHive() {
   });
 }
 
+export type HiveBulkAction = 'inactivate' | 'activate' | 'delete';
+
+/**
+ * Inativa, reativa ou exclui várias caixas. Cada caixa vira um item próprio na
+ * fila de sync, como nas ações individuais — funciona offline. A atualização
+ * das listas roda mesmo se uma caixa falhar no meio, para a tela refletir as
+ * que já foram alteradas.
+ */
+export function useBulkHiveAction() {
+  const qc = useQueryClient();
+  const { setPendingCount } = useSyncStore();
+  return useMutation({
+    mutationFn: async ({ action, ids }: { action: HiveBulkAction; ids: string[] }) => {
+      for (const id of ids) {
+        if (action === 'delete') await hiveRepo.softDelete(id);
+        else await hiveRepo.update(id, { status: action === 'activate' ? 'active' : 'inactive' });
+      }
+    },
+    onSettled: async () => {
+      qc.invalidateQueries({ queryKey: QUERY_KEY });
+      setPendingCount(await syncQueueRepo.count());
+    },
+    networkMode: 'offlineFirst',
+  });
+}
+
 export function useDeleteHive() {
   const qc = useQueryClient();
   const { setPendingCount } = useSyncStore();

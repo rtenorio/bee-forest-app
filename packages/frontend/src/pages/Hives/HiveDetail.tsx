@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
-import { useHive, useDeleteHive } from '@/hooks/useHives';
+import { useHive, useDeleteHive, useUpdateHive } from '@/hooks/useHives';
 import { useInspections, useDeleteInspection } from '@/hooks/useInspections';
 import { useInstructions } from '@/hooks/useInstructions';
 import { useProductions } from '@/hooks/useProductions';
@@ -35,7 +35,8 @@ export function HiveDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user)!;
-  const canManageHive = user.role === 'socio' || user.role === 'responsavel';
+  // master_admin gerencia caixas de qualquer meliponário (o backend já libera).
+  const canManageHive = ['master_admin', 'socio', 'responsavel'].includes(user.role);
   const canSeeProduction = user.role === 'socio' || user.role === 'responsavel';
 
   const canTransfer = ['master_admin', 'socio', 'responsavel'].includes(user.role);
@@ -76,6 +77,7 @@ export function HiveDetail() {
   const removeMelgueira   = useRemoveMelgueira();
   const { data: speciesList = [] } = useSpecies();
   const deleteHive = useDeleteHive();
+  const updateHive = useUpdateHive();
   const deleteInspection = useDeleteInspection();
   const { data: hiveInstructionsPanel = [] } = useInstructions({ hive_local_id: id!, status: 'pending' });
   const { data: apiaryInstructionsPanel = [] } = useInstructions({ apiary_local_id: hive?.apiary_local_id, status: 'pending' });
@@ -220,8 +222,19 @@ export function HiveDetail() {
           {canManageHive && (
             <>
               <Button variant="ghost" size="sm" onClick={() => setEditHive(true)}>Editar</Button>
+              {(hive.status === 'active' || hive.status === 'inactive') && (
+                <Button variant="secondary" size="sm" loading={updateHive.isPending} onClick={() => {
+                  const ativa = hive.status === 'active';
+                  const msg = ativa
+                    ? `Inativar caixa "${hive.code}"? Ela sai do Painel de Manejo e da inspeção em lote, mas o histórico continua e ela pode ser reativada.`
+                    : `Reativar caixa "${hive.code}"?`;
+                  if (confirm(msg)) {
+                    updateHive.mutate({ local_id: hive.local_id, data: { status: ativa ? 'inactive' : 'active' } });
+                  }
+                }}>{hive.status === 'active' ? 'Inativar' : 'Reativar'}</Button>
+              )}
               <Button variant="danger" size="sm" onClick={() => {
-                if (confirm(`Excluir caixa "${hive.code}"?`)) {
+                if (confirm(`Excluir caixa "${hive.code}"? Ela some do app e não há como restaurá-la pela tela. Para só tirá-la de circulação, use Inativar.`)) {
                   deleteHive.mutate(hive.local_id, { onSuccess: () => navigate(-1) });
                 }
               }}>Excluir</Button>

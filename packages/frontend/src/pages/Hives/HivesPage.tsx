@@ -6,6 +6,7 @@ import { useInspections } from '@/hooks/useInspections';
 import { useSpecies } from '@/hooks/useSpecies';
 import { useAuthStore } from '@/store/authStore';
 import { HiveCard } from '@/components/hive/HiveCard';
+import { HiveBulkBar, HiveSelectOverlay, HiveSelectToolbar } from '@/components/hive/HiveBulkActions';
 import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Select';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -26,7 +27,8 @@ export function HivesPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const user = useAuthStore((s) => s.user)!;
-  const canManage = user.role === 'socio' || user.role === 'responsavel';
+  // master_admin gerencia caixas de qualquer meliponário (o backend já libera).
+  const canManage = ['master_admin', 'socio', 'responsavel'].includes(user.role);
 
   const { data: hives = [], isLoading } = useHives();
   const { data: apiaries = [] } = useApiaries();
@@ -40,6 +42,8 @@ export function HivesPage() {
   // Respect ?apiary= URL param (used by ResponsavelDashboard and ApiaryDetail)
   const [filterApiaryId, setFilterApiaryId] = useState(searchParams.get('apiary') ?? '');
   const [filterStatus, setFilterStatus] = useState('');
+  const [selecting, setSelecting] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   const apiaryOptions = [
     { value: '', label: 'Todos os meliponários' },
@@ -54,13 +58,19 @@ export function HivesPage() {
     })
     .sort((a, b) => a.code.localeCompare(b.code, undefined, { numeric: true }));
 
+  // Ações em lote valem só para as caixas visíveis no filtro atual.
+  const selectedVisible = filtered.filter((h) => selectedIds.includes(h.local_id));
+  const toggleSelected = (id: string) =>
+    setSelectedIds((cur) => cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]);
+  const exitSelecting = () => { setSelecting(false); setSelectedIds([]); };
+
   function openNew() { setEditing(null); setShowForm(true); }
   function openEdit(h: Hive) { setEditing(h); setShowForm(true); }
 
   if (isLoading) return <div className="flex justify-center py-16"><Spinner /></div>;
 
   return (
-    <div className="space-y-6">
+    <div className={selecting ? 'space-y-6 pb-32' : 'space-y-6'}>
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-stone-100">Caixas</h1>
@@ -69,7 +79,12 @@ export function HivesPage() {
           </p>
         </div>
         {canManage && (
-          <Button onClick={openNew}>+ Nova Caixa</Button>
+          <div className="flex gap-2">
+            {!selecting && hives.length > 0 && (
+              <Button variant="secondary" onClick={() => setSelecting(true)}>Selecionar</Button>
+            )}
+            <Button onClick={openNew}>+ Nova Caixa</Button>
+          </div>
         )}
       </div>
 
@@ -88,6 +103,16 @@ export function HivesPage() {
           className="flex-1 min-w-[140px]"
         />
       </div>
+
+      {selecting && (
+        <HiveSelectToolbar
+          total={filtered.length}
+          selected={selectedVisible.length}
+          onSelectAll={() => setSelectedIds(filtered.map((h) => h.local_id))}
+          onClear={() => setSelectedIds([])}
+          onExit={exitSelecting}
+        />
+      )}
 
       {filtered.length === 0 ? (
         <EmptyState
@@ -109,8 +134,15 @@ export function HivesPage() {
                   lastInspectedAt={latest?.inspected_at}
                   speciesName={species?.name}
                 />
-                {canManage && (
-                  <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                {selecting ? (
+                  <HiveSelectOverlay
+                    code={hive.code}
+                    checked={selectedIds.includes(hive.local_id)}
+                    onToggle={() => toggleSelected(hive.local_id)}
+                  />
+                ) : canManage && (
+                  // Em tela de toque não há hover: os botões ficam sempre visíveis.
+                  <div className="absolute top-2 right-2 flex gap-1 pointer-fine:opacity-0 pointer-fine:group-hover:opacity-100 transition-opacity">
                     <button
                       onClick={(e) => { e.stopPropagation(); openEdit(hive); }}
                       className="w-7 h-7 flex items-center justify-center rounded-lg bg-stone-700/90 text-stone-300 hover:bg-stone-600 text-xs"
@@ -135,6 +167,8 @@ export function HivesPage() {
           })}
         </div>
       )}
+
+      {selecting && <HiveBulkBar selected={selectedVisible} onDone={exitSelecting} />}
 
       <Modal
         open={showForm}
