@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { v4 as uuidv4 } from 'uuid';
 import { useCreateInspection, useInspections } from '@/hooks/useInspections';
-import { useCreateDivision } from '@/hooks/useDivisions';
+import { useCreateDivision, useDivisions } from '@/hooks/useDivisions';
 import {
   useInstructions,
   useUpdateInstructionStatus,
@@ -28,7 +28,7 @@ import { OptionCards } from '@/components/inspection/OptionCards';
 import { UploadCard } from '@/components/inspection/UploadCard';
 import { InspectionSummaryCard, computeScore } from '@/components/inspection/InspectionSummaryCard';
 import { cn } from '@/utils/cn';
-import { todayISO } from '@/utils/dates';
+import { formatDate, todayISO } from '@/utils/dates';
 import type { InspectionChecklist, InspectionTask, SkyCondition, Instruction } from '@bee-forest/shared';
 import { toggleInvasores, toggleSinaisEnfraquecimento, toggleAlteracoesInternas } from '@bee-forest/shared';
 import { FotoAnaliseIA } from '@/components/inspection/FotoAnaliseIA';
@@ -438,6 +438,9 @@ export function ColonyInspectionPage() {
   const { data: inspections = [] } = useInspections(hive_local_id || undefined);
   const createInspection = useCreateInspection();
   const createDivision = useCreateDivision();
+  const { data: divisoesPendentes = [] } = useDivisions(
+    hive_local_id ? { status: 'pendente', hive_local_id } : { status: 'pendente' }
+  );
 
   const [selectedId, setSelectedId] = useState('');
   const [form, setForm] = useState<FormState>(() => makeDefault(user?.name ?? ''));
@@ -593,6 +596,14 @@ export function ColonyInspectionPage() {
 
   const score = computeScore(form.checklist);
 
+  // "Dividi" não encerra a Divisão pendente sozinho: executar exige informar a
+  // nova caixa e baixar o estoque (DivisionDetail). Avisa e, ao salvar, leva
+  // direto para a divisão. O filtro local garante a caixa mesmo se a API
+  // ignorar o parâmetro.
+  const divisaoAExecutar = form.checklist.management_actions_done.includes('divisao')
+    ? divisoesPendentes.find((d) => d.hive_origin_local_id === hive_local_id) ?? null
+    : null;
+
   // ── Task helpers ──────────────────────────────────────────────────────────
 
   const addTask = (label: string) => {
@@ -668,7 +679,11 @@ export function ColonyInspectionPage() {
         });
       }
 
-      navigate(hive_local_id ? `/hives/${hive_local_id}` : '/inspections');
+      if (divisaoAExecutar && !draft) {
+        navigate(`/divisions/${divisaoAExecutar.local_id}`);
+      } else {
+        navigate(hive_local_id ? `/hives/${hive_local_id}` : '/inspections');
+      }
     } finally {
       setSavingDraft(false);
     }
@@ -1260,6 +1275,12 @@ export function ColonyInspectionPage() {
             <FieldLabel>MANEJO REALIZADO NESTA VISITA</FieldLabel>
             <ChipGroup options={MANAGEMENT_DONE_CHIPS} value={form.checklist.management_actions_done} onChange={(v) => setCL('management_actions_done', v)} color="emerald" />
           </div>
+          {divisaoAExecutar && (
+            <p className="text-xs text-sky-300 bg-sky-500/10 border border-sky-500/30 rounded-lg px-3 py-2">
+              ✂️ Esta caixa tem uma divisão pendente desde {formatDate(divisaoAExecutar.identified_at)}.
+              Ao salvar, você vai para ela para registrar a execução — nova caixa e baixa de estoque.
+            </p>
+          )}
           <div>
             <FieldLabel hint="Alimenta o Painel de Manejo">MANEJO PENDENTE</FieldLabel>
             <ChipGroup options={MANAGEMENT_PENDING_CHIPS} value={form.checklist.management_actions_pending} onChange={(v) => setCL('management_actions_pending', v)} color="amber" />
