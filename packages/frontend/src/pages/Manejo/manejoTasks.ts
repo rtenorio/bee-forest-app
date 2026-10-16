@@ -141,6 +141,49 @@ export function fundirPendencias(anteriores: unknown, feitas: string[], novas: s
   return unicas.length > 0 ? unicas : [SEM_INTERVENCAO];
 }
 
+/**
+ * Campos do checklist que descrevem o ESTADO da colônia (força, alimento, cria,
+ * sanidade, potencial, situação geral). Ficam de fora os da visita em si —
+ * clima, manejo, tarefas, resumo, alertas, próxima inspeção.
+ */
+export const CAMPOS_ESTADO_COLONIA = [
+  'inspection_type',
+  'activity_level', 'activity_observations', 'entry_notes',
+  'colony_strength', 'strength_observations',
+  'honey_stores', 'pollen_stores', 'food_observations', 'food_notes',
+  'brood_status', 'brood_observations', 'brood_notes',
+  'box_observations', 'box_notes',
+  'invaders', 'other_invader_text', 'weakness_signs', 'internal_changes',
+  'odor_description', 'sanitary_severity',
+  'productive_potential', 'productive_observations', 'productive_notes',
+  'overall_status', 'recommendation',
+] as const;
+
+/**
+ * Checklist de uma caixa no registro de manejo.
+ *
+ * O registro grava uma inspeção completa, e ela vira a última da caixa. Com os
+ * valores padrão do formulário, uma colônia fraca ou com invasores apareceria
+ * saudável nos cards e dashboards só porque alguém a alimentou. Regra: cada
+ * campo de estado vem da última inspeção da caixa, a menos que o tratador o
+ * tenha alterado no formulário. Campo ausente na anterior (formato antigo)
+ * fica com o valor do formulário.
+ */
+export function herdarEstadoDaColonia<T extends object>(
+  anterior: unknown,
+  atual: T,
+  editados: ReadonlySet<string>,
+): T {
+  if (!anterior || typeof anterior !== 'object') return atual;
+  const prev = anterior as Record<string, unknown>;
+  const resultado = { ...atual } as Record<string, unknown>;
+  for (const campo of CAMPOS_ESTADO_COLONIA) {
+    if (editados.has(campo) || !(campo in prev) || prev[campo] === undefined) continue;
+    resultado[campo] = prev[campo];
+  }
+  return resultado as T;
+}
+
 /** Uma pendência é sempre derivada da última inspeção da colônia. */
 export interface ManejoPendencia {
   taskKey: ManejoTaskKey;

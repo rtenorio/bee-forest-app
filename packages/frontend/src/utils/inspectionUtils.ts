@@ -26,6 +26,9 @@ const STRENGTH_MAP: Record<string, number> = {
   very_strong: 5,
 };
 
+/** Mesmos valores neutros que SanidadeTab trata como "nada observado". */
+const VALORES_NEUTROS = ['ausentes', 'nenhum', 'nenhuma'];
+
 /** Safely coerce an unknown value to string[]. */
 function safeArray(v: unknown): string[] {
   return Array.isArray(v) ? (v as string[]) : [];
@@ -45,7 +48,9 @@ export function normalizeChecklistHealth(checklist: unknown): ChecklistHealth {
   const diseasesObserved = safeArray(c.diseases_observed);
   const weaknessSigns = safeArray(c.weakness_signs);
 
-  const allInvaders = [...invaders, ...pestsObserved];
+  // "Ausentes"/"nenhum" são a resposta negativa do formulário (e o valor
+  // padrão) — não podem contar como invasor presente.
+  const allInvaders = [...invaders, ...pestsObserved].filter((v) => !VALORES_NEUTROS.includes(v));
   const criticalWeakness = weaknessSigns.some((s) =>
     ['suspeita_orfandade', 'abandono_total', 'sem_postura_visivel', 'colonia_fraca'].includes(s)
   );

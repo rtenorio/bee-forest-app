@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { v4 as uuidv4 } from 'uuid';
 import { useCreateInspection, useInspections } from '@/hooks/useInspections';
-import { useCreateDivision } from '@/hooks/useDivisions';
+import { useCreateDivision, useDivisions } from '@/hooks/useDivisions';
 import { useHives } from '@/hooks/useHives';
 import { useApiaries } from '@/hooks/useApiaries';
 import { useAuthStore } from '@/store/authStore';
@@ -13,7 +13,7 @@ import { Spinner } from '@/components/ui/Spinner';
 import { Textarea } from '@/components/ui/Textarea';
 import { InspectionSection } from '@/components/inspection/InspectionSection';
 import { ChipGroup } from '@/components/inspection/ChipGroup';
-import { MANEJO_TASKS, SEM_INTERVENCAO, fundirPendencias, getManejoTask, type ManejoTask } from '@/pages/Manejo/manejoTasks';
+import { MANEJO_TASKS, SEM_INTERVENCAO, fundirPendencias, getManejoTask, herdarEstadoDaColonia, type ManejoTask } from '@/pages/Manejo/manejoTasks';
 import { selecionarUltimaPorColonia } from '@/pages/Manejo/useManejoPendencias';
 import { OptionCards } from '@/components/inspection/OptionCards';
 import { InspectionSummaryCard, computeScore } from '@/components/inspection/InspectionSummaryCard';
@@ -352,6 +352,7 @@ export function BatchInspectionPage() {
   const { data: inspections = [] } = useInspections();
   const createInspection = useCreateInspection();
   const createDivision = useCreateDivision();
+  const { data: divisoesPendentes = [] } = useDivisions({ status: 'pendente' });
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [apiaryId, setApiaryId] = useState('');
@@ -366,6 +367,9 @@ export function BatchInspectionPage() {
   const [preselectAviso, setPreselectAviso] = useState<string | null>(null);
   // Registro de manejo: lote aberto a partir de uma tarefa do Painel de Manejo.
   const [manejoTask, setManejoTask] = useState<ManejoTask | null>(null);
+  // Campos do checklist que o usuário mexeu. No registro de manejo, os de
+  // estado da colônia que ficarem intocados vêm da última inspeção da caixa.
+  const camposEditados = useRef(new Set<string>());
 
   // Pré-seleção vinda do Painel de Manejo. preselectApiaryRef marca o
   // meliponário cuja seleção o efeito de reset não deve limpar.
@@ -506,10 +510,18 @@ export function BatchInspectionPage() {
   }, [step, weatherFetched, apiary, isOnline]);
 
   const setCL = useCallback(<K extends keyof InspectionChecklist>(key: K, value: InspectionChecklist[K]) => {
+    camposEditados.current.add(key as string);
     setForm((f) => ({ ...f, checklist: { ...f.checklist, [key]: value } }));
   }, []);
 
   const score = computeScore(form.checklist);
+
+  // "Dividi" não encerra a Divisão pendente sozinho: executar exige informar a
+  // nova caixa e baixar o estoque (DivisionDetail). O lote só avisa e, ao
+  // salvar, leva para Divisões.
+  const divisoesAExecutar = form.checklist.management_actions_done.includes('divisao')
+    ? divisoesPendentes.filter((d) => selectedHiveIds.includes(d.hive_origin_local_id))
+    : [];
 
   const addTask = (label: string) => {
     const task: InspectionTask = {
@@ -569,7 +581,7 @@ export function BatchInspectionPage() {
           );
           const restouPendencia = !pendentes.includes(SEM_INTERVENCAO);
           checklistDaCaixa = {
-            ...checklist,
+            ...herdarEstadoDaColonia(anterior, checklist, camposEditados.current),
             management_actions_pending: pendentes,
             // Sem observação nova, a anterior acompanha as pendências que restaram.
             management_pending_notes: checklist.management_pending_notes
@@ -608,7 +620,7 @@ export function BatchInspectionPage() {
         saved = i + 1;
         setProgress({ done: saved, total: selectedHiveIds.length });
       }
-      navigate('/inspections');
+      navigate(divisoesAExecutar.length > 0 ? '/divisions' : '/inspections');
     } catch (err) {
       console.error('[BatchInspectionPage] erro ao salvar lote:', err);
       setBatchError({
@@ -910,6 +922,9 @@ export function BatchInspectionPage() {
                   <p className="text-xs text-emerald-300/70 mt-0.5">
                     “{manejoTask.labelFeito}” já vem marcado em Manejo realizado. As demais pendências de cada caixa são mantidas.
                   </p>
+                  <p className="text-xs text-emerald-300/70 mt-1">
+                    O estado da colônia (força, alimento, cria, sanidade, situação geral) vem da última inspeção de cada caixa. Só o que você alterar abaixo substitui o registrado.
+                  </p>
                 </div>
               </div>
             )}
@@ -1170,6 +1185,13 @@ export function BatchInspectionPage() {
                 <FieldLabel>MANEJO REALIZADO NESTA VISITA</FieldLabel>
                 <ChipGroup options={MANAGEMENT_DONE_CHIPS} value={form.checklist.management_actions_done} onChange={(v) => setCL('management_actions_done', v)} color="emerald" />
               </div>
+              {divisoesAExecutar.length > 0 && (
+                <p className="text-xs text-sky-300 bg-sky-500/10 border border-sky-500/30 rounded-lg px-3 py-2">
+                  ✂️ {divisoesAExecutar.length === 1 ? 'Há 1 divisão pendente' : `Há ${divisoesAExecutar.length} divisões pendentes`} em Divisões
+                  ({divisoesAExecutar.map((d) => d.hive_origin_code ?? d.hive_origin_local_id).join(', ')}).
+                  Ao salvar, você vai para Divisões para registrar a execução — nova caixa e baixa de estoque.
+                </p>
+              )}
               {manejoTask ? (
                 <div>
                   <FieldLabel hint="Opcional">NOVAS PENDÊNCIAS</FieldLabel>
