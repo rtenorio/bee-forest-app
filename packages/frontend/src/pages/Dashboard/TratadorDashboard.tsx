@@ -40,6 +40,16 @@ export function TratadorDashboard() {
 
   return (
     <div className="space-y-6">
+      {/* Primeira coisa da tela: tratadores têm dificuldade de leitura, então a
+          ação principal é um botão grande, com ícone, e quase nenhum texto. */}
+      <button
+        onClick={() => navigate('/scan')}
+        className="w-full flex flex-col items-center gap-3 py-10 rounded-3xl bg-amber-500 active:bg-amber-600 text-stone-950 shadow-lg"
+      >
+        <span className="text-7xl" aria-hidden>📷</span>
+        <span className="text-3xl font-extrabold tracking-wide">ESCANEAR CAIXA</span>
+      </button>
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-stone-100">Minhas Caixas de abelha</h1>

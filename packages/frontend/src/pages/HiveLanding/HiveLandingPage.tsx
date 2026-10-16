@@ -180,6 +180,34 @@ export function HiveLandingPage() {
           </div>
         )}
 
+        {/* Tratador: o que fazer com esta caixa, em destaque e com pouco texto.
+            O tratador só grava inspeção das caixas atribuídas a ele (o sync
+            recusa as demais), então caixa alheia mostra aviso em vez do botão. */}
+        {user?.role === 'tratador' && (
+          user.hive_local_ids.includes(data.local_id) ? (
+            <button
+              onClick={() => navigate(`/inspections/new?hive=${data.local_id}`)}
+              className="w-full flex flex-col items-center gap-2 py-8 rounded-3xl bg-amber-500 active:bg-amber-600 text-stone-950 shadow-lg"
+            >
+              <span className="text-6xl" aria-hidden>🔍</span>
+              <span className="text-3xl font-extrabold tracking-wide">INSPECIONAR</span>
+              <span className="text-xl font-bold">{data.code}</span>
+            </button>
+          ) : (
+            <div className="w-full flex flex-col items-center gap-2 py-6 px-4 rounded-3xl bg-red-900/40 border-2 border-red-600 text-center">
+              <span className="text-5xl" aria-hidden>🚫</span>
+              <span className="text-2xl font-extrabold text-red-200">NÃO É SUA CAIXA</span>
+              <span className="text-lg text-red-300">{data.code}</span>
+              <button
+                onClick={() => navigate('/scan', { replace: true })}
+                className="mt-2 px-6 py-3 rounded-2xl bg-stone-800 text-stone-100 text-lg font-bold"
+              >
+                📷 Escanear outra
+              </button>
+            </div>
+          )
+        )}
+
         {/* Identidade da caixa */}
         <div className="bg-stone-900 border border-stone-800 rounded-2xl p-5">
           <div className="flex items-start justify-between gap-3">

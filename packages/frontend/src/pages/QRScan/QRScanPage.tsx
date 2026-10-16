@@ -156,10 +156,10 @@ export function QRScanPage() {
         </p>
       )}
 
-      {/* Voltar */}
+      {/* Voltar — grande, para toque fácil */}
       <button
         onClick={() => navigate(-1)}
-        className="text-stone-500 hover:text-stone-300 text-sm transition-colors mt-auto mb-8"
+        className="mt-auto mb-8 px-8 py-3 rounded-2xl bg-stone-800 text-stone-200 text-lg font-semibold active:bg-stone-700"
       >
         ← Voltar
       </button>

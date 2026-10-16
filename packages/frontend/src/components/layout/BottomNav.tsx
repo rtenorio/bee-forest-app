@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom';
 import { useUIStore } from '@/store/uiStore';
+import { useAuthStore } from '@/store/authStore';
 import { cn } from '@/utils/cn';
 
 const iconCls = 'w-5 h-5';
@@ -52,19 +53,29 @@ const itemCls = (isActive: boolean) =>
 
 export function BottomNav() {
   const { setSidebarOpen } = useUIStore();
+  // O tratador não recebe meliponários no sync (a tela ficaria vazia): no
+  // lugar entra o atalho de escanear, que é o que ele mais usa.
+  const isTratador = useAuthStore((s) => s.user?.role === 'tratador');
 
   return (
     <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-stone-900 border-t border-stone-800 pb-safe">
       <div className="flex">
         <NavLink to="/" end className={({ isActive }) => itemCls(isActive)}>
           <HomeIcon />
-          <span>Dashboard</span>
+          <span>{isTratador ? 'Início' : 'Dashboard'}</span>
         </NavLink>
 
-        <NavLink to="/apiaries" className={({ isActive }) => itemCls(isActive)}>
-          <BuildingIcon />
-          <span>Meliponários</span>
-        </NavLink>
+        {isTratador ? (
+          <NavLink to="/scan" className={({ isActive }) => itemCls(isActive)}>
+            <span className="text-xl leading-5" aria-hidden>📷</span>
+            <span>Escanear</span>
+          </NavLink>
+        ) : (
+          <NavLink to="/apiaries" className={({ isActive }) => itemCls(isActive)}>
+            <BuildingIcon />
+            <span>Meliponários</span>
+          </NavLink>
+        )}
 
         <NavLink to="/hives" className={({ isActive }) => itemCls(isActive)}>
           <BoxIcon />
