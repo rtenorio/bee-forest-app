@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
@@ -11,8 +12,33 @@ function UpdateBanner() {
   const { needRefresh, offlineReady, updateServiceWorker } = useRegisterSW({
     onRegistered(r) {
       console.log('SW registered:', r);
+      // App instalado pode ficar aberto por dias: procura versão nova a cada hora.
+      if (r) window.setInterval(() => { r.update().catch(() => {}); }, 60 * 60 * 1000);
     },
   });
+
+  // O sw.ts chama skipWaiting(), então a versão nova assume sozinha e
+  // needRefresh nunca dispara. A troca de controlador é o sinal de que há
+  // versão nova; sem controlador no carregamento é a primeira instalação.
+  const [versaoNova, setVersaoNova] = useState(false);
+  useEffect(() => {
+    if (!('serviceWorker' in navigator) || !navigator.serviceWorker.controller) return;
+    const onChange = () => setVersaoNova(true);
+    navigator.serviceWorker.addEventListener('controllerchange', onChange);
+    return () => navigator.serviceWorker.removeEventListener('controllerchange', onChange);
+  }, []);
+
+  if (versaoNova) {
+    // Sem recarga automática: o usuário pode estar no meio de uma inspeção.
+    return (
+      <div className="bg-amber-500 text-stone-950 px-4 py-2 text-sm flex items-center justify-between">
+        <span className="font-medium">Nova versão instalada!</span>
+        <button onClick={() => window.location.reload()} className="underline font-semibold">
+          Recarregar
+        </button>
+      </div>
+    );
+  }
 
   if (needRefresh[0]) {
     return (

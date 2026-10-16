@@ -1,6 +1,6 @@
 /// <reference lib="webworker" />
 import { clientsClaim } from 'workbox-core';
-import { precacheAndRoute, cleanupOutdatedCaches } from 'workbox-precaching';
+import { precacheAndRoute, cleanupOutdatedCaches, createHandlerBoundToURL } from 'workbox-precaching';
 import { registerRoute, NavigationRoute } from 'workbox-routing';
 import { StaleWhileRevalidate, CacheFirst, NetworkOnly } from 'workbox-strategies';
 import { ExpirationPlugin } from 'workbox-expiration';
@@ -15,17 +15,22 @@ self.skipWaiting();
 precacheAndRoute(self.__WB_MANIFEST);
 cleanupOutdatedCaches();
 
-// Navigation: serve app shell (SPA)
+// Navigation: serve o index.html do PRECACHE (SPA).
+//
+// Antes era CacheFirst num cache próprio ('app-shell') sem expiração: o
+// index.html do primeiro acesso ficava congelado e o app instalado nunca via
+// deploy novo. O do precache é trocado a cada versão do service worker.
 registerRoute(
-  new NavigationRoute(
-    new CacheFirst({
-      cacheName: 'app-shell',
-      plugins: [
-        new CacheableResponsePlugin({ statuses: [200] }),
-      ],
-    })
-  )
+  new NavigationRoute(createHandlerBoundToURL('/index.html'), {
+    denylist: [/^\/api\//],
+  })
 );
+
+// Limpa o cache antigo de navegação, que prendia os aparelhos na versão velha.
+const OLD_SHELL_CACHE = 'app-shell';
+self.addEventListener('activate', (event) => {
+  event.waitUntil(caches.delete(OLD_SHELL_CACHE));
+});
 
 // API GET requests: StaleWhileRevalidate
 registerRoute(
