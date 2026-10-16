@@ -7,6 +7,7 @@ import { Card, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { HiveCard } from '@/components/hive/HiveCard';
 import { daysSince } from '@/utils/dates';
+import { ManejoResumo } from '@/pages/Manejo/ManejoResumo';
 
 export function TratadorDashboard() {
   const navigate = useNavigate();
@@ -65,6 +66,8 @@ export function TratadorDashboard() {
           </Card>
         ))}
       </div>
+
+      <ManejoResumo />
 
       {attentionHives.length > 0 && (
         <div>

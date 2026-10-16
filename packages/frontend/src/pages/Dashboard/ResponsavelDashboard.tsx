@@ -10,6 +10,7 @@ import { Card, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { HiveCard } from '@/components/hive/HiveCard';
 import { daysSince } from '@/utils/dates';
+import { ManejoResumo } from '@/pages/Manejo/ManejoResumo';
 import { normalizeChecklistHealth } from '@/utils/inspectionUtils';
 import { usePendingDivisionsCount } from '@/hooks/useDivisions';
 
@@ -187,6 +188,8 @@ export function ResponsavelDashboard() {
           <span className="text-amber-400 text-sm">Ver →</span>
         </button>
       )}
+
+      <ManejoResumo />
 
       {/* Production last 30 days */}
       {productionSummary.count > 0 && (

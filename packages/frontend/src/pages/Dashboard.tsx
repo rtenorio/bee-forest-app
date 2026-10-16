@@ -15,6 +15,7 @@ import { Card, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { HiveCard } from '@/components/hive/HiveCard';
 import { daysSince } from '@/utils/dates';
+import { ManejoResumo } from '@/pages/Manejo/ManejoResumo';
 import { normalizeChecklistHealth } from '@/utils/inspectionUtils';
 
 const PIE_COLORS = { active: '#10b981', inactive: '#f59e0b', dead: '#ef4444', transferred: '#6b7280' };
@@ -189,6 +190,8 @@ export function Dashboard() {
           <span className="text-amber-400 text-sm">Ver →</span>
         </button>
       )}
+
+      <ManejoResumo />
 
       {/* Production totals (current year) */}
       {productionTotals.harvestCount > 0 && (

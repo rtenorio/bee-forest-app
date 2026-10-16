@@ -23,6 +23,8 @@ import { QRCodeDisplay } from '@/components/hive/QRCodeDisplay';
 import { normalizeChecklistHealth } from '@/utils/inspectionUtils';
 import { exportHivePdf } from '@/utils/exportPdf';
 import { HiveInstructions } from './HiveInstructions';
+import { ManejoPendenteDaCaixa } from '../Manejo/ManejoResumo';
+import { derivarPendencias, historicoPorColonia } from '../Manejo/useManejoPendencias';
 import { useDivisions } from '@/hooks/useDivisions';
 import { useTransfers, useCreateTransfer } from '@/hooks/useTransfers';
 import { useApiaries } from '@/hooks/useApiaries';
@@ -91,6 +93,12 @@ export function HiveDetail() {
   ];
   const pendingCount = allPendingPanel.length;
   const days = sortedInspections.length > 0 ? daysSince(sortedInspections[0].inspected_at) : null;
+  // Mesma regra do Painel de Manejo, aplicada só a esta caixa.
+  const manejoPendente = derivarPendencias({
+    hives: [{ local_id: hive.local_id, code: hive.code, apiary_local_id: hive.apiary_local_id }],
+    historyByHive: historicoPorColonia(inspections),
+    apiaryNames: new Map(apiaries.map((a) => [a.local_id, a.name])),
+  }).pendencias;
 
   const strengthData = [...sortedInspections].reverse().map((i) => ({
     date: formatDate(i.inspected_at),
@@ -286,6 +294,8 @@ export function HiveDetail() {
           )}
         </div>
       )}
+
+      <ManejoPendenteDaCaixa pendencias={manejoPendente} />
 
       {/* QR Code */}
       <QRCodeDisplay hiveLocalId={hive.local_id} qrCodeText={hive.qr_code} />
