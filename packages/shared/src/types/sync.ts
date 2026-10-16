@@ -66,5 +66,7 @@ export interface ServerChange {
 export interface SyncResult {
   resolved: SyncResultItem[];
   conflicts: SyncConflict[];
+  /** Itens recusados por permissão. Opcional: servidores antigos não mandam. */
+  rejected?: Array<{ local_id: string; reason: string }>;
   server_changes: ServerChange[];
 }

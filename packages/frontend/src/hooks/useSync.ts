@@ -185,6 +185,16 @@ export function useSync() {
       );
 
       setConflicts(result.conflicts);
+
+      // Recusado por permissão: reenviar não adianta. Sai da fila e o usuário
+      // é avisado. Só acontece se o cliente gravou o que a tela não oferece.
+      const rejected = result.rejected ?? [];
+      if (rejected.length > 0) {
+        const rejectedIds = new Set(rejected.map((r) => r.local_id));
+        await syncQueueRepo.removeMany(items.filter((i) => rejectedIds.has(i.entity_local_id)).map((i) => i.id));
+        console.warn('[Sync] Itens recusados pelo servidor:', rejected);
+        setLastError(`${rejected.length} alteração(ões) recusada(s) pelo servidor por falta de permissão`);
+      }
       const now = new Date().toISOString();
       setLastSyncAt(now);
       localStorage.setItem('bee-forest-last-sync', now);

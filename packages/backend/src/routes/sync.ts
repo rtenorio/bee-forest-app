@@ -3,6 +3,11 @@ import { pool, query } from '../db/connection';
 import { validate } from '../middleware/validate';
 import { SyncPayloadSchema, SyncQueueItem } from '../shared';
 import type { Request } from 'express';
+import type { PoolClient } from 'pg';
+import {
+  authorizeSyncItem, filtrarColunas, OWNER_COLUMNS,
+  type OwnerLookup, type SyncEntityType,
+} from '../services/syncAuthorization';
 
 const router = Router();
 
@@ -17,6 +22,42 @@ const TABLE_MAP: Record<string, string> = {
   batch: 'honey_batches',
   stock_item: 'stock_items',
 };
+
+// Colunas reais de cada tabela, lidas uma vez do catálogo. O push só grava
+// chaves que estão aqui (ver filtrarColunas).
+const columnCache = new Map<string, Set<string>>();
+async function tableColumns(client: PoolClient, table: string): Promise<Set<string>> {
+  let cols = columnCache.get(table);
+  if (!cols) {
+    const r = await client.query<{ column_name: string }>(
+      `SELECT column_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = $1`,
+      [table]
+    );
+    cols = new Set(r.rows.map((row) => row.column_name));
+    columnCache.set(table, cols);
+  }
+  return cols;
+}
+
+function ownerLookup(client: PoolClient): OwnerLookup {
+  return {
+    async existing(entity, localId) {
+      const table = TABLE_MAP[entity];
+      const col = OWNER_COLUMNS[entity];
+      const r = await client.query(
+        `SELECT local_id${col && col !== 'local_id' ? `, ${col}` : ''} FROM ${table} WHERE local_id = $1`,
+        [localId]
+      );
+      return r.rows[0] ?? null;
+    },
+    async apiaryOfHive(hiveLocalId) {
+      const r = await client.query<{ apiary_local_id: string }>(
+        'SELECT apiary_local_id FROM hives WHERE local_id = $1', [hiveLocalId]
+      );
+      return r.rows[0]?.apiary_local_id ?? null;
+    },
+  };
+}
 
 // Retorna os hive_local_ids acessíveis para o usuário atual
 async function resolveAccessibleHiveIds(req: Request): Promise<string[] | null> {
@@ -44,16 +85,25 @@ router.post('/', validate(SyncPayloadSchema), async (req, res, next) => {
 
     const resolved: Array<{ local_id: string; server_id: number; updated_at: string }> = [];
     const conflicts: Array<{ local_id: string; server_record: unknown; conflict_type: string }> = [];
+    // Itens recusados por permissão. O cliente conta tentativa e, no limite,
+    // trata como item travado — em vez de reenviar para sempre.
+    const rejected: Array<{ local_id: string; reason: string }> = [];
+    const lookup = ownerLookup(client);
 
     for (const item of items as SyncQueueItem[]) {
       const table = TABLE_MAP[item.entity_type];
       if (!table) continue;
 
-      // Tratador só pode push de inspeções das suas caixas de abelha
-      if (user.role === 'tratador') {
-        if (!['inspection'].includes(item.entity_type)) continue;
-        const payload = item.payload as Record<string, unknown>;
-        if (!user.hive_local_ids.includes(payload.hive_local_id as string)) continue;
+      const decision = await authorizeSyncItem(user, {
+        entity_type: item.entity_type as SyncEntityType,
+        entity_local_id: item.entity_local_id,
+        operation: item.operation,
+        payload: item.payload as Record<string, unknown>,
+      }, lookup);
+      if (!decision.allowed) {
+        console.warn(`[sync] recusado user=${user.id} ${item.operation} ${item.entity_type} ${item.entity_local_id}: ${decision.reason}`);
+        rejected.push({ local_id: item.entity_local_id, reason: decision.reason });
+        continue;
       }
 
       if (item.operation === 'DELETE') {
@@ -64,11 +114,13 @@ router.post('/', validate(SyncPayloadSchema), async (req, res, next) => {
       const payload = item.payload as Record<string, unknown>;
       const existing = await client.query(`SELECT server_id, updated_at FROM ${table} WHERE local_id = $1`, [item.entity_local_id]);
 
-      // Fields that exist only on the client and must never be written to the DB
-      const CLIENT_ONLY = new Set(['local_id', 'server_id', 'is_dirty', 'synced_at', 'species_name']);
-      const dbPayload = Object.fromEntries(
-        Object.entries(payload).filter(([k]) => !CLIENT_ONLY.has(k))
-      );
+      // Só colunas reais da tabela: os nomes das chaves entram no SQL como
+      // identificadores. Campos só do cliente (species_name etc.) caem aqui.
+      const { dados: dbPayload, descartadas } = filtrarColunas(payload, await tableColumns(client, table));
+      const inesperadas = descartadas.filter((k) => !['local_id', 'server_id', 'is_dirty', 'synced_at', 'species_name'].includes(k));
+      if (inesperadas.length > 0) {
+        console.warn(`[sync] colunas ignoradas em ${table}: ${inesperadas.join(', ')}`);
+      }
 
       // Inspection-specific: resolve server FK and populate denormalized tasks column
       if (table === 'inspections') {
@@ -223,7 +275,7 @@ router.post('/', validate(SyncPayloadSchema), async (req, res, next) => {
     );
 
     await client.query('COMMIT');
-    res.json({ resolved, conflicts, server_changes });
+    res.json({ resolved, conflicts, rejected, server_changes });
   } catch (err) {
     await client.query('ROLLBACK');
     next(err);
