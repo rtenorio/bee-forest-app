@@ -15,6 +15,7 @@ import { HiveBulkBar, HiveSelectOverlay, HiveSelectToolbar } from '@/components/
 import { HiveForm } from '../Hives/HiveForm';
 import { ApiaryForm } from './ApiaryForm';
 import { daysSince } from '@/utils/dates';
+import type { Hive } from '@bee-forest/shared';
 
 export function ApiaryDetail() {
   const { id } = useParams<{ id: string }>();
@@ -34,6 +35,7 @@ export function ApiaryDetail() {
 
   const [editApiary, setEditApiary] = useState(false);
   const [addHive, setAddHive] = useState(false);
+  const [editingHive, setEditingHive] = useState<Hive | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>('');
   const [selecting, setSelecting] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -221,16 +223,26 @@ export function ApiaryDetail() {
                       onToggle={() => toggleSelected(hive.local_id)}
                     />
                   ) : canManage && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (confirm(`Excluir caixa "${hive.code}"?`)) deleteHive.mutate(hive.local_id);
-                      }}
-                      className="absolute top-2 right-2 pointer-fine:opacity-0 pointer-fine:group-hover:opacity-100 w-6 h-6 flex items-center justify-center rounded-full bg-red-900/80 text-red-300 hover:bg-red-800 transition-all text-xs font-bold"
-                      title="Excluir caixa"
-                    >
-                      ×
-                    </button>
+                    // Em tela de toque não há hover: os botões ficam sempre visíveis.
+                    <div className="absolute top-2 right-2 flex gap-1 pointer-fine:opacity-0 pointer-fine:group-hover:opacity-100 transition-opacity">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setEditingHive(hive); }}
+                        className="w-7 h-7 flex items-center justify-center rounded-lg bg-stone-700/90 text-stone-300 hover:bg-stone-600 text-xs"
+                        title="Editar caixa (inclui o status)"
+                      >
+                        ✏️
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (confirm(`Excluir caixa "${hive.code}"? Ela some do app e não há como restaurá-la pela tela. Para só tirá-la de circulação, use Editar → Status ou Selecionar → Inativar.`)) deleteHive.mutate(hive.local_id);
+                        }}
+                        className="w-7 h-7 flex items-center justify-center rounded-lg bg-red-900/80 text-red-300 hover:bg-red-800 text-xs font-bold"
+                        title="Excluir caixa"
+                      >
+                        ×
+                      </button>
+                    </div>
                   )}
                 </div>
               );
@@ -244,6 +256,12 @@ export function ApiaryDetail() {
       {/* Modals */}
       <Modal open={editApiary} onClose={() => setEditApiary(false)} title="Editar Meliponário">
         <ApiaryForm initial={apiary} onSuccess={() => setEditApiary(false)} onCancel={() => setEditApiary(false)} />
+      </Modal>
+
+      <Modal open={!!editingHive} onClose={() => setEditingHive(null)} title="Editar Caixa" size="lg">
+        {editingHive && (
+          <HiveForm initial={editingHive} onSuccess={() => setEditingHive(null)} onCancel={() => setEditingHive(null)} />
+        )}
       </Modal>
 
       <Modal open={addHive} onClose={() => setAddHive(false)} title="Nova Caixa" size="lg">
