@@ -11,3 +11,6 @@ coverage/
 packages/frontend/dev-dist/
 packages/frontend/dist/
 packages/backend/dist/
+
+# Documentos do registro no INPI (cópia do código registrado + comprovantes) — ficam fora do git
+inpi-registro/
