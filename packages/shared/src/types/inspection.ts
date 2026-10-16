@@ -76,6 +76,8 @@ export interface InspectionChecklist {
   // Estado derivado: alimenta o Painel de Manejo e deixa de valer quando uma
   // inspeção mais nova não lista mais a chave.
   management_actions_pending: string[];
+  /** Observação sobre o que ficou pendente — é a que o Painel de Manejo exibe. */
+  management_pending_notes: string;
 
   management_description: string;
   materials_used: string;

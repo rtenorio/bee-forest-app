@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useMemo } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useApiaries } from '@/hooks/useApiaries';
 import { useHives } from '@/hooks/useHives';
 import { useAuthStore } from '@/store/authStore';
@@ -12,7 +12,11 @@ import { useManejoPendencias } from './useManejoPendencias';
 export function ManejoPage() {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
-  const [apiaryId, setApiaryId] = useState('');
+  // Filtro na URL: sobrevive à ida e volta para a tela de uma tarefa.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const apiaryId = searchParams.get('meliponario') ?? '';
+  const setApiaryId = (id: string) =>
+    setSearchParams(id ? { meliponario: id } : {}, { replace: true });
 
   const { data: apiaries = [] } = useApiaries();
   const { data: hives = [] } = useHives();
@@ -79,7 +83,7 @@ export function ManejoPage() {
               <Card
                 key={grupo.taskKey}
                 hover
-                onClick={() => navigate(`/manejo/${grupo.taskKey}`)}
+                onClick={() => navigate(`/manejo/${grupo.taskKey}${apiaryId ? `?meliponario=${apiaryId}` : ''}`)}
               >
                 <div className="flex items-start gap-3">
                   <span className={`text-2xl shrink-0 ${task.colorClass}`}>{task.icon}</span>

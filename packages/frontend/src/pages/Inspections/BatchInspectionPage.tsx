@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { v4 as uuidv4 } from 'uuid';
-import { useCreateInspection } from '@/hooks/useInspections';
+import { useCreateInspection, useInspections } from '@/hooks/useInspections';
 import { useCreateDivision } from '@/hooks/useDivisions';
 import { useHives } from '@/hooks/useHives';
 import { useApiaries } from '@/hooks/useApiaries';
@@ -13,7 +13,8 @@ import { Spinner } from '@/components/ui/Spinner';
 import { Textarea } from '@/components/ui/Textarea';
 import { InspectionSection } from '@/components/inspection/InspectionSection';
 import { ChipGroup } from '@/components/inspection/ChipGroup';
-import { MANEJO_TASKS, SEM_INTERVENCAO } from '@/pages/Manejo/manejoTasks';
+import { MANEJO_TASKS, SEM_INTERVENCAO, fundirPendencias, getManejoTask, type ManejoTask } from '@/pages/Manejo/manejoTasks';
+import { selecionarUltimaPorColonia } from '@/pages/Manejo/useManejoPendencias';
 import { OptionCards } from '@/components/inspection/OptionCards';
 import { InspectionSummaryCard, computeScore } from '@/components/inspection/InspectionSummaryCard';
 import { cn } from '@/utils/cn';
@@ -134,6 +135,9 @@ const MANAGEMENT_PENDING_CHIPS = [
   ...MANEJO_TASKS.map((t) => ({ value: t.key, label: t.labelPendente })),
 ];
 
+// No registro de manejo o bloco pendente só ACRESCENTA pendências — as
+// anteriores de cada caixa são mantidas —, então "Nada pendente" não cabe.
+const MANAGEMENT_NEW_PENDING_CHIPS = MANAGEMENT_PENDING_CHIPS.filter((c) => c.value !== SEM_INTERVENCAO);
 const PREDEFINED_TASKS = [
   { value: 'fornecer_xarope', label: 'Fornecer xarope' },
   { value: 'fornecer_bombom_polen', label: 'Fornecer bombom de pólen' },
@@ -206,6 +210,7 @@ function defaultChecklist(): InspectionChecklist {
     management_actions: [],
     management_actions_done: ['sem_intervencao'],
     management_actions_pending: ['sem_intervencao'],
+    management_pending_notes: '',
     management_description: '',
     materials_used: '',
     tasks: [],
@@ -344,6 +349,7 @@ export function BatchInspectionPage() {
 
   const { data: hives = [], isLoading: hivesLoading } = useHives();
   const { data: apiaries = [] } = useApiaries();
+  const { data: inspections = [] } = useInspections();
   const createInspection = useCreateInspection();
   const createDivision = useCreateDivision();
 
@@ -358,6 +364,8 @@ export function BatchInspectionPage() {
   const [weatherLoading, setWeatherLoading] = useState(false);
   const [weatherFetched, setWeatherFetched] = useState(false);
   const [preselectAviso, setPreselectAviso] = useState<string | null>(null);
+  // Registro de manejo: lote aberto a partir de uma tarefa do Painel de Manejo.
+  const [manejoTask, setManejoTask] = useState<ManejoTask | null>(null);
 
   // Pré-seleção vinda do Painel de Manejo. preselectApiaryRef marca o
   // meliponário cuja seleção o efeito de reset não deve limpar.
@@ -400,7 +408,7 @@ export function BatchInspectionPage() {
     if (preselectDone.current) return;
     if (accessibleHives.length === 0) return; // cache local ainda carregando
 
-    const state = location.state as { colonyIds?: unknown } | null;
+    const state = location.state as { colonyIds?: unknown; manejoKey?: unknown } | null;
     const fromState = Array.isArray(state?.colonyIds)
       ? (state!.colonyIds as unknown[]).filter((v): v is string => typeof v === 'string')
       : null;
@@ -430,6 +438,22 @@ export function BatchInspectionPage() {
     setApiaryId(alvo);
     setSelectedHiveIds(mesmoMeliponario.map((h) => h.local_id));
     setStep(2);
+
+    // Vindo de uma tarefa do painel, o manejo já entra como realizado e as
+    // novas pendências começam vazias (as anteriores são preservadas no envio).
+    const manejoKey = typeof state?.manejoKey === 'string' ? state.manejoKey : searchParams.get('manejo');
+    const task = manejoKey ? getManejoTask(manejoKey) : null;
+    if (task) {
+      setManejoTask(task);
+      setForm((f) => ({
+        ...f,
+        checklist: {
+          ...f.checklist,
+          management_actions_done: [task.key],
+          management_actions_pending: [],
+        },
+      }));
+    }
 
     const partes: string[] = [];
     if (outroMeliponario > 0) {
@@ -529,16 +553,36 @@ export function BatchInspectionPage() {
     // 'pendente' e data de identificação (ver DivisionStatus), ou seja, é uma
     // divisão a executar — não uma já executada.
     const willCreateDivision = checklist.management_actions_pending.includes('divisao');
+    const latestByHive = manejoTask ? selecionarUltimaPorColonia(inspections) : null;
 
     let saved = 0;
     try {
       for (let i = 0; i < selectedHives.length; i++) {
         const hive = selectedHives[i];
+        let checklistDaCaixa = checklist;
+        if (latestByHive) {
+          const anterior = latestByHive.get(hive.local_id)?.checklist as Partial<InspectionChecklist> | undefined;
+          const pendentes = fundirPendencias(
+            anterior?.management_actions_pending,
+            checklist.management_actions_done,
+            checklist.management_actions_pending,
+          );
+          const restouPendencia = !pendentes.includes(SEM_INTERVENCAO);
+          checklistDaCaixa = {
+            ...checklist,
+            management_actions_pending: pendentes,
+            // Sem observação nova, a anterior acompanha as pendências que restaram.
+            management_pending_notes: checklist.management_pending_notes
+              || (restouPendencia && typeof anterior?.management_pending_notes === 'string'
+                ? anterior.management_pending_notes
+                : ''),
+          };
+        }
         await createInspection.mutateAsync({
           hive_local_id: hive.local_id,
           inspected_at: form.inspected_at,
           inspector_name: form.inspector_name,
-          checklist,
+          checklist: checklistDaCaixa,
           weight_kg: form.weight_kg ? parseFloat(form.weight_kg) : null,
           temperature_c: form.temperature_c ? parseFloat(form.temperature_c) : null,
           humidity_pct: form.humidity_pct ? parseFloat(form.humidity_pct) : null,
@@ -856,6 +900,20 @@ export function BatchInspectionPage() {
               </div>
             </div>
 
+            {manejoTask && (
+              <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-2xl px-4 py-3 flex items-start gap-3">
+                <span className={cn('text-xl flex-shrink-0', manejoTask.colorClass)}>{manejoTask.icon}</span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-emerald-200">
+                    Registro de manejo: {manejoTask.labelPendente.toLowerCase()}
+                  </p>
+                  <p className="text-xs text-emerald-300/70 mt-0.5">
+                    “{manejoTask.labelFeito}” já vem marcado em Manejo realizado. As demais pendências de cada caixa são mantidas.
+                  </p>
+                </div>
+              </div>
+            )}
+
             {/* Identidade do lote */}
             <div className="bg-stone-900 border border-stone-800 rounded-2xl px-6 py-5">
               <div className="grid grid-cols-2 gap-3">
@@ -1112,15 +1170,29 @@ export function BatchInspectionPage() {
                 <FieldLabel>MANEJO REALIZADO NESTA VISITA</FieldLabel>
                 <ChipGroup options={MANAGEMENT_DONE_CHIPS} value={form.checklist.management_actions_done} onChange={(v) => setCL('management_actions_done', v)} color="emerald" />
               </div>
-              <div>
-                <FieldLabel hint="Alimenta o Painel de Manejo">MANEJO PENDENTE</FieldLabel>
-                <ChipGroup options={MANAGEMENT_PENDING_CHIPS} value={form.checklist.management_actions_pending} onChange={(v) => setCL('management_actions_pending', v)} color="amber" />
-              </div>
+              {manejoTask ? (
+                <div>
+                  <FieldLabel hint="Opcional">NOVAS PENDÊNCIAS</FieldLabel>
+                  <p className="text-xs text-stone-500 mb-2">
+                    O que cada caixa já tinha pendente continua valendo, menos o que foi marcado como realizado acima.
+                  </p>
+                  <ChipGroup options={MANAGEMENT_NEW_PENDING_CHIPS} value={form.checklist.management_actions_pending} onChange={(v) => setCL('management_actions_pending', v)} color="amber" />
+                </div>
+              ) : (
+                <div>
+                  <FieldLabel hint="Alimenta o Painel de Manejo">MANEJO PENDENTE</FieldLabel>
+                  <ChipGroup options={MANAGEMENT_PENDING_CHIPS} value={form.checklist.management_actions_pending} onChange={(v) => setCL('management_actions_pending', v)} color="amber" />
+                </div>
+              )}
               {form.checklist.management_actions_pending.includes('divisao') && (
                 <p className="text-xs text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-lg px-3 py-2">
                   ⚠️ Divisão será criada em {selectedHiveIds.length} caixa{selectedHiveIds.length !== 1 ? 's' : ''} — confira se faz sentido aplicar a todas.
                 </p>
               )}
+              <div>
+                <FieldLabel hint="Opcional · aparece no Painel de Manejo">Observação sobre o pendente</FieldLabel>
+                <Textarea value={form.checklist.management_pending_notes} onChange={(e) => setCL('management_pending_notes', e.target.value)} placeholder="Ex: dividir quando tiver 3 discos de cria" rows={2} />
+              </div>
               <div>
                 <FieldLabel>Observações necessárias</FieldLabel>
                 <Textarea value={form.checklist.management_description} onChange={(e) => setCL('management_description', e.target.value)} placeholder="Descreva o que foi feito em detalhes…" rows={3} />

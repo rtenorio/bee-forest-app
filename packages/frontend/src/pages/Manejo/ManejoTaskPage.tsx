@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Spinner } from '@/components/ui/Spinner';
@@ -27,7 +27,12 @@ export function ManejoTaskPage() {
   const { taskKey = '' } = useParams<{ taskKey: string }>();
   const task = getManejoTask(taskKey);
 
-  const { pendencias, isLoading } = useManejoPendencias();
+  // Mesmo filtro de meliponário do painel, carregado pela URL.
+  const [searchParams] = useSearchParams();
+  const apiaryId = searchParams.get('meliponario') ?? '';
+  const voltar = () => navigate(`/manejo${apiaryId ? `?meliponario=${apiaryId}` : ''}`);
+
+  const { pendencias, isLoading } = useManejoPendencias(apiaryId || undefined);
   const [selected, setSelected] = useState<string[]>([]);
   const [copiado, setCopiado] = useState(false);
 
@@ -36,6 +41,13 @@ export function ManejoTaskPage() {
     [pendencias, taskKey]
   );
   const grupos = useMemo(() => agruparPorMeliponario(doTask), [doTask]);
+
+  // A inspeção em lote é de um meliponário só; o roteiro pode cruzar vários.
+  const meliponariosSelecionados = useMemo(
+    () => new Set(doTask.filter((p) => selected.includes(p.colonyId)).map((p) => p.apiaryId)).size,
+    [doTask, selected]
+  );
+  const loteBloqueado = meliponariosSelecionados > 1;
 
   const toggle = (colonyId: string) =>
     setSelected((prev) =>
@@ -91,8 +103,8 @@ export function ManejoTaskPage() {
   };
 
   const inspecionarEmLote = () => {
-    if (selected.length === 0) return;
-    navigate('/inspections/batch', { state: { colonyIds: selected } });
+    if (selected.length === 0 || loteBloqueado) return;
+    navigate('/inspections/batch', { state: { colonyIds: selected, manejoKey: taskKey } });
   };
 
   if (!task) {
@@ -101,7 +113,7 @@ export function ManejoTaskPage() {
         icon="❓"
         title="Manejo não encontrado"
         description="Esse manejo não existe no catálogo."
-        action={{ label: 'Voltar ao painel', onClick: () => navigate('/manejo') }}
+        action={{ label: 'Voltar ao painel', onClick: voltar }}
       />
     );
   }
@@ -113,7 +125,7 @@ export function ManejoTaskPage() {
     <div className="space-y-6 pb-32">
       <div className="flex items-start gap-3">
         <button
-          onClick={() => navigate('/manejo')}
+          onClick={voltar}
           className="text-stone-500 hover:text-stone-300 text-2xl leading-none mt-1"
           aria-label="Voltar"
         >
@@ -133,7 +145,7 @@ export function ManejoTaskPage() {
           icon="✅"
           title="Nada pendente aqui"
           description="Nenhuma caixa está com esse manejo pendente na última inspeção."
-          action={{ label: 'Voltar ao painel', onClick: () => navigate('/manejo') }}
+          action={{ label: 'Voltar ao painel', onClick: voltar }}
         />
       ) : (
         <div className="space-y-5">
@@ -178,7 +190,7 @@ export function ManejoTaskPage() {
                           <div className="min-w-0 flex-1">
                             <p className="font-semibold text-stone-100">{p.colonyCode}</p>
                             <p className="text-xs text-stone-500 mt-0.5">
-                              {formatDate(p.inspectionDate)} · há {p.daysSince} dia{p.daysSince !== 1 ? 's' : ''}
+                              pendente desde {formatDate(p.inspectionDate)} · há {p.daysSince} dia{p.daysSince !== 1 ? 's' : ''}
                             </p>
                             {p.note && (
                               <p className="text-xs text-stone-400 mt-1 line-clamp-2">{p.note}</p>
@@ -199,15 +211,22 @@ export function ManejoTaskPage() {
       {selected.length > 0 && (
         <div className="fixed bottom-0 left-0 right-0 z-30 bg-stone-900 border-t border-stone-800 pb-safe lg:left-60">
           <div className="px-4 py-3 flex items-center gap-3 flex-wrap">
-            <span className="text-sm text-stone-300 font-medium">
-              {selected.length} selecionada{selected.length !== 1 ? 's' : ''}
-            </span>
+            <div className="min-w-0">
+              <p className="text-sm text-stone-300 font-medium">
+                {selected.length} selecionada{selected.length !== 1 ? 's' : ''}
+              </p>
+              {loteBloqueado && (
+                <p className="text-xs text-amber-400">
+                  Lote é por meliponário: deixe marcadas caixas de um só.
+                </p>
+              )}
+            </div>
             <div className="flex gap-2 ml-auto">
               <Button variant="secondary" size="sm" onClick={copiarRoteiro}>
                 {copiado ? '✓ Copiado' : 'Copiar roteiro'}
               </Button>
-              <Button size="sm" onClick={inspecionarEmLote}>
-                Inspecionar em lote
+              <Button size="sm" onClick={inspecionarEmLote} disabled={loteBloqueado}>
+                Registrar manejo
               </Button>
             </div>
           </div>

@@ -105,6 +105,7 @@ function defaultChecklist(): InspectionChecklist {
     management_actions: [],
     management_actions_done: ['sem_intervencao'],
     management_actions_pending: ['sem_intervencao'],
+    management_pending_notes: '',
     management_description: '',
     materials_used: '',
     // Tarefas
@@ -1262,6 +1263,10 @@ export function ColonyInspectionPage() {
           <div>
             <FieldLabel hint="Alimenta o Painel de Manejo">MANEJO PENDENTE</FieldLabel>
             <ChipGroup options={MANAGEMENT_PENDING_CHIPS} value={form.checklist.management_actions_pending} onChange={(v) => setCL('management_actions_pending', v)} color="amber" />
+          </div>
+          <div>
+            <FieldLabel hint="Opcional · aparece no Painel de Manejo">Observação sobre o pendente</FieldLabel>
+            <Textarea value={form.checklist.management_pending_notes} onChange={(e) => setCL('management_pending_notes', e.target.value)} placeholder="Ex: dividir quando tiver 3 discos de cria" rows={2} />
           </div>
           <div>
             <FieldLabel>Observações necessárias</FieldLabel>

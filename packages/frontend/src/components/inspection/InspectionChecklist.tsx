@@ -115,6 +115,7 @@ export function InspectionChecklistForm({ value }: Props) {
   const mgmtDone = safeArray(c.management_actions_done);
   const mgmtPending = safeArray(c.management_actions_pending);
   const mgmtNote = typeof c.management_description === 'string' ? c.management_description : '';
+  const mgmtPendingNote = typeof c.management_pending_notes === 'string' ? c.management_pending_notes : '';
   const mgmtMaterials = typeof c.materials_used === 'string' ? c.materials_used : '';
   const productiveObs = safeArray(c.productive_observations);
   const tasks = safeArray(c.tasks);
@@ -251,6 +252,7 @@ export function InspectionChecklistForm({ value }: Props) {
       {mgmtPending.length > 0 && (
         <Section title="Manejo pendente">
           <TagList tags={mgmtPending} color="amber" />
+          {mgmtPendingNote !== '' && <p className="text-xs text-stone-400 mt-1 italic">"{mgmtPendingNote}"</p>}
         </Section>
       )}
 

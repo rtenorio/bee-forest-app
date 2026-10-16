@@ -23,11 +23,34 @@ export interface UseManejoPendenciasResult {
   colonyCount: number;
 }
 
+type InspecaoMinima = Pick<Inspection, 'inspected_at' | 'checklist'>;
+
 /** Entrada mínima que o núcleo puro precisa — facilita exercitar a regra. */
 interface DerivarInput {
   hives: Array<{ local_id: string; code: string; apiary_local_id: string }>;
-  latestByHive: Map<string, Pick<Inspection, 'inspected_at' | 'checklist'>>;
+  /** Inspeções de cada colônia, da mais nova para a mais antiga. */
+  historyByHive: Map<string, InspecaoMinima[]>;
   apiaryNames: Map<string, string>;
+}
+
+function pendentesDe(insp: InspecaoMinima): unknown {
+  return ((insp.checklist ?? {}) as unknown as Record<string, unknown>).management_actions_pending;
+}
+
+/**
+ * Desde quando a pendência está em aberto: a inspeção mais antiga da sequência
+ * ininterrupta, a partir da última, que lista a chave. Sem isso, registrar
+ * outro manejo na caixa (que repete as pendências restantes) zeraria a idade
+ * delas — e o "mais antiga" e o alerta de atraso passariam a mentir.
+ */
+function abertaDesde(historico: InspecaoMinima[], key: string): string {
+  let desde = historico[0].inspected_at;
+  for (const insp of historico) {
+    const raw = pendentesDe(insp);
+    if (!Array.isArray(raw) || !raw.includes(key)) break;
+    desde = insp.inspected_at;
+  }
+  return desde;
 }
 
 /**
@@ -35,7 +58,7 @@ interface DerivarInput {
  * manejo listado e agrupa por manejo. Sem React, para poder ser conferido
  * isoladamente.
  */
-export function derivarPendencias({ hives, latestByHive, apiaryNames }: DerivarInput): {
+export function derivarPendencias({ hives, historyByHive, apiaryNames }: DerivarInput): {
   grupos: ManejoGrupo[];
   pendencias: ManejoPendencia[];
   colonyCount: number;
@@ -44,8 +67,9 @@ export function derivarPendencias({ hives, latestByHive, apiaryNames }: DerivarI
   let colonyCount = 0;
 
   for (const hive of hives) {
-    const insp = latestByHive.get(hive.local_id);
-    if (!insp) continue; // colônia sem inspeção: fora, sem quebrar
+    const historico = historyByHive.get(hive.local_id);
+    if (!historico || historico.length === 0) continue; // colônia sem inspeção: fora, sem quebrar
+    const insp = historico[0];
 
     // Leitura defensiva: inspeções antigas não têm os campos novos, e o
     // checklist gravado pode vir de qualquer versão do formulário.
@@ -56,22 +80,25 @@ export function derivarPendencias({ hives, latestByHive, apiaryNames }: DerivarI
     if (!Array.isArray(raw) || raw.length === 0) continue;
 
     colonyCount += 1;
-    const note = typeof checklist.management_description === 'string'
-      ? checklist.management_description
+    // Só a observação do pendente: management_description descreve o que
+    // foi feito na visita e confundiria quem vai executar a tarefa.
+    const note = typeof checklist.management_pending_notes === 'string'
+      ? checklist.management_pending_notes
       : '';
 
     for (const key of raw) {
       if (typeof key !== 'string') continue;
       if (!getManejoTask(key)) continue; // fora do catálogo: ignora em silêncio
 
+      const desde = abertaDesde(historico, key);
       pendencias.push({
         taskKey: key,
         colonyId: hive.local_id,
         colonyCode: hive.code,
         apiaryId: hive.apiary_local_id,
         apiaryName: apiaryNames.get(hive.apiary_local_id) ?? '—',
-        inspectionDate: insp.inspected_at,
-        daysSince: daysSince(insp.inspected_at) ?? 0,
+        inspectionDate: desde,
+        daysSince: daysSince(desde) ?? 0,
         note,
       });
     }
@@ -97,22 +124,29 @@ export function derivarPendencias({ hives, latestByHive, apiaryNames }: DerivarI
 }
 
 /**
- * Seleciona a inspeção de maior data por colônia, com desempate por created_at.
+ * Agrupa as inspeções por colônia, da mais nova para a mais antiga
+ * (desempate por created_at quando inspected_at é igual).
  */
-export function selecionarUltimaPorColonia(inspections: Inspection[]): Map<string, Inspection> {
-  const latest = new Map<string, Inspection>();
+export function historicoPorColonia(inspections: Inspection[]): Map<string, Inspection[]> {
+  const byHive = new Map<string, Inspection[]>();
   for (const insp of inspections) {
     if (insp.deleted_at) continue;
-    const current = latest.get(insp.hive_local_id);
-    if (!current) {
-      latest.set(insp.hive_local_id, insp);
-      continue;
-    }
-    const byDate = insp.inspected_at.localeCompare(current.inspected_at);
-    const wins = byDate > 0
-      || (byDate === 0 && (insp.created_at ?? '').localeCompare(current.created_at ?? '') > 0);
-    if (wins) latest.set(insp.hive_local_id, insp);
+    const list = byHive.get(insp.hive_local_id);
+    if (list) list.push(insp);
+    else byHive.set(insp.hive_local_id, [insp]);
   }
+  for (const list of byHive.values()) {
+    list.sort((a, b) =>
+      b.inspected_at.localeCompare(a.inspected_at)
+      || (b.created_at ?? '').localeCompare(a.created_at ?? ''));
+  }
+  return byHive;
+}
+
+/** A inspeção mais nova de cada colônia. */
+export function selecionarUltimaPorColonia(inspections: Inspection[]): Map<string, Inspection> {
+  const latest = new Map<string, Inspection>();
+  for (const [hiveId, list] of historicoPorColonia(inspections)) latest.set(hiveId, list[0]);
   return latest;
 }
 
@@ -149,10 +183,8 @@ export function useManejoPendencias(apiaryId?: string): UseManejoPendenciasResul
     return apiaryId ? active.filter((h) => h.apiary_local_id === apiaryId) : active;
   }, [hives, user, apiaryId]);
 
-  // Uma passada sobre todas as inspeções: a última de cada colônia.
-  // Desempate por created_at quando inspected_at é igual.
-  const latestByHive = useMemo(
-    () => selecionarUltimaPorColonia(inspections),
+  const historyByHive = useMemo(
+    () => historicoPorColonia(inspections),
     [inspections]
   );
 
@@ -164,9 +196,9 @@ export function useManejoPendencias(apiaryId?: string): UseManejoPendenciasResul
   return useMemo(() => {
     const { grupos, pendencias, colonyCount } = derivarPendencias({
       hives: accessibleHives,
-      latestByHive,
+      historyByHive,
       apiaryNames,
     });
     return { grupos, pendencias, isLoading, colonyCount };
-  }, [accessibleHives, latestByHive, apiaryNames, isLoading]);
+  }, [accessibleHives, historyByHive, apiaryNames, isLoading]);
 }

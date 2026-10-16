@@ -121,6 +121,26 @@ export function getManejoTask(key: string): ManejoTask | null {
  */
 export const SEM_INTERVENCAO = 'sem_intervencao';
 
+/**
+ * Pendências que a caixa deve carregar depois de um registro de manejo.
+ *
+ * A pendência é derivada da última inspeção, e o lote grava o mesmo checklist
+ * em todas as caixas. Sem esta fusão, registrar "Alimentei" em lote apagaria
+ * de uma caixa um "Dividir" que ninguém executou. Regra: mantém as pendências
+ * anteriores da caixa, tira as que foram feitas agora e soma as novas.
+ */
+export function fundirPendencias(anteriores: unknown, feitas: string[], novas: string[]): string[] {
+  const previas = Array.isArray(anteriores)
+    ? anteriores.filter((k): k is string => typeof k === 'string')
+    : [];
+  const resultado = [
+    ...previas.filter((k) => !feitas.includes(k)),
+    ...novas,
+  ].filter((k) => k !== SEM_INTERVENCAO);
+  const unicas = [...new Set(resultado)];
+  return unicas.length > 0 ? unicas : [SEM_INTERVENCAO];
+}
+
 /** Uma pendência é sempre derivada da última inspeção da colônia. */
 export interface ManejoPendencia {
   taskKey: ManejoTaskKey;
@@ -128,10 +148,10 @@ export interface ManejoPendencia {
   colonyCode: string;
   apiaryId: string;
   apiaryName: string;
-  /** inspected_at da inspeção que originou a pendência. */
+  /** inspected_at da primeira inspeção, na sequência atual, que listou a pendência. */
   inspectionDate: string;
-  /** Dias corridos desde essa inspeção. */
+  /** Dias corridos desde então: há quanto tempo a pendência está em aberto. */
   daysSince: number;
-  /** Observação do manejo registrada na inspeção, se houver. */
+  /** Observação sobre o pendente registrada na inspeção, se houver. */
   note: string;
 }

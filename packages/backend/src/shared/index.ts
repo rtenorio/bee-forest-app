@@ -161,6 +161,7 @@ export const InspectionChecklistSchema = z.object({
   management_actions: z.array(z.string()).default([]),
   management_actions_done: z.array(z.string()).default([]),
   management_actions_pending: z.array(z.string()).default([]),
+  management_pending_notes: z.string().default(''),
   management_description: z.string().default(''),
   materials_used: z.string().default(''),
   tasks: z.array(InspectionTaskSchema).default([]),
